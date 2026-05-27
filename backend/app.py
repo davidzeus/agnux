@@ -1,96 +1,182 @@
-# app.py
 import os
-import sys
-import logging
 import json
-import httpx
 import importlib
-import asyncio
+import logging
 from datetime import datetime
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+import httpx
 
 # =====================================================================
-# 🛠️ CONFIGURACIÓN DE ENTORNO Y RUTAS INDUSTRIALES
+# CONFIGURACIÓN DE ENTORNO Y LOGS INDUSTRIALES
 # =====================================================================
-base_dir = os.path.dirname(os.path.abspath(__file__))
-if base_dir not in sys.path:
-    sys.path.insert(0, base_dir)
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    datefmt="%H:%M:%S"
+)
+logger = logging.getLogger("AGNUX-CORE")
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s', datefmt='%H:%M:%S')
-logger = logging.getLogger("AGNUX_CORE")
+app = FastAPI(title="AGNUX OS Core API", version="2.0.0")
 
-PROFILE_PATH = os.path.join(base_dir, "system_profile.json")
-DYNAMIC_DIR = os.path.join(base_dir, "dynamic_tools")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DYNAMIC_DIR = os.path.join(BASE_DIR, "dynamic_tools")
+PROFILE_PATH = os.path.join(BASE_DIR, "system_profile.json")
+
 os.makedirs(DYNAMIC_DIR, exist_ok=True)
-
 if not os.path.exists(os.path.join(DYNAMIC_DIR, "__init__.py")):
     with open(os.path.join(DYNAMIC_DIR, "__init__.py"), "w") as f: f.write("")
 
-app = FastAPI(title="AGNUX Engine", version="1.0.0")
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
+# 🧠 MEMORIA RAM SEMÁNTICA GLOBAL DE AGNUX OS (EVITA HITS COMPULSIVOS A OLLAMA)
+CACHE_VECTORS = {}
 
+# =====================================================================
+# MODELOS DE DATOS (PYDANTIC)
+# =====================================================================
 class TaskbarPrompt(BaseModel):
     prompt: str
 
 # =====================================================================
-# 🧬 MATRIZ DE HERRAMIENTAS NATIVAS DE AGNUX (EJECUCIÓN LOCAL)
+# ⚙️ MOTOR DE CAPA FÍSICA: EJECUTOR DE ENTORNO HOST
 # =====================================================================
-def autogenerar_nueva_tool(nombre_funcion: str, codigo_python: str, descripcion_docstring: str) -> str:
-    logger.info(f"🛠️ [AUTOGÉNESIS] Creando nueva herramienta: '{nombre_funcion}'...")
-    try:
-        nombre_clean = nombre_funcion.strip().replace(" ", "_")
-        nombre_archivo = f"{DYNAMIC_DIR}/{nombre_clean}.py"
-        contenido_codigo = f'"""\nDefinición autogenerada por AGNUX OS Core.\n"""\n\ndef {nombre_clean}():\n    """{descripcion_docstring}"""\n{codigo_python}\n'
-        with open(nombre_archivo, "w") as f: f.write(contenido_codigo)
-        logger.info(f"💾 [AUTOGÉNESIS] Código escrito con éxito en {nombre_archivo}")
-        return f"SUCCESS: Herramienta '{nombre_clean}' instalada en el host."
-    except Exception as e:
-        return f"ERROR en autogénesis: {str(e)}"
-
 def ejecutar_herramienta_local(nombre: str, argumentos: dict = None) -> str:
-    """Orquestador dinámico que ejecuta funciones estáticas o dinámicas en el host real."""
+    """
+    Orquestador del núcleo de AGNUX OS. Intercepta herramientas estáticas
+    o levanta scripts dinámicos pasándoles argumentos por desempaquetado kwargs.
+    """
     logger.info(f"🔌 [EJECUTOR] Invocando función local: '{nombre}' con argumentos {argumentos}")
     if argumentos is None: argumentos = {}
     
     if nombre == "autogenerar_nueva_tool":
         return autogenerar_nueva_tool(**argumentos)
     
-    # Intentar ejecutar wrappers estáticos mapeados
-    try:
-        from tools.system_tools import obtener_diagnostico_hardware, gestionar_energia_equipo
-        from tools.multimedia_tools import ejecutar_musica_fondo, controlar_reproductor_global
-        
-        if nombre == "tool_diagnostico_wrapper":
+    # ─── 1. HERRAMIENTAS INTERNAS FIJAS (ESTÁTICAS) ───────────────────
+    if nombre == "tool_diagnostico_wrapper":
+        try:
+            from tools.system_tools import obtener_diagnostico_hardware
             return json.dumps(obtener_diagnostico_hardware(), indent=2)
-        elif nombre == "tool_energia_wrapper":
-            return json.dumps(gestionar_energia_equipo(argumentos.get("accion", "reiniciar")), indent=2)
-        elif nombre == "tool_musica_wrapper":
-            return str(ejecutar_musica_fondo(argumentos.get("busqueda_o_url", "")))
-        elif nombre == "tool_control_audio_wrapper":
-            return str(controlar_reproductor_global(argumentos.get("accion", "pausa")))
-    except Exception as e:
-        logger.warning(f"No se pudo ejecutar la herramienta estática básica: {e}")
+        except Exception as e: return f"Error en diagnóstico de hardware: {e}"
 
-    # Buscar en herramientas dinámicas autogeneradas en el disco
+    elif nombre == "tool_energia_wrapper":
+        try:
+            from tools.system_tools import gestionar_energia_equipo
+            return json.dumps(gestionar_energia_equipo(argumentos.get("accion", "reiniciar")), indent=2)
+        except Exception as e: return f"Error en gestión de energía: {e}"
+
+    elif nombre == "tool_reproductor_video":
+        try:
+            import subprocess
+            import urllib.parse
+            
+            target = argumentos.get("objetivo", "").strip()
+            if not target: return "Error: No se especificó qué video reproducir."
+                
+            if os.path.exists(target) or target.startswith("/") or target.endswith(('.mp4', '.mkv', '.avi', '.mov')):
+                subprocess.Popen(["xdg-open", target], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                return f"🎬 AGNUX KERNEL: Levantando archivo de video local: {os.path.basename(target)}"
+            
+            elif "youtube.com" in target or "youtu.be" in target:
+                subprocess.Popen(["xdg-open", target], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                return "🌐 AGNUX KERNEL: Abriendo enlace directo de YouTube en el navegador host."
+            
+            else:
+                query_enc = urllib.parse.quote(target)
+                url_busqueda = f"https://www.youtube.com/results?search_query={query_enc}"
+                subprocess.Popen(["xdg-open", url_busqueda], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                return f"🔍 AGNUX KERNEL: Buscando '{target}' en YouTube y abriendo navegador."
+        except Exception as e:
+            return f"Error físico en bus de video: {str(e)}"
+
+    # ─── 2. MOTOR DINÁMICA (EJECUCIÓN DE SCRIPTS MUTADOS EN DISCO) ────
     try:
         if os.path.exists(DYNAMIC_DIR):
             for archivo in os.listdir(DYNAMIC_DIR):
                 if archivo.endswith(".py") and archivo != "__init__.py":
                     nombre_mod = archivo.replace(".py", "")
+                    
                     if nombre_mod == nombre:
                         modulo = importlib.import_module(f"dynamic_tools.{nombre_mod}")
                         importlib.reload(modulo)
-                        funcion = getattr(modulo, nombre_mod)
-                        return str(funcion())
+                        funcion_dinamica = getattr(modulo, nombre_mod)
+                        
+                        if argumentos:
+                            logger.info(f"🚀 [MUTACIÓN HOST] Corriendo '{nombre_mod}' con argumentos: {argumentos}")
+                            return str(funcion_dinamica(**argumentos))
+                        else:
+                            logger.info(f"🚀 [MUTACIÓN HOST] Corriendo '{nombre_mod}' sin argumentos obligatorios.")
+                            return str(funcion_dinamica())
+                            
     except Exception as e:
-        return f"Error ejecutando herramienta dinámica '{nombre}': {str(e)}"
+        return f"❌ Falla crítica de ejecución en herramienta mutada '{nombre}': {str(e)}"
         
-    return f"Herramienta '{nombre}' no encontrada en el Kernel."
+    return f"Herramienta '{nombre}' no encontrada en la matriz activa del Kernel."
 
 # =====================================================================
-# 📥 ENDPOINT: ORQUESTADOR COGNITIVO UNIFICADO Y SIMÉTRICO (NATIVO)
+# 🧬 CAPA DE METAPROGRAMACIÓN: AUTOGÉNESIS (MUTACIÓN EN CALIENTE)
+# =====================================================================
+def autogenerar_nueva_tool(nombre_funcion: str, codigo_python: str, descripcion_docstring: str) -> str:
+    """Escribe un script ejecutable real en la carpeta dynamic_tools e invalida la RAM."""
+    global CACHE_VECTORS
+    nombre_limpio = nombre_funcion.strip().lower().replace(" ", "_").replace("-", "_")
+    if not nombre_limpio.endswith(".py"):
+        path_archivo = os.path.join(DYNAMIC_DIR, f"{nombre_limpio}.py")
+    else:
+        path_archivo = os.path.join(DYNAMIC_DIR, nombre_limpio)
+        nombre_limpio = nombre_limpio.replace(".py", "")
+
+    plantilla = (
+        f'""\"\nDefinición autogenerada por AGNUX OS Core.\n""\"\n\n'
+        f'def {nombre_limpio}(**kwargs):\n'
+        f'    """{descripcion_docstring}"""\n'
+        f'{codigo_python}\n'
+    )
+    
+    try:
+        with open(path_archivo, "w", encoding="utf-8") as f:
+            f.write(plantilla)
+        
+        logger.info(f"💾 [AUTOGÉNESIS] Código escrito con éxito en {path_archivo}")
+        
+        # 💥 INVALIDACIÓN DEL CACHÉ EN RAM: Obliga al sistema a indexar la nueva tool en la siguiente orden
+        CACHE_VECTORS = {}
+        logger.info("💥 [KERNEL RAM] Memoria semántica invalidada para forzar re-indexación.")
+        
+        return f"SUCCESS: Herramienta '{nombre_limpio}' instalada e indexada en el host."
+    except Exception as e:
+        return f"ERROR: No se pudo escribir la herramienta física en el disco: {str(e)}"
+
+# =====================================================================
+# 📐 SERVICIO VECTORIAL DE APOYO
+# =====================================================================
+async def verificar_y_cargar_cache_ram(client: httpx.AsyncClient, url_embeddings: str, modelo: str, tools: list):
+    """Calcula e indexa en RAM los embeddings de las descripciones si la memoria está vacía."""
+    global CACHE_VECTORS
+    if not CACHE_VECTORS:
+        logger.info("📦 [KERNEL RAM] Memoria vacía. Indexando matriz geométrica en hilos de la CPU...")
+        for tool in tools:
+            nombre_tool = tool["name"]
+            texto_referencia = f"herramienta funcion comando operativo {nombre_tool}: {tool['description']}"
+            try:
+                res_vec = await client.post(url_embeddings, json={"model": modelo, "prompt": texto_referencia}, timeout=10.0)
+                if res_vec.status_code == 200:
+                    CACHE_VECTORS[nombre_tool] = {
+                        "vector": res_vec.json().get("embedding"),
+                        "tool_data": tool
+                    }
+            except Exception as ev:
+                logger.error(f"❌ Error al indexar herramienta {nombre_tool} en RAM: {ev}")
+
+# =====================================================================
+# 📥 ENDPOINT CENTRAL: ORQUESTADOR COGNITIVO HÍBRIDO (FAILOVER + VECTOR ROUTER)
 # =====================================================================
 @app.post("/api/system/intent")
 async def procesar_intencion_global(payload: TaskbarPrompt):
@@ -98,27 +184,24 @@ async def procesar_intencion_global(payload: TaskbarPrompt):
     
     provider_actual = os.getenv("AGNUX_IA_PROVIDER", "local")
     modelo_actual = os.getenv("AGNUX_ACTIVE_MODEL", "qwen2.5:1.5b")
-    
-    # 🧬 1. MATRIZ ÚNICA DE HERRAMIENTAS (Formato Estándar de Mercado)
-    # Cualquier cambio acá impacta automáticamente en Ollama y en Gemini
+    global CACHE_VECTORS
+
+    # 🧬 1. CONSTRUCCIÓN DE LA MATRIZ DE HERRAMIENTAS UNIFICADA
     tools_schema = [
         {
             "name": "tool_diagnostico_wrapper",
-            "description": "Muestra el estado actual del hardware de la máquina: uso de CPU, memoria RAM y espacio en disco duro.",
-            "parameters": {
-                "type": "object",
-                "properties": {}
-            }
+            "description": "Muestra el estado actual del hardware de la máquina: uso de CPU, memoria RAM y espacio libre en disco duro.",
+            "parameters": {"type": "object", "properties": {}}
         },
         {
             "name": "tool_reproductor_video",
-            "description": "Maneja de forma genérica la reproducción de videos. Abre archivos locales en el disco si es una ruta física, enlaces directos de YouTube, o busca palabras clave en internet si es un tema o categoría.",
+            "description": "Maneja de forma genérica la reproducción de videos. Abre archivos locales en el disco si es una ruta física, enlaces directos de YouTube, o busca palabras clave en internet si es un tema o carrera.",
             "parameters": {
                 "type": "object",
                 "properties": {
                     "objetivo": {
                         "type": "string",
-                        "description": "La ruta del archivo local (ej: /home/david/video.mp4), URL de YouTube, o frase de búsqueda (ej: 'autos de tc2000')."
+                        "description": "La ruta del archivo local (/home/david/video.mp4), URL de YouTube, o frase de búsqueda ('autos de tc2000')."
                     }
                 },
                 "required": ["objetivo"]
@@ -126,82 +209,135 @@ async def procesar_intencion_global(payload: TaskbarPrompt):
         },
         {
             "name": "autogenerar_nueva_tool",
-            "description": "OBLIGATORIA ÚNICAMENTE si el usuario pide una automatización compleja que NO se pueda resolver con las herramientas existentes.",
+            "description": "OBLIGATORIA ÚNICAMENTE si el usuario pide una automatización compleja o comandos físicos que NO se puedan resolver con las herramientas existentes.",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "nombre_funcion": {"type": "string", "description": "Nombre técnico en minúsculas (ej: control_compresor)."},
-                    "codigo_python": {"type": "string", "description": "Código limpio que retorne string."},
-                    "descripcion_docstring": {"type": "string"}
+                    "nombre_funcion": {"type": "string", "description": "Nombre técnico en minúsculas."},
+                    "codigo_python": {"type": "string", "description": "Código limpio identado que retorne un string informativo."},
+                    "descripcion_docstring": {"type": "string", "description": "Qué hace la automatización."}
                 },
                 "required": ["nombre_funcion", "codigo_python", "descripcion_docstring"]
             }
         }
     ]
 
-    # Incorporamos al esquema dinámico las herramientas guardadas en el disco
+    # Incorporamos dinámicamente lo que esté en disco a la matriz global
     if os.path.exists(DYNAMIC_DIR):
         for archivo in os.listdir(DYNAMIC_DIR):
             if archivo.endswith(".py") and archivo != "__init__.py" and archivo != "historial_consumo.json":
                 nom = archivo.replace(".py", "")
                 tools_schema.append({
                     "name": nom,
-                    "description": f"Ejecuta la automatización local ya existente '{nom}' en el sistema operativo.",
+                    "description": f"Ejecuta la automatización local ya existente '{nom}' en el sistema operativo host.",
                     "parameters": {"type": "object", "properties": {}}
                 })
 
-    # Directiva base de comportamiento del Kernel
     system_instruction = (
         "Sos el nucleo de AGNUX OS. Responde de forma ultra corta.\n"
         "Si el usuario pide ver el hardware, usa 'tool_diagnostico_wrapper'.\n"
-        "Si pide videos, peliculas, carreras o youtube, usa 'tool_reproductor_video'.\n"
+        "Si pide videos, peliculas o youtube, usa 'tool_reproductor_video'.\n"
         "Si pide algo que no existe y no podes resolver, usa 'autogenerar_nueva_tool'."
     )
 
-    # 🏠 2. PROCESADOR INTERNO OLLAMA (HTTP Estándar OpenAI compatible)
+# 🏠 2. MÓDULO OLLAMA LOCAL: VECTOR ROUTER INTEGRADO (MÁXIMA VELOCIDAD)
     async def ejecutar_ollama_local(motivo_log: str):
         logger.info(f"🏠 PROCESANDO EN HOST LOCAL VIA OLLAMA ({modelo_actual}) -> Motivo: {motivo_log}")
-        url_local = "http://127.0.0.1:11434/v1/chat/completions"
+        url_embeddings = "http://127.0.0.1:11434/api/embeddings"
+        url_chat = "http://127.0.0.1:11434/v1/chat/completions"
+        global CACHE_VECTORS  # 🛟 ¡LA VALIDACIÓN CRÍTICA! Enlazamos el bus de memoria RAM global
         
-        # Adaptamos el esquema global al formato OpenAI que usa Ollama por HTTP
-        openai_tools = [{"type": "function", "function": t} for t in tools_schema]
-        
-        payload_local = {
-            "model": modelo_actual,
-            "messages": [
-                {"role": "system", "content": system_instruction},
-                {"role": "user", "content": payload.prompt}
-            ],
-            "tools": openai_tools,
-            "stream": False
-        }
+        def similitud_coseno(vec_a, vec_b):
+            if not vec_a or not vec_b: return 0.0
+            dot_product = sum(a * b for a, b in zip(vec_a, vec_b))
+            norm_a = sum(a * a for a in vec_a) ** 0.5
+            norm_b = sum(b * b for b in vec_b) ** 0.5
+            return dot_product / (norm_a * norm_b) if (norm_a * norm_b) else 0.0
+
+        filtered_tools = []
         
         async with httpx.AsyncClient() as client:
             try:
-                res = await client.post(url_local, json=payload_local, timeout=45.0)
-                if res.status_code != 200:
-                    return {"status": "error", "detail": f"Ollama HTTP Error: {res.text}"}
-                
-                choice = res.json()["choices"][0]["message"]
-                
-                # Captura del Function Calling en Ollama
-                if "tool_calls" in choice and choice["tool_calls"]:
-                    tool_call = choice["tool_calls"][0]["function"]
-                    args = json.loads(tool_call["arguments"]) if isinstance(tool_call.get("arguments"), str) else tool_call.get("arguments", {})
-                    resultado_local = ejecutar_herramienta_local(tool_call["name"], args)
-                    return {"status": "success", "user": "user_cristian", "response": resultado_local}
-                
-                return {"status": "success", "user": "user_cristian", "response": choice.get("content", "").strip()}
-            except Exception as e:
-                return {"status": "error", "detail": f"Falla total en bus local: {str(e)}"}
+                # Comprobamos si la RAM necesita ser poblada (sucede una sola vez)
+                await verificar_y_cargar_cache_ram(client, url_embeddings, modelo_actual, tools_schema)
 
-    # --- RUTEO DE LA PETICIÓN EN BASE AL RUNTIME ACTIVO ---
+                # Tu procesador calcula SOLO 1 embedding para la orden del usuario
+                res_prompt_vec = await client.post(url_embeddings, json={"model": modelo_actual, "prompt": payload.prompt}, timeout=10.0)
+                
+                if res_prompt_vec.status_code == 200:
+                    vector_usuario = res_prompt_vec.json().get("embedding")
+                    logger.info("📐 [VECTOR ROUTER RAM] Escaneando matriz geométrica directo en memoria...")
+                    
+                    # Multiplexación matemática veloz en RAM
+                    for nombre_tool, cached in CACHE_VECTORS.items():
+                        score = similitud_coseno(vector_usuario, cached["vector"])
+                        logger.info(f"   ↳ [RAM SCORE] '{nombre_tool}' = {score:.4f}")
+                        
+                        # 🛡️ UMBRAL DE CORTE CONTROLADO (0.81 evita falsos positivos del modelo de 1.5B)
+                        if score > 0.81:
+                            filtered_tools.append(cached["tool_data"])
+                
+                openai_tools = [{"type": "function", "function": t} for t in filtered_tools] if filtered_tools else None
+                
+                payload_local = {
+                    "model": modelo_actual,
+                    "messages": [
+                        {"role": "system", "content": system_instruction},
+                        {"role": "user", "content": payload.prompt}
+                    ],
+                    "stream": False
+                }
+                
+                if openai_tools:
+                    payload_local["tools"] = openai_tools
+                    logger.info(f"🧠 [ROUTER SEGURO] Inyectando herramientas válidas: {[t['name'] for t in filtered_tools]}")
+                else:
+                    logger.info("🧠 [ROUTER SEGURO] Entrada general detectada. Cero herramientas enviadas para evitar alucinaciones.")
+
+                res_chat = await client.post(url_chat, json=payload_local, timeout=45.0)
+                if res_chat.status_code != 200:
+                    return {"status": "error", "detail": f"Ollama Chat Error: {res_chat.text}"}
+                
+                res_json = res_chat.json()
+                
+                # 🛡️ PARCHADO SEGURO: Validación estructural para evitar fallas si Ollama responde texto plano
+                if "choices" not in res_json or not res_json["choices"]:
+                    return {"status": "success", "user": "user_cristian", "response": "AGNUX CORE: El motor local no devolvió respuestas válidas."}
+                
+                message_node = res_json["choices"][0].get("message", {})
+                
+                # Ejecución controlada del Function Calling local si Ollama activó la tool
+                if "tool_calls" in message_node and message_node["tool_calls"] and openai_tools:
+                    tool_call = message_node["tool_calls"][0].get("function", {})
+                    nombre_call = tool_call.get("name")
+                    
+                    if nombre_call:
+                        args_raw = tool_call.get("arguments", {})
+                        args = json.loads(args_raw) if isinstance(args_raw, str) else args_raw
+                        if args is None: args = {}
+                        
+                        resultado_local = ejecutar_herramienta_local(nombre_call, args)
+                        return {"status": "success", "user": "user_cristian", "response": resultado_local}
+                
+                # Extracción blindada del texto plano si no se usó ninguna herramienta
+                texto_respuesta = message_node.get("content", "").strip()
+                if not texto_respuesta:
+                    texto_respuesta = "AGNUX CORE: Ejecución completada en texto plano (sin salida de consola)."
+                    
+                return {"status": "success", "user": "user_cristian", "response": texto_respuesta}
+                
+            except Exception as e:
+                return {"status": "error", "detail": f"Falla en bus vectorial local cacheado: {str(e)}"}
+
+    # =====================================================================
+    # 🔀 ENRUTAMIENTO DINÁMICO EN TIEMPO DE EJECUCIÓN (RUNTIME)
+    # =====================================================================
     
-    # CASO DIRECTO A CPU LOCAL
+    # CASO DIRECTO A CPU LOCAL (OLLAMA)
     if provider_actual == "local":
         return await ejecutar_ollama_local("Configuración por defecto")
 
-    # CASO HÍBRIDO NUBE (CON REPLIEGUE SEGURO AUTOMÁTICO)
+    # CASO NUBE (GEMINI) CON SEGURO DE VIDA INTEGRADO
     elif provider_actual == "gemini":
         api_key = ""
         if os.path.exists(PROFILE_PATH):
@@ -210,11 +346,11 @@ async def procesar_intencion_global(payload: TaskbarPrompt):
             except Exception: pass
 
         if not api_key:
-            return await ejecutar_ollama_local("Bypass: API Key faltante")
+            return await ejecutar_ollama_local("Bypass inmediato: API Key no configurada en el perfil")
 
         url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
         
-        # Mapeo directo y simétrico del mismo esquema al dialecto de Google (Mayúsculas en los tipos)
+        # Traducimos de forma simétrica la matriz de herramientas al dialecto estricto de Google
         gemini_declarations = []
         for t in tools_schema:
             dec = {
@@ -242,14 +378,14 @@ async def procesar_intencion_global(payload: TaskbarPrompt):
                 logger.info("🌐 ENVIANDO INTENCIONES A GEMINI EN LA NUBE (0% CPU Local)...")
                 response = await client.post(url, json=payload_api, headers={"Content-Type": "application/json"}, timeout=15.0)
                 
-                # FAILOVER TRIPLE-A: Si la nube pincha o da 429, Ollama toma el control en el acto
+                # 🛟 ¡EL RESCATE AUTOMÁTICO! Si Google tira 429 o explota, Ollama toma el control en milisegundos
                 if response.status_code != 200:
-                    return await ejecutar_ollama_local(f"Bypass por error HTTP de la nube ({response.status_code})")
+                    return await ejecutar_ollama_local(f"Bypass por error HTTP de la nube (Status: {response.status_code})")
                     
                 data = response.json()
                 part = data['candidates'][0]['content']['parts'][0]
 
-                # Telemetría de tokens en la nube
+                # Registro de telemetría de tokens en la nube
                 try:
                     usage = data.get("usageMetadata", {})
                     if usage:
@@ -267,7 +403,7 @@ async def procesar_intencion_global(payload: TaskbarPrompt):
                         with open(log_path, "w") as f: json.dump(historial, f, indent=4)
                 except Exception: pass
 
-                # Captura del Function Calling en Gemini
+                # Procesamiento de Function Calling nativo de Google
                 if "functionCall" in part:
                     func_call = part["functionCall"]
                     resultado_local = ejecutar_herramienta_local(func_call["name"], func_call.get("args", {}))
@@ -276,25 +412,8 @@ async def procesar_intencion_global(payload: TaskbarPrompt):
                 return {"status": "success", "user": "user_cristian", "response": part.get("text", "").strip()}
 
             except Exception as e:
-                return await ejecutar_ollama_local(f"Bypass por corte físico de red: {str(e)}")
+                # Si hay timeout o corte de internet físico, Ollama también nos salva
+                return await ejecutar_ollama_local(f"Bypass por corte físico/timeout de red: {str(e)}")
 
-    return {"status": "error", "detail": "Proveedor no configurado."}
+    return {"status": "error", "detail": "Proveedor no configurado en las variables de entorno."}
 
-# =====================================================================
-# 🔌 STARTUP DAEMON
-# =====================================================================
-@app.on_event("startup")
-async def startup_daemon():
-    logger.info("🔍 AGNUX INITIAL BOOT: Configurando entorno...")
-    prov_consola = os.getenv("AGNUX_IA_PROVIDER")
-    if prov_consola:
-        logger.info(f"⚡ PRIORIDAD DE CONSOLA: Forzando proveedor '{prov_consola}' de forma manual.")
-    else:
-        if os.path.exists(PROFILE_PATH):
-            try:
-                with open(PROFILE_PATH, "r") as f:
-                    perfil = json.load(f)
-                os.environ["AGNUX_IA_PROVIDER"] = perfil.get("proveedor_ia", "local")
-                os.environ["AGNUX_ACTIVE_MODEL"] = perfil.get("modelo_ia_sugerido", "qwen2.5:1.5b")
-            except Exception: pass
-    logger.info(f"🚀 NÚCLEO CONFIGURADO -> Runtime: {os.getenv('AGNUX_IA_PROVIDER', 'local')}")
