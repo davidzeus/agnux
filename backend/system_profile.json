@@ -1,0 +1,11 @@
+{
+    "cpu_modelo": "Intel(R) Pentium(R) CPU G4400 @ 3.30GHz",
+    "cpu_nucleos": 2,
+    "ram_total_gb": 8,
+    "posee_gpu_nvidia": false,
+    "proveedor_ia": "gemini",
+    "modelo_ia_sugerido": "gemini-2.5-flash",
+    "teclado_layout": "latam",
+    "disco_raiz_libre_gb": 81,
+    "api_key_guardada": "AIzaSyABOv21_H8EuB6kpTwb9Rj_29leeKGFO7A"
+}

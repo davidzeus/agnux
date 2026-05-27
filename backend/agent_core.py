@@ -1,24 +1,37 @@
 # agent_core.py
 import os
 import sys
-import json
-import importlib
+from typing import Literal
 
 # =====================================================================
-# 🛠️ PARCHE ESTRICTO DE RUTAS PARA SUBPROCESOS DE LINUX/UVICORN
+# 🛠️ PARCHE ESTRICTO DE RUTAS PARA SUBPROCESOS DE LINUX / UVICORN
 # =====================================================================
 base_dir = os.path.dirname(os.path.abspath(__file__))
 if base_dir not in sys.path:
     sys.path.insert(0, base_dir)
 
 from agno.agent import Agent
-from agno.models.ollama import Ollama
+import importlib
 
-# Importaciones de módulos nativos de herramientas
+# --- INSTANCIACIÓN DINÁMICA DEL PROVEEDOR DE IA ---
+PROVEEDOR = os.getenv("AGNUX_IA_PROVIDER", "local")
+MODELO_ID = os.getenv("AGNUX_ACTIVE_MODEL", "qwen2.5:1.5b")
+
+if PROVEEDOR == "gemini":
+    from agno.models.google import Gemini
+    objeto_modelo = Gemini(id=MODELO_ID)
+elif PROVEEDOR == "openai":
+    from agno.models.openai import OpenAIChat
+    objeto_modelo = OpenAIChat(id=MODELO_ID)
+else:
+    from agno.models.ollama import Ollama
+    objeto_modelo = Ollama(id=MODELO_ID)
+
+# Importaciones de módulos de herramientas estáticas nativas
 from tools.system_tools import obtener_diagnostico_hardware, gestionar_energia_equipo
 from tools.multimedia_tools import ejecutar_musica_fondo, controlar_reproductor_global
 
-# Configuración de directorios para herramientas en caliente
+# Configuración del almacenamiento dinámico de herramientas autogeneradas
 DYNAMIC_DIR = os.path.join(base_dir, "dynamic_tools")
 os.makedirs(DYNAMIC_DIR, exist_ok=True)
 
@@ -27,136 +40,108 @@ if not os.path.exists(os.path.join(DYNAMIC_DIR, "__init__.py")):
         f.write("")
 
 # =====================================================================
-# ⚡ HERRAMIENTAS FORMALES CON TIPADO NATIVO ESTRICTO (Para Agno)
+# 🧬 FUNCIÓN RAÍZ DE AUTOGÉNESIS (METAPROGRAMACIÓN EN CALIENTE)
 # =====================================================================
-
-def tool_diagnostico_wrapper(estado: str = None, accion: str = None) -> str:
-    """
-    Obtiene un reporte detallado del estado del hardware, uso de CPU, memoria RAM y disco en Lubuntu.
-    """
-    print(f"🔌 [TOOL CALL] El modelo invocó 'tool_diagnostico_wrapper'.")
-    if estado or accion:
-        print(f"   -> Descartando parámetros fantasma: estado={estado}, accion={accion}")
-    try:
-        resultado_dict = obtener_diagnostico_hardware()
-        return json.dumps(resultado_dict, indent=2, ensure_ascii=False)
-    except Exception as e:
-        return f"Error leyendo métricas de hardware: {str(e)}"
-
-def tool_energia_wrapper(accion: str = "apagar", estado: str = None) -> str:
-    """
-    Gestiona la energía del equipo físico (apagar o reiniciar). El parámetro 'accion' debe ser 'apagar' o 'reinicio'.
-    """
-    print(f"🔌 [TOOL CALL] El modelo invocó 'tool_energia_wrapper' con accion: {accion}")
-    try:
-        return str(gestionar_energia_equipo(accion))
-    except Exception as e:
-        return f"Error en gestión de energía: {str(e)}"
-
-def tool_musica_wrapper(busqueda: str = "lofi", accion: str = None, estado: str = None) -> str:
-    """
-    Busca una canción o mix en YouTube y lo reproduce de fondo usando MPV. Requiere el parámetro 'busqueda'.
-    """
-    print(f"🔌 [TOOL CALL] El modelo invocó 'tool_musica_wrapper' buscando: {busqueda}")
-    try:
-        return str(ejecutar_musica_fondo(busqueda))
-    except Exception as e:
-        return f"Error en subsistema multimedia: {str(e)}"
-
-def tool_control_audio_wrapper(accion: str = "pausa", estado: str = None) -> str:
-    """
-    Controla el reproductor global MPV de fondo. El parámetro 'accion' debe ser 'pausa', 'reproducir' o 'detener'.
-    """
-    print(f"🔌 [TOOL CALL] El modelo invocó 'tool_control_audio_wrapper' con accion: {accion}")
-    try:
-        return str(controlar_reproductor_global(accion))
-    except Exception as e:
-        return f"Error controlando reproductor: {str(e)}"
-
 def autogenerar_nueva_tool(nombre_funcion: str, codigo_python: str, descripcion_docstring: str) -> str:
     """
-    Escribe un nuevo script de Python en caliente dentro de la carpeta 'dynamic_tools' para expandir las capacidades del sistema.
-    
-    Args:
-        nombre_funcion (str): Nombre de la función en formato snake_case sin espacios.
-        codigo_python (str): Bloque de código puro y funcional en Python.
-        descripcion_docstring (str): Documentación formal explicando el propósito de la herramienta.
-        
-    Returns:
-        str: Mensaje de éxito de la inyección en disco.
+    OBLIGATORIA para crear, programar, listar cosas nuevas o desarrollar funciones de software o comandos que NO existan en el sistema.
+    Si el usuario te pide listar archivos, interactuar con carpetas nuevas, crear scripts o automatizar tareas que no tenés en tus herramientas básicas, DEBÉS usar esta función para escribir el código.
     """
-    print(f"🛠️ [AUTOGÉNESIS] Creando nueva herramienta: '{nombre_funcion}'...")
+    print(f"🛠️ [AUTOGÉNESIS] El modelo determinó que falta una herramienta. Creando: '{nombre_funcion}'...")
     try:
         nombre_clean = nombre_funcion.strip().replace(" ", "_")
         nombre_archivo = f"{DYNAMIC_DIR}/{nombre_clean}.py"
+        
         contenido_codigo = f'""\"\nDefinición autogenerada por AGNUX OS Core.\n""\"\n\ndef {nombre_clean}():\n    \"\"\"{descripcion_docstring}\"\"\"\n{codigo_python}\n'
+        
         with open(nombre_archivo, "w") as f:
             f.write(contenido_codigo)
-        return f"SUCCESS: Herramienta '{nombre_clean}' inyectada en disco."
+            
+        print(f"💾 [AUTOGEDESIS] Código escrito con éxito en {nombre_archivo}")
+        return f"SUCCESS: Herramienta '{nombre_clean}' inyectada en disco duro. Recargando matriz cognitiva..."
     except Exception as e:
+        print(f"❌ [AUTOGÉNESIS ERROR] No se pudo escribir el script: {str(e)}")
         return f"Error crítico de autogénesis: {str(e)}"
 
 # =====================================================================
-# 🧠 AGENTE CORE - CONFIGURACIÓN ESTÁNDAR COMPATIBLE
+# 🔌 WRAPPERS DE TELEMETRÍA Y CONTROL CON ENUMS ESTRICTOS
+# =====================================================================
+def tool_diagnostico_wrapper():
+    """Muestra el estado actual del hardware de la máquina: uso de CPU, memoria RAM y espacio en disco duro."""
+    print("🔌 [TOOL CALL] El modelo invocó 'tool_diagnostico_wrapper'")
+    return obtener_diagnostico_hardware()
+
+def tool_energia_wrapper(accion: Literal["apagar", "reiniciar"]):
+    """Gestiona el encendido, apagado o reinicio físico del equipo host."""
+    print(f"🔌 [TOOL CALL] El modelo invocó 'tool_energia_wrapper' con acción: {accion}")
+    return gestionar_energia_equipo(accion)
+
+def tool_musica_wrapper(busqueda_o_url: str):
+    """Busca y reproduce canciones, música o audios de YouTube de fondo en los parlantes del sistema operativo."""
+    print(f"🔌 [TOOL CALL] El modelo invocó 'tool_musica_wrapper' buscando: {busqueda_o_url}")
+    return ejecutar_musica_fondo(busqueda_o_url)
+
+def tool_control_audio_wrapper(accion: Literal["pausa", "reproducir", "detener"]):
+    """Controla el estado del reproductor de música de fondo (pausar, reanudar o detener de raíz el audio de mpv)."""
+    print(f"🔌 [TOOL CALL] El modelo invocó 'tool_control_audio_wrapper' con acción: {accion}")
+    return controlar_reproductor_global(accion)
+
+# Lista de referencia base para el Kernel inmutable
+TOOLS_BASE = [
+    autogenerar_nueva_tool, 
+    tool_diagnostico_wrapper, 
+    tool_energia_wrapper,
+    tool_musica_wrapper,
+    tool_control_audio_wrapper
+]
+
+# Prompt de sistema estricto encapsulado para el bypass de tipos
+AGNUX_SYSTEM_PROMPT = (
+    "Sos el nucleo de autogenesis de AGNUX OS. Tu fuerte es la programacion de bajo nivel de Linux.\n"
+    "CRITICO: Analiza minuciosamente el nombre de las herramientas y sus parametros validos antes de decidir llamarlas.\n"
+    "Si te piden crear una funcion para listar archivos, carpetas o cualquier logica nueva, usa SI O SI 'autogenerar_nueva_tool'. No asumas que otras herramientas pueden hacer esto.\n"
+    "Tenes prohibido pasarle parametros libres como 'listar' o 'buscar' a 'tool_control_audio_wrapper'. Esa herramienta solo acepta 'pausa', 'reproducir' o 'detener'.\n"
+    "Se conciso, profesional y directo en tus respuestas, emulando la velocidad de una shell de Linux."
+)
+
+# =====================================================================
+# 🧠 INICIALIZACIÓN DEL AGENTE CORE DE AGNUX (BYPASS DE SYSTEM PROMPT)
 # =====================================================================
 agnux_agent = Agent(
-    model=Ollama(
-        id="qwen2.5:0.5b",
-        options={
-            "num_thread": 2,       # Forzado estricto a los 2 hilos de tu Pentium G4400
-            "num_predict": 128,    # Respuestas ágiles de consola
-            "temperature": 0.0     # Precisión y determinismo puro
-        }
-    ),
-    description="Sos el núcleo agéntico inmutable de AGNUX, operando de forma directa sobre la CPU host.",
-    instructions=[
-        "Analiza la intención del usuario para comandar el sistema operativo de forma precisa.",
-        "Si te piden el estado de la memoria, CPU, temperaturas o disco, invoca la función 'tool_diagnostico_wrapper' sin pasar argumentos.",
-        "Si te piden apagar o reiniciar el equipo, invoca 'tool_energia_wrapper' pasando el parámetro exacto 'accion' ('apagar' o 'reinicio').",
-        "Si te piden reproducir música o un sonido de YouTube, invoca 'tool_musica_wrapper' pasando el término en el parámetro 'busqueda'.",
-        "Si te piden pausar, reanudar o detener el reproductor, invoca 'tool_control_audio_wrapper' pasando en 'accion' los valores 'pausa', 'reproducir' o 'detener'.",
-        "Si te piden una función de hardware o software que no posees instalada, diseña el código con 'autogenerar_nueva_tool'.",
-        "Sé ultra directo, escueto y técnico. No agregues saludos, introducciones ni explicaciones de cortesía."
-    ],
-    # Al pasar la lista de funciones limpias con tipado nativo formal en la firma de Python, 
-    # Agno genera el esquema JSON perfecto usando Pydantic nativo sin romper el diccionario de mapping.
-    tools=[
-        autogenerar_nueva_tool,
-        tool_diagnostico_wrapper,
-        tool_energia_wrapper,
-        tool_musica_wrapper,
-        tool_control_audio_wrapper
-    ],
+    model=objeto_modelo,
+    description=None,
+    instructions=None,
+    system_message=None,
+    add_datetime_to_instructions=False,
+    tools=TOOLS_BASE,
     markdown=False
 )
 
 # =====================================================================
-# 🔄 MOTOR DE RECARGA EN CALIENTE
+# 🔄 RECARGA COGNITIVA EN CALIENTE (DYNAMIC MODULE IMPORT)
 # =====================================================================
 def recargar_herramientas_dinamicas():
+    """
+    Escanea la carpeta de herramientas generadas por el modelo, las compila e
+    inyecta sus objetos nativos de Python de forma limpia en la estructura del agente.
+    """
     nuevas_tools = []
     if DYNAMIC_DIR not in sys.path:
         sys.path.append(DYNAMIC_DIR)
 
     try:
-        archivos = os.listdir(DYNAMIC_DIR)
-        for archivo in archivos:
+        for archivo in os.listdir(DYNAMIC_DIR):
             if archivo.endswith(".py") and archivo != "__init__.py":
                 nombre_modulo = archivo.replace(".py", "")
+                
                 modulo = importlib.import_module(nombre_modulo)
                 importlib.reload(modulo)
+                
                 funcion_objeto = getattr(modulo, nombre_modulo)
                 nuevas_tools.append(funcion_objeto)
                 
-        if nuevas_tools:
-            tools_base = [
-                autogenerar_nueva_tool,
-                tool_diagnostico_wrapper,
-                tool_energia_wrapper,
-                tool_musica_wrapper,
-                tool_control_audio_wrapper
-            ]
-            agnux_agent.tools = tools_base + nuevas_tools
-            agnux_agent.tools_schema = None
+        # Consolidamos la matriz definitiva de herramientas
+        agnux_agent.tools = TOOLS_BASE + nuevas_tools
+        
     except Exception as e:
         print(f"⚠️ Error en recarga dinámica del núcleo: {e}")
