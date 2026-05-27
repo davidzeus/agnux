@@ -1,0 +1,145 @@
+/* Contenedor Principal estilo Terminal */
+.agnux-container {
+  max-width: 750px;
+  margin: 50px auto;
+  font-family: 'Courier New', Courier, monospace;
+  padding: 25px;
+  background-color: #0d0d0d;
+  color: #00ff00;
+  border: 1px solid #00ff0022;
+  border-radius: 6px;
+  box-shadow: 0 4px 20px rgba(0, 255, 0, 0.05);
+}
+
+/* Grupo del Input Global */
+.input-group {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.prompt-prefix {
+  color: #00ff00;
+  font-weight: bold;
+  align-self: center;
+  user-select: none;
+}
+
+/* El Campo de Texto Cognitivo */
+.agnux-input {
+  flex: 1;
+  background-color: #161616;
+  border: 1px solid #262626;
+  color: #ffffff;
+  padding: 12px;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 14px;
+  outline: none;
+  border-radius: 4px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.agnux-input:focus {
+  border-color: #00ff0055;
+  box-shadow: 0 0 8px rgba(0, 255, 0, 0.15);
+}
+
+.agnux-input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Botón Industrial de Gatillado */
+.agnux-btn {
+  background-color: #00ff00;
+  color: #000000;
+  border: none;
+  padding: 0 24px;
+  font-family: 'Courier New', Courier, monospace;
+  font-weight: bold;
+  font-size: 13px;
+  letter-spacing: 1px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.agnux-btn:hover:not(:disabled) {
+  background-color: #00cc00;
+}
+
+.agnux-btn:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.agnux-btn:disabled {
+  background-color: #224422;
+  color: #004400;
+  cursor: not-allowed;
+}
+
+/* Paneles de Mensajes y Estados */
+.status-msg {
+  color: #ffaa00;
+  margin-bottom: 15px;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.error-msg {
+  color: #ff3333;
+  background-color: #241111;
+  border: 1px solid #551111;
+  padding: 12px;
+  border-radius: 4px;
+  margin-bottom: 15px;
+  font-size: 13px;
+}
+
+/* Panel de Resultados del Núcleo */
+.output-panel {
+  background-color: #050505;
+  border: 1px solid #1a1a1a;
+  padding: 18px;
+  border-radius: 4px;
+  max-height: 450px;
+  overflow-y: auto;
+}
+
+.output-header {
+  color: #666666;
+  font-size: 11px;
+  display: block;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.output-text {
+  margin: 0;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  color: #e0e0e0;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* Personalización de la barra de scroll estilo retro */
+.output-panel::-webkit-scrollbar {
+  width: 6px;
+}
+
+.output-panel::-webkit-scrollbar-track {
+  background: #050505;
+}
+
+.output-panel::-webkit-scrollbar-thumb {
+  background: #222;
+  border-radius: 3px;
+}
+
+.output-panel::-webkit-scrollbar-thumb:hover {
+  background: #00ff0033;
+}

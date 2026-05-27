@@ -3,15 +3,19 @@ Definición autogenerada por AGNUX OS Core.
 """
 
 def listar_descargas():
-    """Lista los archivos en la carpeta personal de descargas del usuario."""
-'''import os
+    """Muestra una lista de los archivos en la carpeta de descargas del usuario."""
 
-def listar_descargas():
-    descargas_path = os.path.expanduser("~/Downloads")
-    if not os.path.exists(descargas_path):
-        return "La carpeta de descargas no existe."
-    archivos = os.listdir(descargas_path)
-    if not archivos:
-        return "La carpeta de descargas está vacía."
-    return f"Archivos en la carpeta de descargas: {", ".join(archivos)}"
-'''
+    import os
+
+    try:
+        downloads_path = os.path.expanduser("~/Descargas")
+        files = os.listdir(downloads_path)
+        if files:
+            return "Archivos en tus descargas:\n" + "\n".join(files)
+        else:
+            return "No hay archivos en tu carpeta de descargas."
+    except FileNotFoundError:
+        return "La carpeta de descargas no fue encontrada."
+    except Exception as e:
+        return f"Ocurrió un error al listar descargas: {e}"
+    

@@ -1,6 +1,8 @@
 # agent_core.py
 import os
 import sys
+import json
+import importlib
 from typing import Literal
 
 # =====================================================================
@@ -11,7 +13,6 @@ if base_dir not in sys.path:
     sys.path.insert(0, base_dir)
 
 from agno.agent import Agent
-import importlib
 
 # --- INSTANCIACIÓN DINÁMICA DEL PROVEEDOR DE IA ---
 PROVEEDOR = os.getenv("AGNUX_IA_PROVIDER", "local")
@@ -27,7 +28,7 @@ else:
     from agno.models.ollama import Ollama
     objeto_modelo = Ollama(id=MODELO_ID)
 
-# Importaciones de módulos de herramientas estáticas nativas
+# Importaciones de módulos de herramientas estáticas nativas de AGNUX
 from tools.system_tools import obtener_diagnostico_hardware, gestionar_energia_equipo
 from tools.multimedia_tools import ejecutar_musica_fondo, controlar_reproductor_global
 
@@ -52,41 +53,46 @@ def autogenerar_nueva_tool(nombre_funcion: str, codigo_python: str, descripcion_
         nombre_clean = nombre_funcion.strip().replace(" ", "_")
         nombre_archivo = f"{DYNAMIC_DIR}/{nombre_clean}.py"
         
-        contenido_codigo = f'""\"\nDefinición autogenerada por AGNUX OS Core.\n""\"\n\ndef {nombre_clean}():\n    \"\"\"{descripcion_docstring}\"\"\"\n{codigo_python}\n'
+        contenido_codigo = f'"""\nDefinición autogenerada por AGNUX OS Core.\n"""\n\ndef {nombre_clean}():\n    """{descripcion_docstring}"""\n{codigo_python}\n'
         
         with open(nombre_archivo, "w") as f:
             f.write(contenido_codigo)
             
-        print(f"💾 [AUTOGEDESIS] Código escrito con éxito en {nombre_archivo}")
+        print(f"💾 [AUTOGÉNESIS] Código escrito con éxito en {nombre_archivo}")
         return f"SUCCESS: Herramienta '{nombre_clean}' inyectada en disco duro. Recargando matriz cognitiva..."
     except Exception as e:
         print(f"❌ [AUTOGÉNESIS ERROR] No se pudo escribir el script: {str(e)}")
         return f"Error crítico de autogénesis: {str(e)}"
 
 # =====================================================================
-# 🔌 WRAPPERS DE TELEMETRÍA Y CONTROL CON ENUMS ESTRICTOS
+# 🔌 WRAPPERS DE TELEMETRÍA Y CONTROL CON ENUMS ESTRICTOS (BLINDADOS)
 # =====================================================================
-def tool_diagnostico_wrapper():
+# Cambiamos la definición para que absorba argumentos fantasmas
+def tool_diagnostico_wrapper(**kwargs) -> str:
     """Muestra el estado actual del hardware de la máquina: uso de CPU, memoria RAM y espacio en disco duro."""
-    print("🔌 [TOOL CALL] El modelo invocó 'tool_diagnostico_wrapper'")
-    return obtener_diagnostico_hardware()
+    print(f"🔌 [TOOL CALL] El modelo invocó 'tool_diagnostico_wrapper'. Argumentos ignorados: {kwargs}")
+    res = obtener_diagnostico_hardware()
+    return json.dumps(res, indent=2) if isinstance(res, dict) else str(res)
 
-def tool_energia_wrapper(accion: Literal["apagar", "reiniciar"]):
+def tool_energia_wrapper(accion: Literal["apagar", "reiniciar"]) -> str:
     """Gestiona el encendido, apagado o reinicio físico del equipo host."""
     print(f"🔌 [TOOL CALL] El modelo invocó 'tool_energia_wrapper' con acción: {accion}")
-    return gestionar_energia_equipo(accion)
+    res = gestionar_energia_equipo(accion)
+    return json.dumps(res, indent=2) if isinstance(res, dict) else str(res)
 
-def tool_musica_wrapper(busqueda_o_url: str):
+def tool_musica_wrapper(busqueda_o_url: str) -> str:
     """Busca y reproduce canciones, música o audios de YouTube de fondo en los parlantes del sistema operativo."""
     print(f"🔌 [TOOL CALL] El modelo invocó 'tool_musica_wrapper' buscando: {busqueda_o_url}")
-    return ejecutar_musica_fondo(busqueda_o_url)
+    res = ejecutar_musica_fondo(busqueda_o_url)
+    return str(res)
 
-def tool_control_audio_wrapper(accion: Literal["pausa", "reproducir", "detener"]):
+def tool_control_audio_wrapper(accion: Literal["pausa", "reproducir", "detener"]) -> str:
     """Controla el estado del reproductor de música de fondo (pausar, reanudar o detener de raíz el audio de mpv)."""
     print(f"🔌 [TOOL CALL] El modelo invocó 'tool_control_audio_wrapper' con acción: {accion}")
-    return controlar_reproductor_global(accion)
+    res = controlar_reproductor_global(accion)
+    return str(res)
 
-# Lista de referencia base para el Kernel inmutable
+# Lista base inmutable de herramientas del Kernel
 TOOLS_BASE = [
     autogenerar_nueva_tool, 
     tool_diagnostico_wrapper, 
@@ -95,17 +101,8 @@ TOOLS_BASE = [
     tool_control_audio_wrapper
 ]
 
-# Prompt de sistema estricto encapsulado para el bypass de tipos
-AGNUX_SYSTEM_PROMPT = (
-    "Sos el nucleo de autogenesis de AGNUX OS. Tu fuerte es la programacion de bajo nivel de Linux.\n"
-    "CRITICO: Analiza minuciosamente el nombre de las herramientas y sus parametros validos antes de decidir llamarlas.\n"
-    "Si te piden crear una funcion para listar archivos, carpetas o cualquier logica nueva, usa SI O SI 'autogenerar_nueva_tool'. No asumas que otras herramientas pueden hacer esto.\n"
-    "Tenes prohibido pasarle parametros libres como 'listar' o 'buscar' a 'tool_control_audio_wrapper'. Esa herramienta solo acepta 'pausa', 'reproducir' o 'detener'.\n"
-    "Se conciso, profesional y directo en tus respuestas, emulando la velocidad de una shell de Linux."
-)
-
 # =====================================================================
-# 🧠 INICIALIZACIÓN DEL AGENTE CORE DE AGNUX (BYPASS DE SYSTEM PROMPT)
+# 🧠 INICIALIZACIÓN DEL AGENTE CORE DE AGNUX (COMPLETAMENTE LIMPIO)
 # =====================================================================
 agnux_agent = Agent(
     model=objeto_modelo,
@@ -131,16 +128,16 @@ def recargar_herramientas_dinamicas():
 
     try:
         for archivo in os.listdir(DYNAMIC_DIR):
-            if archivo.endswith(".py") and archivo != "__init__.py":
+            if archivo.endswith(".py") and archivo != "__init__.py" and archivo != "historial_consumo.json":
                 nombre_modulo = archivo.replace(".py", "")
                 
-                modulo = importlib.import_module(nombre_modulo)
+                modulo = importlib.import_module(f"dynamic_tools.{nombre_modulo}")
                 importlib.reload(modulo)
                 
                 funcion_objeto = getattr(modulo, nombre_modulo)
                 nuevas_tools.append(funcion_objeto)
                 
-        # Consolidamos la matriz definitiva de herramientas
+        # Seteamos la lista de herramientas combinada de forma limpia
         agnux_agent.tools = TOOLS_BASE + nuevas_tools
         
     except Exception as e:

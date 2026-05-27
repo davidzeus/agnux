@@ -1,3 +1,6 @@
+# =====================================================
+# Python Backend
+# =====================================================
 .venv/
 venv/
 __pycache__/
@@ -6,8 +9,46 @@ __pycache__/
 *.pyd
 .agnux_storage/
 .env
+.env.local
 .idea/
 .vscode/
 *.sqlite3
 *.db
 backend/venv/
+
+# =====================================================
+# Angular Frontend
+# =====================================================
+frontend/node_modules/
+frontend/.angular/
+frontend/dist/
+frontend/build/
+frontend/.env
+frontend/.env.local
+frontend/.env.*.local
+frontend/.DS_Store
+frontend/npm-debug.log
+frontend/yarn-error.log
+
+# =====================================================
+# OS & Editor Files
+# =====================================================
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+
+# =====================================================
+# IDE
+# =====================================================
+.vscode/
+.vscode-test/
+.history/
+*.code-workspace
