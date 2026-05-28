@@ -328,6 +328,7 @@ async def terminal_stream(terminal_id: str):
                     user_id = estado.get("user_id")
                     logger.info(f"✅ [TERMINAL] Aprobación detectada. Liberando terminal para: {user_id}")
                     yield f"data: {json.dumps({'event': 'AUTH_SUCCESS', 'user_id': user_id})}\n\n"
+                    await asyncio.sleep(1.5) # ⏳ Delay de cortesía para el buffer de red de Chrome
                     break
                 
                 # Mantenimiento del túnel SSE abierto

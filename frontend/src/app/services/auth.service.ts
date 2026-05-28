@@ -32,14 +32,15 @@ export class AuthService {
       this.eventSource.addEventListener('AUTH_SUCCESS', (event: any) => {
         const data = JSON.parse(event.data);
         console.log('🟢 [AGNUX KERNEL] Autenticación remota exitosa:', data);
-        
+
         if (typeof localStorage !== 'undefined') {
           localStorage.setItem('agnux_user_id', data.user_id);
         }
         this.currentUserSubject.next(data.user_id);
         
-        observer.next(data.user_id);
+        // Cierre controlado posterior al impacto del estado
         this.closeConnection();
+        observer.next(data.user_id);
       });
 
       this.eventSource.addEventListener('HEARTBEAT', (event: any) => {
