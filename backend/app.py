@@ -195,8 +195,9 @@ async def procesar_intencion_global(payload: TaskbarPrompt):
             
         # Adquiriendo candado de concurrencia
         async with OLLAMA_BUS_LOCK:
-            ollama_host = os.getenv("OLLAMA_HOST", "http://10.10.0.48:11434").rstrip("/")
-            url_chat = f"{ollama_host}/api/generate"
+            base_host = os.getenv('OLLAMA_HOST', 'http://10.10.0.48:11434').rstrip("/")
+            url_ollama_universal = f"{base_host}/api/generate"
+            modelo_activo = os.getenv('AGNUX_ACTIVE_MODEL', 'ministral-es:latest')
             
             yield json.dumps({"event": "ROUTER_START", "message": "Inicializando Router Semántico en Memoria..."}) + "\n"
             
@@ -241,9 +242,9 @@ async def procesar_intencion_global(payload: TaskbarPrompt):
 - Todo identificador debe normalizarse utilizando única y exclusivamente guiones medios ('-') o formato alfanumérico plano en minúsculas (ejemplo correcto: 'user-cristian', 'global-calculadora', 'term-desktop-101').
 - Si vas a autogenerar código en caliente para una nueva herramienta, el archivo físico en disco y su registro semántico deben usar guiones medios (ej. 'global-control-bomba.py')."""
 
-            payload_local = {
-                "model": "ministral:latest",
-                "prompt": f"{SYSTEM_PROMPT}\n\nUser Question: {payload.prompt}",
+            payload_ollama = {
+                "model": modelo_activo,
+                "prompt": f"{SYSTEM_PROMPT}\n\nUser: {payload.prompt}",
                 "stream": True
             }
             # Nota: El endpoint /api/generate es de texto plano y no procesa 'tools' de forma nativa.
@@ -254,7 +255,7 @@ async def procesar_intencion_global(payload: TaskbarPrompt):
             try:
                 # Streaming multiplexado al bus Ollama
                 async with httpx.AsyncClient() as client:
-                    async with client.stream("POST", url_chat, json=payload_local, timeout=60.0) as response:
+                    async with client.stream("POST", url_ollama_universal, json=payload_ollama, timeout=60.0) as response:
                         if response.status_code != 200:
                             yield json.dumps({"event": "ERROR", "message": f"Bus Inferencia Caído. HTTP {response.status_code}"}) + "\n"
                             return
@@ -265,9 +266,10 @@ async def procesar_intencion_global(payload: TaskbarPrompt):
                                     data = json.loads(line)
                                     token = data.get("response", "")
                                     if token:
-                                        # Emite el token bajo el protocolo AG-UI (formato JSONLine)
-                                        yield json.dumps({"event": "TOKEN", "text": token}) + "\n"
-                                except Exception: continue
+                                        # Emitimos bajo el protocolo AG-UI para la barra verde
+                                        yield f"event: TOKEN\ndata: {json.dumps(token)}\n\n"
+                                except Exception:
+                                    continue
                             
             except Exception as e:
                 yield json.dumps({"event": "ERROR", "message": f"Ollama Stream Network Error: {e}"}) + "\n"
