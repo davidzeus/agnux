@@ -29,18 +29,18 @@ export class AuthService {
       this.eventSource = new EventSource(`http://10.10.0.66:8000/api/auth/terminal-stream/${terminalId}`);
 
       // Escucha el evento personalizado que dispara FastAPI al aprobar desde el celular
-      this.eventSource.addEventListener('AUTH_SUCCESS', (event: any) => {
+      this.eventSource.addEventListener('AUTH-SUCCESS', (event: any) => {
         const data = JSON.parse(event.data);
         console.log('🟢 [AGNUX KERNEL] Autenticación remota exitosa:', data);
 
         if (typeof localStorage !== 'undefined') {
-          localStorage.setItem('agnux_user_id', data.user_id);
+          localStorage.setItem('agnux_user_id', data.userId);
         }
-        this.currentUserSubject.next(data.user_id);
+        this.currentUserSubject.next(data.userId);
         
         // Cierre controlado posterior al impacto del estado
         this.closeConnection();
-        observer.next(data.user_id);
+        observer.next(data.userId);
       });
 
       this.eventSource.addEventListener('HEARTBEAT', (event: any) => {
@@ -58,6 +58,27 @@ export class AuthService {
       terminal_id: terminalId,
       user_id: userId
     });
+  }
+
+  loginFacial(file: File): Observable<any> {
+    const formData = new FormData();
+    formData.append('file', file);
+    const req = this.http.post('http://10.10.0.66:8000/api/auth/facial-login', formData);
+    
+    req.subscribe({
+      next: (res: any) => {
+        if (res.status === 'authenticated' && res.user_id) {
+          console.log('🟢 [AGNUX BIOMETRICS] Reconocimiento local exitoso:', res.user_id);
+          if (typeof localStorage !== 'undefined') {
+            localStorage.setItem('agnux_user_id', res.user_id);
+          }
+          this.currentUserSubject.next(res.user_id);
+          this.closeConnection();
+        }
+      },
+      error: () => {} // Ignorar errores de reconocimiento continuo
+    });
+    return req;
   }
 
   closeConnection() {

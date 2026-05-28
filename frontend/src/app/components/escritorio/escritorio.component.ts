@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit, afterNextRender } from '@angular/core';
+import { Component, OnDestroy, OnInit, afterNextRender, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Subscription, take } from 'rxjs';
@@ -35,8 +35,15 @@ export class EscritorioComponent implements OnInit, OnDestroy {
 
   userId: string | null = null;
   terminalId: string = '';
+  qrUrl: string = '';
   isLocked: boolean = true;
   private authSub!: Subscription;
+
+  // Local Biometric state
+  tieneCamaraLocal: boolean = false;
+  @ViewChild('videoElement') videoElement!: ElementRef<HTMLVideoElement>;
+  private streamCamara: MediaStream | null = null;
+  private intervalFacial: any;
 
   constructor(private agnuxService: AgnuxService, private authService: AuthService) {
     afterNextRender(() => {
@@ -44,6 +51,26 @@ export class EscritorioComponent implements OnInit, OnDestroy {
         this.horaActual = new Date();
       }, 1000);
     });
+
+    this.subscriptions.push(
+      this.agnuxService.eventStatus$.subscribe(status => {
+        if (status.type === 'TOOL_EXECUTE') {
+          this.cargando = true;
+          const msg = status.msg || '';
+          if (msg.includes('reproducir_musica')) {
+            this.spawnVentana('musica', '🎵 AGNUX Media Player', { status: 'Playing...' });
+          } else if (msg.includes('tool_reproductor_video')) {
+            this.spawnVentana('video', '🎬 AGNUX Video Core', { url: '' });
+          }
+        } else if (status.type === 'TOOL_END' || status.type === 'ERROR') {
+          this.cargando = false;
+        } else if (status.type === 'INFERENCE_START') {
+          this.currentHtmlWindowId = this.spawnVentana('html', '⚡ AGNUX OS Intelligence Output', null);
+        } else if (status.type === 'ERROR') {
+          this.spawnVentana('texto', '❌ Error de Sistema', { error: status.message });
+        }
+      })
+    );
   }
 
   ngOnInit() {
@@ -66,20 +93,6 @@ export class EscritorioComponent implements OnInit, OnDestroy {
     });
 
     this.subscriptions.push(
-      this.agnuxService.eventStatus$.subscribe(status => {
-        if (status.type === 'TOOL_EXECUTE') {
-          const msg = status.msg || '';
-          if (msg.includes('reproducir_musica')) {
-            this.spawnVentana('musica', '🎵 AGNUX Media Player', { status: 'Playing...' });
-          } else if (msg.includes('tool_reproductor_video')) {
-            this.spawnVentana('video', '🎬 AGNUX Video Core', { url: '' });
-          }
-        } else if (status.type === 'INFERENCE_START') {
-          this.currentHtmlWindowId = this.spawnVentana('html', '⚡ AGNUX OS Intelligence Output', null);
-        } else if (status.type === 'ERROR') {
-          this.spawnVentana('texto', '❌ Error de Sistema', { error: status.message });
-        }
-      })
     );
 
     this.subscriptions.push(
@@ -100,12 +113,60 @@ export class EscritorioComponent implements OnInit, OnDestroy {
   }
 
   iniciarFlujoBloqueo() {
-    this.terminalId = 'TERM_DESKTOP_' + Math.floor(Math.random() * 100000);
+    this.terminalId = 'TERM-DESKTOP-' + Math.floor(Math.random() * 100000);
+    this.qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent('http://10.10.0.66:4200/authorize?terminal-id=' + this.terminalId)}`;
     console.warn(`🔒 [UI] Terminal Bloqueada. ID Asignado: ${this.terminalId}`);
     
     // Evitar ejecutar SSE en SSR Node.js
     if (typeof window !== 'undefined') {
       this.authService.listenTerminal(this.terminalId).pipe(take(1)).subscribe();
+
+      // Sondeo silencioso de periféricos
+      navigator.mediaDevices.enumerateDevices().then(devices => {
+        const camara = devices.some(device => device.kind === 'videoinput');
+        this.tieneCamaraLocal = camara;
+        if (camara) {
+          console.log("📹 [KERNEL UI] Periférico de video detectado. Inicializando reconocimiento facial secundario...");
+          this.activarStreamingCamaraLocal();
+        }
+      });
+    }
+  }
+
+  activarStreamingCamaraLocal() {
+    if (typeof navigator !== 'undefined' && navigator.mediaDevices) {
+      navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
+        this.streamCamara = stream;
+        // Delay ligero para permitir que Angular renderice el *ngIf del canvas/video
+        setTimeout(() => {
+          if (this.videoElement && this.videoElement.nativeElement) {
+            this.videoElement.nativeElement.srcObject = stream;
+            // Frame check cada 3 segundos
+            this.intervalFacial = setInterval(() => this.capturarFrameFacial(), 3000);
+          }
+        }, 500);
+      }).catch(err => console.warn("⚠️ [KERNEL UI] Error bloqueando cámara local:", err));
+    }
+  }
+
+  capturarFrameFacial() {
+    if (!this.videoElement || !this.videoElement.nativeElement || !this.isLocked) return;
+    
+    const video = this.videoElement.nativeElement;
+    if (video.videoWidth === 0) return;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const context = canvas.getContext('2d');
+    if (context) {
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob(blob => {
+        if (blob) {
+          const file = new File([blob], 'frame.jpg', { type: 'image/jpeg' });
+          this.authService.loginFacial(file).subscribe();
+        }
+      }, 'image/jpeg');
     }
   }
 
@@ -118,6 +179,13 @@ export class EscritorioComponent implements OnInit, OnDestroy {
       this.authSub.unsubscribe();
     }
     this.authService.closeConnection();
+
+    if (this.streamCamara) {
+      this.streamCamara.getTracks().forEach(track => track.stop());
+    }
+    if (this.intervalFacial) {
+      clearInterval(this.intervalFacial);
+    }
   }
 
   spawnVentana(tipo: 'html' | 'musica' | 'video' | 'texto', titulo: string, datos: any): string {

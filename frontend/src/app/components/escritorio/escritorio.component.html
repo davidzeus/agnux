@@ -7,9 +7,22 @@
         <p class="blink-text">SISTEMA CONTROLADO POR ENTORNO BIOMÉTRICO</p>
         <p>Escanee el acceso desde su dispositivo móvil a través de la VPN privada:</p>
         
-        <div class="qr-placeholder">
-          <p class="qr-text">IP: 10.10.0.66</p>
-          <p class="qr-link">ID: {{ terminalId }}</p>
+        <div style="display: flex; justify-content: center; align-items: center; gap: 40px; margin: 20px 0;">
+          <!-- Nodo Central Inmutable: QR VPN -->
+          <div class="qr-container" style="text-align: center;">
+            <img [src]="qrUrl" alt="AG-CONF-QR" style="border: 4px solid #00e5ff; padding: 10px; background: white; box-shadow: 0 0 15px rgba(0, 229, 255, 0.5);" />
+            <p style="color: #00e5ff; font-family: monospace; margin-top: 10px; font-size: 12px; font-weight: bold;">
+              TARGET: 10.10.0.66 | NODE: {{ terminalId }}
+            </p>
+          </div>
+
+          <!-- Módulo Secundario Dinámico: Biometría Local -->
+          <div class="cam-container" *ngIf="tieneCamaraLocal" style="text-align: center;">
+            <video #videoElement autoplay muted playsinline style="width: 250px; height: 250px; object-fit: cover; border: 4px solid #ff3366; box-shadow: 0 0 15px rgba(255, 51, 102, 0.5);"></video>
+            <p class="blink-text" style="color: #ff3366; font-family: monospace; margin-top: 10px; font-size: 12px; font-weight: bold;">
+              SCANNING LOCAL BIOMETRICS...
+            </p>
+          </div>
         </div>
         
         <p class="footer-msg">Esperando token de proximidad WireGuard...</p>

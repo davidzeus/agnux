@@ -325,14 +325,14 @@ async def terminal_stream(terminal_id: str):
             while True:
                 estado = TERMINAL_SESSIONS.get(terminal_id)
                 if estado and estado.get("status") == "approved":
-                    user_id = estado.get("user_id")
-                    logger.info(f"✅ [TERMINAL] Aprobación detectada. Liberando terminal para: {user_id}")
-                    yield f"data: {json.dumps({'event': 'AUTH_SUCCESS', 'user_id': user_id})}\n\n"
+                    userid = estado.get("user-id") or estado.get("user_id") # Tolerancia de parseo interno
+                    logger.info(f"✅ [TERMINAL] Aprobación detectada. Liberando terminal para: {userid}")
+                    yield f"event: AUTH-SUCCESS\ndata: {json.dumps({'userId': userid})}\n\n"
                     await asyncio.sleep(1.5) # ⏳ Delay de cortesía para el buffer de red de Chrome
                     break
                 
                 # Mantenimiento del túnel SSE abierto
-                yield f"data: {json.dumps({'event': 'HEARTBEAT'})}\n\n"
+                yield f"event: HEARTBEAT\ndata: {json.dumps({'status': 'keep-alive'})}\n\n"
                 await asyncio.sleep(1.0)
         finally:
             # Destruye el socket local de la tabla

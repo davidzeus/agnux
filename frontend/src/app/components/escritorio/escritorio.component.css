@@ -122,7 +122,8 @@
 }
 
 .lock-window {
-  width: 450px;
+  min-width: 450px;
+  width: fit-content;
   background: rgba(10, 10, 10, 0.8);
   border: 1px solid #ff3366;
   box-shadow: 0 0 20px rgba(255, 51, 102, 0.3), inset 0 0 10px rgba(255, 51, 102, 0.1);
