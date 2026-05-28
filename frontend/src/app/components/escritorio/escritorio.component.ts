@@ -1,7 +1,7 @@
 import { Component, OnDestroy, OnInit, afterNextRender } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Subscription } from 'rxjs';
+import { Subscription, take } from 'rxjs';
 import { AgnuxService } from '../../services/agnux.service';
 import { Ventana } from '../../models/ventana.model';
 import { VentanaComponent } from '../ventana/ventana.component';
@@ -48,13 +48,20 @@ export class EscritorioComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     this.authSub = this.authService.currentUser$.subscribe(user => {
-      this.userId = user;
+      console.log('🔄 [UI KERNEL] Cambio de estado de usuario detectado:', user);
+      
       if (user) {
+        // 🔓 Si hay usuario, limpiamos CUALQUIER conexión residual primero
+        this.authService.closeConnection();
+        this.userId = user;
         this.isLocked = false;
-        console.log(`🔓 [UI] Sistema Desbloqueado. Operador: ${user}`);
+        console.log(`🔓 [UI KERNEL] Terminal liberada con éxito para: ${user}`);
       } else {
         this.isLocked = true;
-        this.iniciarFlujoBloqueo();
+        // Evita disparar el bloqueo si ya hay un ID de terminal inicializado escuchando
+        if (!this.terminalId) {
+          this.iniciarFlujoBloqueo();
+        }
       }
     });
 
@@ -98,7 +105,7 @@ export class EscritorioComponent implements OnInit, OnDestroy {
     
     // Evitar ejecutar SSE en SSR Node.js
     if (typeof window !== 'undefined') {
-      this.authService.listenTerminal(this.terminalId).subscribe();
+      this.authService.listenTerminal(this.terminalId).pipe(take(1)).subscribe();
     }
   }
 
