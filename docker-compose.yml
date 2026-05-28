@@ -1,0 +1,42 @@
+services:
+  # 🧠 CORE BACKEND: API FASTAPI + EMISOR DE EVENTOS SSE (AG-UI)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.back
+    container_name: agnux_backend_dev
+    ports:
+      - "8000:8000"
+    environment:
+      - AGNUX_IA_PROVIDER=local
+      - AGNUX_ACTIVE_MODEL=ministral:latest
+      - OLLAMA_HOST=http://10.10.0.48:11434  # 🔥 Enlace directo al nodo de tu LAN
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./backend:/app
+      # Volumen específico para preservar las automatizaciones que la IA cree o mute en caliente
+      - ./backend/dynamic_tools:/app/dynamic_tools
+    networks:
+      - agnux_net
+    restart: unless-stopped
+
+  # 💻 INTERFAZ GRAFICA FRONTEND: CONSOLA CYBERPUNK INMERSIVA (ANGULAR)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.front
+    container_name: agnux_frontend_dev
+    ports:
+      - "4200:4200"
+    volumes:
+      - ./frontend:/app
+      # Volumen anónimo para node_modules, evita que choquen las arquitecturas del host y el contenedor
+      - /app/node_modules
+    networks:
+      - agnux_net
+    restart: unless-stopped
+
+networks:
+  agnux_net:
+    driver: bridge
+    name: agnux_internal_network

@@ -1,0 +1,12 @@
+FROM node:18-slim
+
+WORKDIR /app
+
+# Instalar Angular CLI global en el entorno del contenedor
+RUN npm install -g @angular/cli@latest
+
+EXPOSE 4200
+
+# Forzamos a Angular a escuchar en 0.0.0.0 y activamos el polling para que el Hot-Reload
+# detecte los cambios de archivos a través del volumen de Docker en Linux
+CMD ["ng", "serve", "--host", "0.0.0.0", "--poll", "2000", "--disable-host-check"]

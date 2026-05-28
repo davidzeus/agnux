@@ -13,7 +13,7 @@ export interface AgnuxResponse {
   providedIn: 'root'
 })
 export class AgnuxService {
-  private apiUrl = 'http://127.0.0.1:8000/api/system/intent';
+private apiUrl = 'http://10.10.0.66:8000/api/system/intent';
 
   constructor(private http: HttpClient) {}
 

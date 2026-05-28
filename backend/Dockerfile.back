@@ -1,0 +1,15 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Instalar herramientas básicas de compilación por si alguna librería requiere C nativo
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copiar el índice de librerías e instalarlas sin dejar basura en caché
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Levantamos Uvicorn escuchando en todas las interfaces para que Docker exponga el puerto
+CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
