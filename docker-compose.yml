@@ -49,7 +49,7 @@ services:
       - TZ=America/Argentina/Buenos_Aires
       - SERVERURL=10.10.0.66       # 🌐 Reemplazar por tu IP pública o DDNS al desplegar fuera de casa
       - SERVERPORT=51820
-      - PEERS=cristian_mobile,medico_mobile  # 📱 Genera perfiles independientes y únicos para multi-usuario
+      - PEERS=cristianmobile,medicomobile  # 📱 Genera perfiles independientes y únicos para multi-usuario
       - PEERDNS=auto
       - ALLOWEDIPS=10.10.0.0/24,192.168.1.0/24  # Enrutamiento hacia tus contenedores y la LAN de casa
       - WITH_CORE=false              # 🔥 CLAVE: Desactiva el módulo nativo para evitar caídas
