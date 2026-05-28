@@ -196,7 +196,7 @@ async def procesar_intencion_global(payload: TaskbarPrompt):
         # Adquiriendo candado de concurrencia
         async with OLLAMA_BUS_LOCK:
             ollama_host = os.getenv("OLLAMA_HOST", "http://10.10.0.48:11434").rstrip("/")
-            url_chat = f"{ollama_host}/api/chat"
+            url_chat = f"{ollama_host}/api/generate"
             
             yield json.dumps({"event": "ROUTER_START", "message": "Inicializando Router Semántico en Memoria..."}) + "\n"
             
@@ -243,13 +243,10 @@ async def procesar_intencion_global(payload: TaskbarPrompt):
 
             payload_local = {
                 "model": "ministral:latest",
-                "messages": [
-                    {"role": "system", "content": SYSTEM_PROMPT},
-                    {"role": "user", "content": payload.prompt}
-                ],
+                "prompt": f"{SYSTEM_PROMPT}\n\nUser Question: {payload.prompt}",
                 "stream": True
             }
-            if openai_tools: payload_local["tools"] = openai_tools
+            # Nota: El endpoint /api/generate es de texto plano y no procesa 'tools' de forma nativa.
             
             tool_call_detected = None
             argumentos_acumulados = ""
@@ -266,16 +263,7 @@ async def procesar_intencion_global(payload: TaskbarPrompt):
                             if line:
                                 try:
                                     data = json.loads(line)
-                                    # Adaptación para compatibilidad de Tool Calling nativa en Ollama
-                                    if "message" in data and "tool_calls" in data["message"]:
-                                        for tc in data["message"]["tool_calls"]:
-                                            if tc.get("function"):
-                                                if tc["function"].get("name"): tool_call_detected = tc["function"]["name"]
-                                                if tc["function"].get("arguments"): 
-                                                    args = tc["function"]["arguments"]
-                                                    argumentos_acumulados += json.dumps(args) if isinstance(args, dict) else args
-                                    
-                                    token = data.get("message", {}).get("content", "")
+                                    token = data.get("response", "")
                                     if token:
                                         # Emite el token bajo el protocolo AG-UI (formato JSONLine)
                                         yield json.dumps({"event": "TOKEN", "text": token}) + "\n"
