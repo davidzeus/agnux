@@ -11,11 +11,52 @@ services:
       - AGNUX_IA_PROVIDER=local
       - AGNUX_ACTIVE_MODEL=ministral-es:latest  # 🔥 El orquestador principal del SO
       - OLLAMA_HOST=http://10.10.0.48:11434
+      - QDRANT_HOST=http://qdrant_db:6333     # 🔌 Enlace interno al bus de Rust de Qdrant
       - PYTHONUNBUFFERED=1
     volumes:
       - ./backend:/app
       # Volumen específico para preservar las automatizaciones que la IA cree o mute en caliente
       - ./backend/dynamic_tools:/app/dynamic_tools
+    networks:
+      - agnux_net
+    depends_on:
+      - qdrant_db  # 🛡️ El Kernel espera a que la base vectorial esté en línea
+    restart: unless-stopped
+
+  # 🗄️ BASE DE DATOS VECTORIAL: QDRANT (MEMORIA SEMÁNTICA EN RUST)
+  qdrant_db:
+    image: qdrant/qdrant:latest
+    container_name: agnux_qdrant_db
+    ports:
+      - "6333:6333"  # Puerto HTTP para el cliente de FastAPI
+      - "6334:6334"  # Puerto gRPC para máxima velocidad de transferencia
+    volumes:
+      - ./qdrant_storage:/qdrant/storage  # 💾 Persistencia de rostros, huellas de voz y tools en el host
+    networks:
+      - agnux_net
+    restart: unless-stopped
+
+  # 🔐 SERVIDOR DE SEGURIDAD: WIREGUARD VPN (TÚNELES DE ACCESO MOBILE)
+  vpn_agnux:
+    image: lscr.io/linuxserver/wireguard:latest
+    container_name: agnux_vpn
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/Argentina/Buenos_Aires
+      - SERVERURL=tu_ip_publica_o_ddns       # 🌐 Reemplazar por tu IP pública o DDNS al desplegar fuera de casa
+      - SERVERPORT=51820
+      - PEERS=cristian_mobile,medico_mobile  # 📱 Genera perfiles independientes y únicos para multi-usuario
+      - PEERDNS=auto
+      - ALLOWEDIPS=10.10.0.0/24,192.168.1.0/24  # Enrutamiento hacia tus contenedores y la LAN de casa
+    ports:
+      - "51820:51820/udp"
+    volumes:
+      - ./wireguard_config:/config
+      - /lib/modules:/lib/modules            # Enlace con los módulos de red del Kernel del host
     networks:
       - agnux_net
     restart: unless-stopped
@@ -30,8 +71,7 @@ services:
       - "4200:4200"
     volumes:
       - ./frontend:/app
-      # Volumen anónimo para node_modules, evita que choquen las arquitecturas del host y el contenedor
-      - /app/node_modules
+      - /app/node_modules  # Volumen anónimo para node_modules, evita que choquen las arquitecturas del host y el contenedor
     networks:
       - agnux_net
     restart: unless-stopped
