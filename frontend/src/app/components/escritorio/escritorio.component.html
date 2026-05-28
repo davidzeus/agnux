@@ -1,4 +1,10 @@
 <div class="desktop-env" (click)="currentHtmlWindowId ? null : null">
+  <!-- Reloj de Escritorio -->
+  <div class="desktop-clock">
+    <div class="clock-time">{{ horaActual | date:'HH:mm' }}</div>
+    <div class="clock-date">{{ horaActual | date:'EEEE, d MMM y' | uppercase }}</div>
+  </div>
+
   <!-- Ventanas Flotantes -->
   <ng-container *ngFor="let win of ventanas">
     <app-ventana 

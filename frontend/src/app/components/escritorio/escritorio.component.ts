@@ -29,10 +29,16 @@ export class EscritorioComponent implements OnInit, OnDestroy {
   private maxZIndex = 100;
   private subscriptions: Subscription[] = [];
   public currentHtmlWindowId: string | null = null;
+  public horaActual: Date = new Date();
+  private clockInterval: any;
 
   constructor(private agnuxService: AgnuxService) {}
 
   ngOnInit() {
+    this.clockInterval = setInterval(() => {
+      this.horaActual = new Date();
+    }, 1000);
+
     this.subscriptions.push(
       this.agnuxService.eventStatus$.subscribe(status => {
         if (status.type === 'TOOL_EXECUTE') {
@@ -69,6 +75,9 @@ export class EscritorioComponent implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.subscriptions.forEach(sub => sub.unsubscribe());
+    if (this.clockInterval) {
+      clearInterval(this.clockInterval);
+    }
   }
 
   spawnVentana(tipo: 'html' | 'musica' | 'video' | 'texto', titulo: string, datos: any): string {
