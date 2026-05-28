@@ -9,10 +9,6 @@ from pydantic import BaseModel
 import httpx
 from sentence_transformers import SentenceTransformer
 
-# 🧠 INICIALIZACIÓN DEL MOTOR VECTORIAL LOCAL EN CPU
-# La primera vez descargará el modelo 'nomic-embed-text-v1.5' (aprox 280MB) y quedará congelado en la RAM del Lenovo
-logger.info("⚡ [KERNEL BOOT] Cargando modelo Nomic Embeddings local en hilos de CPU...")
-model_embedding_local = SentenceTransformer("nomic-ai/nomic-embed-text-v1.5", trust_remote_code=True)
 # =====================================================================
 # CONFIGURACIÓN DE ENTORNO Y LOGS INDUSTRIALES
 # =====================================================================
@@ -32,6 +28,12 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# 🧠 INICIALIZACIÓN DEL MOTOR VECTORIAL LOCAL EN CPU
+# La primera vez descargará el modelo 'nomic-embed-text-v1.5' (aprox 280MB) y quedará congelado en la RAM del Lenovo
+logger.info("⚡ [KERNEL BOOT] Cargando modelo Nomic Embeddings local en hilos de CPU...")
+model_embedding_local = SentenceTransformer("nomic-ai/nomic-embed-text-v1.5", trust_remote_code=True)
+
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DYNAMIC_DIR = os.path.join(BASE_DIR, "dynamic_tools")
