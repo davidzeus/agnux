@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit, afterNextRender } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
@@ -32,13 +32,15 @@ export class EscritorioComponent implements OnInit, OnDestroy {
   public horaActual: Date = new Date();
   private clockInterval: any;
 
-  constructor(private agnuxService: AgnuxService) {}
+  constructor(private agnuxService: AgnuxService) {
+    afterNextRender(() => {
+      this.clockInterval = setInterval(() => {
+        this.horaActual = new Date();
+      }, 1000);
+    });
+  }
 
   ngOnInit() {
-    this.clockInterval = setInterval(() => {
-      this.horaActual = new Date();
-    }, 1000);
-
     this.subscriptions.push(
       this.agnuxService.eventStatus$.subscribe(status => {
         if (status.type === 'TOOL_EXECUTE') {
