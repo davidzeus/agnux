@@ -248,7 +248,8 @@ async def procesar_intencion_global(payload: TaskbarPrompt):
         "REGLA CRÍTICA DE INVOCACIÓN:\n"
         "1. Solo podés invocar una herramienta si está explícitamente disponible en tu parámetro 'tools'.\n"
         "2. Si el usuario te pide una acción que requiere una herramienta disponible, debés llamarla usando una estructura 'tool_calls' nativa. No inventes código ni respondas con texto descriptivo si la herramienta existe.\n"
-        "3. Si 'tools' está vacío o no contiene una función adecuada para la orden (por ejemplo, preguntas generales, historia o cultura), ignorá las herramientas por completo y respondé directamente con texto plano de forma ultra corta, ejecutiva y en formato consola."
+        "3. Si 'tools' está vacío o no contiene una función adecuada para la orden (por ejemplo, preguntas generales, historia o cultura), ignorá las herramientas por completo y respondé directamente con texto plano de forma ultra corta, ejecutiva y en formato consola.\n"
+        "4. Cuando devuelvas listados de archivos, reportes de hardware o diagnósticos complejos, DEBES estructurar la salida usando elementos nativos de Angular Material (ej: <mat-list><mat-list-item>...) en texto plano de forma directa para el innerHTML. PROHIBIDO taxativamente el uso de bloques de marcado markdown (```html)."
     )
 
     # 🔥 NUEVO MOTOR DE FLUJO CONTINUO ASÍNCRONO DE EVENTOS (AG-UI COMPATIBLE)

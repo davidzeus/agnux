@@ -1,13 +1,13 @@
 import { Component } from '@angular/core';
-import { CommandBarComponent } from './components/command-bar/command-bar.component';
+import { EscritorioComponent } from './components/escritorio/escritorio.component';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommandBarComponent], 
-  template: '<app-command-bar></app-command-bar>', 
+  imports: [EscritorioComponent], 
+  template: '<app-escritorio></app-escritorio>', 
 })
 
 export class AppComponent {
-  title = 'frontend';
+  title = 'AGNUX OS';
 }

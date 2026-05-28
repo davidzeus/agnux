@@ -1,0 +1,87 @@
+<div class="desktop-env" (click)="currentHtmlWindowId ? null : null">
+  <!-- Ventanas Flotantes -->
+  <ng-container *ngFor="let win of ventanas">
+    <mat-card 
+      class="cyber-window" 
+      [class.maximized]="win.maximizada"
+      [class.video-window]="win.tipo === 'video'"
+      [style.z-index]="win.zIndex"
+      [style.left.px]="win.maximizada ? 0 : win.x"
+      [style.top.px]="win.maximizada ? 0 : win.y"
+      (mousedown)="enfocarVentana(win)">
+      
+      <!-- Header de la Ventana -->
+      <div class="window-header">
+        <div class="window-title">
+          <mat-icon class="title-icon">terminal</mat-icon>
+          <span>{{ win.titulo }}</span>
+        </div>
+        <div class="window-actions">
+          <button mat-icon-button (click)="toggleMaximizar(win)">
+            <mat-icon>{{ win.maximizada ? 'flip_to_front' : 'crop_square' }}</mat-icon>
+          </button>
+          <button mat-icon-button color="warn" (click)="cerrarVentana(win.id)">
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
+      </div>
+
+      <!-- Contenido Dinámico -->
+      <mat-card-content class="window-content" [ngSwitch]="win.tipo">
+        
+        <!-- TIPO HTML (Resultados de Inteligencia) -->
+        <div *ngSwitchCase="'html'" class="html-container">
+          <div class="console-output" [innerHTML]="win.htmlDinamico | safeHtml"></div>
+        </div>
+
+        <!-- TIPO MUSICA (Reproductor) -->
+        <div *ngSwitchCase="'musica'" class="music-container">
+          <div class="pulse-ring">
+            <mat-icon class="pulse-icon">graphic_eq</mat-icon>
+          </div>
+          <div class="track-info">Playing Neural Stream...</div>
+          <div class="media-controls">
+            <button mat-icon-button><mat-icon>skip_previous</mat-icon></button>
+            <button mat-fab class="play-btn"><mat-icon>play_arrow</mat-icon></button>
+            <button mat-icon-button><mat-icon>pause</mat-icon></button>
+            <button mat-icon-button><mat-icon>skip_next</mat-icon></button>
+          </div>
+        </div>
+
+        <!-- TIPO VIDEO (Reproductor) -->
+        <div *ngSwitchCase="'video'" class="video-container">
+          <!-- TODO: parse URL properly to embed YouTube or use native video -->
+          <div class="video-placeholder">
+            <mat-icon>movie</mat-icon>
+            <p>Reproduciendo stream de video físico...</p>
+          </div>
+        </div>
+
+        <!-- TIPO TEXTO (Errores o Mensajes Cortos) -->
+        <div *ngSwitchCase="'texto'" class="text-container">
+          <pre>{{ win.datos?.error || win.datos }}</pre>
+        </div>
+
+      </mat-card-content>
+    </mat-card>
+  </ng-container>
+
+  <!-- Barra de Comandos Inferior (Terminal Input) -->
+  <div class="command-bar">
+    <div class="input-wrapper">
+      <mat-icon class="prompt-icon">chevron_right</mat-icon>
+      <input 
+        class="cyber-input"
+        type="text" 
+        [(ngModel)]="promptInput" 
+        (keydown.enter)="ejecutarComando()" 
+        placeholder="Ingrese comando para AGNUX OS..."
+        [disabled]="cargando"
+        autocomplete="off" />
+      <button mat-icon-button class="exec-btn" (click)="ejecutarComando()" [disabled]="cargando || !promptInput">
+        <mat-icon *ngIf="!cargando">send</mat-icon>
+        <mat-icon *ngIf="cargando" class="spin">sync</mat-icon>
+      </button>
+    </div>
+  </div>
+</div>
