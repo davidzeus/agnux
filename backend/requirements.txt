@@ -1,3 +1,5 @@
+--extra-index-url https://download.pytorch.org/whl/cpu
+
 fastapi==0.115.0
 uvicorn==0.30.0
 pydantic>=2.9.2
@@ -10,5 +12,5 @@ opencv-python-headless==4.9.0.80
 chromadb==0.5.0
 agno==1.0.0
 google-generativeai>=0.8.3
+torch
 sentence-transformers==3.0.1
-torch--index-url https://download.pytorch.org/whl/cpu
