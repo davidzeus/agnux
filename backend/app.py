@@ -7,7 +7,12 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import httpx
+from sentence_transformers import SentenceTransformer
 
+# 🧠 INICIALIZACIÓN DEL MOTOR VECTORIAL LOCAL EN CPU
+# La primera vez descargará el modelo 'nomic-embed-text-v1.5' (aprox 280MB) y quedará congelado en la RAM del Lenovo
+logger.info("⚡ [KERNEL BOOT] Cargando modelo Nomic Embeddings local en hilos de CPU...")
+model_embedding_local = SentenceTransformer("nomic-ai/nomic-embed-text-v1.5", trust_remote_code=True)
 # =====================================================================
 # CONFIGURACIÓN DE ENTORNO Y LOGS INDUSTRIALES
 # =====================================================================
@@ -202,23 +207,23 @@ async def autogenerar_nueva_tool(nombre_funcion: str, codigo_python: str, descri
 # =====================================================================
 # 📐 SERVICIO VECTORIAL DE APOYO
 # =====================================================================
-async def verificar_y_cargar_cache_ram(client: httpx.AsyncClient, url_embeddings: str, modelo: str, tools: list):
-    """Calcula e indexa en RAM los embeddings de las descripciones si la memoria está vacía."""
+async def verificar_y_cargar_cache_ram(tools: list):
+    """Calcula e indexa en RAM usando los cores de la CPU del Lenovo SR630."""
     global CACHE_VECTORS
     if not CACHE_VECTORS:
-        logger.info("📦 [KERNEL RAM] Memoria vacía. Indexando matriz geométrica en hilos de la CPU...")
+        logger.info("📦 [KERNEL RAM] Memoria vacía. Indexando matriz semántica de herramientas en CPU local...")
         for tool in tools:
             nombre_tool = tool["name"]
-            texto_referencia = f"herramienta funcion comando operativo {nombre_tool}: {tool['description']}"
+            texto_referencia = f"search_document: herramienta funcion comando operativo {nombre_tool}: {tool['description']}"
             try:
-                res_vec = await client.post(url_embeddings, json={"model": modelo, "prompt": texto_referencia}, timeout=10.0)
-                if res_vec.status_code == 200:
-                    CACHE_VECTORS[nombre_tool] = {
-                        "vector": res_vec.json().get("embedding"),
-                        "tool_data": tool
-                    }
+                # Calculamos el embedding de forma nativa en los hilos del Lenovo
+                embedding = model_embedding_local.encode(texto_referencia).tolist()
+                CACHE_VECTORS[nombre_tool] = {
+                    "vector": embedding,
+                    "tool_data": tool
+                }
             except Exception as ev:
-                logger.error(f"❌ Error al indexar herramienta {nombre_tool} en RAM: {ev}")
+                logger.error(f"❌ Error al indexar herramienta {nombre_tool} localmente: {ev}")
 
 # =====================================================================
 # 📥 ENDPOINT CENTRAL: ORQUESTADOR COGNITIVO HÍBRIDO (FAILOVER + VECTOR ROUTER)
@@ -307,24 +312,26 @@ async def procesar_intencion_global(payload: TaskbarPrompt):
         
         async with httpx.AsyncClient() as client:
             try:
-                # Comprobamos si la RAM necesita ser poblada (sucede una sola vez)
-                await verificar_y_cargar_cache_ram(client, url_embeddings, modelo_actual, tools_schema)
+                # 🛡️ STEP 1: Aseguramos el caché en RAM local
+                await verificar_y_cargar_cache_ram(tools_schema)
 
-                # Tu procesador calcula SOLO 1 embedding para la orden del usuario
-                res_prompt_vec = await client.post(url_embeddings, json={"model": modelo_actual, "prompt": payload.prompt}, timeout=10.0)
+                # 🛡️ STEP 2: El Lenovo calcula el embedding de la orden usando sus propios hilos
+                logger.info("📐 [VECTOR ROUTER CPU] Computando geometría de la orden entrante...")
+                texto_usuario = f"search_query: {payload.prompt}"
                 
-                if res_prompt_vec.status_code == 200:
-                    vector_usuario = res_prompt_vec.json().get("embedding")
+                try:
+                    vector_usuario = model_embedding_local.encode(texto_usuario).tolist()
                     logger.info("📐 [VECTOR ROUTER RAM] Escaneando matriz geométrica directo en memoria...")
                     
-                    # Multiplexación matemática veloz en RAM
                     for nombre_tool, cached in CACHE_VECTORS.items():
                         score = similitud_coseno(vector_usuario, cached["vector"])
                         logger.info(f"   ↳ [RAM SCORE] '{nombre_tool}' = {score:.4f}")
                         
-                        # 🛡️ UMBRAL DE CORTE CONTROLADO (0.81 evita falsos positivos del modelo de 1.5B)
-                        if score > 0.42:
+                        # Umbral de corte calibrado para Nomic local
+                        if score > 0.60:
                             filtered_tools.append(cached["tool_data"])
+                except Exception as vec_err:
+                    logger.error(f"❌ Error en procesamiento vectorial de CPU: {vec_err}")
                 
                 openai_tools = [{"type": "function", "function": t} for t in filtered_tools] if filtered_tools else None
                 
