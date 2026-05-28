@@ -6,68 +6,63 @@ import { BehaviorSubject, Observable } from 'rxjs';
   providedIn: 'root'
 })
 export class AuthService {
-  // Gestiona el estado del usuario activo
-  private currentUserSubject = new BehaviorSubject<string | null>(localStorage.getItem('agnux_user_id'));
-  public currentUser$ = this.currentUserSubject.asObservable();
+  private getInitialUserId(): string | null {
+    if (typeof localStorage !== 'undefined') {
+      return localStorage.getItem('agnux_user_id');
+    }
+    return null;
+  }
 
-  private backendUrl = 'http://10.10.0.66:8000/api/auth';
+  private currentUserSubject = new BehaviorSubject<string | null>(this.getInitialUserId());
+  public currentUser$ = this.currentUserSubject.asObservable();
+  private eventSource: EventSource | null = null;
 
   constructor(private http: HttpClient) {}
 
-  /**
-   * Devuelve el ID del usuario en foco actualmente.
-   */
-  public getCurrentUser(): string | null {
+  getCurrentUser(): string | null {
     return this.currentUserSubject.value;
   }
 
-  /**
-   * Abre un canal SSE para escuchar cuando el celular autoriza el ingreso.
-   */
-  public listenTerminal(terminalId: string): Observable<any> {
-    return new Observable((observer) => {
-      const eventSource = new EventSource(`${this.backendUrl}/terminal-stream/${terminalId}`);
+  listenTerminal(terminalId: string): Observable<string> {
+    return new Observable<string>(observer => {
+      console.log(`📡 [AGNUX KERNEL] Abriendo canal SSE para Terminal: ${terminalId}`);
+      this.eventSource = new EventSource(`http://10.10.0.66:8000/api/auth/terminal-stream/${terminalId}`);
 
-      eventSource.addEventListener('message', (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          
-          if (data.event === 'AUTH_SUCCESS') {
-            const userId = data.user_id;
-            this.currentUserSubject.next(userId);
-            localStorage.setItem('agnux_user_id', userId);
-            
-            observer.next(data);
-            observer.complete();
-            eventSource.close();
-          } else if (data.event === 'HEARTBEAT') {
-            console.log('[VPN BYPASS] Heartbeat recibido: Canal físico vivo.');
-            observer.next(data);
-          }
-        } catch (error) {
-          console.error('Error parseando evento SSE:', error);
+      // Escucha el evento personalizado que dispara FastAPI al aprobar desde el celular
+      this.eventSource.addEventListener('AUTH_SUCCESS', (event: any) => {
+        const data = JSON.parse(event.data);
+        console.log('🟢 [AGNUX KERNEL] Autenticación remota exitosa:', data);
+        
+        if (typeof localStorage !== 'undefined') {
+          localStorage.setItem('agnux_user_id', data.user_id);
         }
+        this.currentUserSubject.next(data.user_id);
+        
+        observer.next(data.user_id);
+        this.closeConnection();
       });
 
-      eventSource.onerror = (error) => {
-        console.error('Error de red en el EventSource de la terminal', error);
-        observer.error(error);
-        eventSource.close();
-      };
+      this.eventSource.addEventListener('HEARTBEAT', (event: any) => {
+        console.log('💓 [AGNUX KERNEL] Heartbeat de terminal recibido...');
+      });
 
-      return () => {
-        eventSource.close();
+      this.eventSource.onerror = (error) => {
+        console.error('❌ [AGNUX KERNEL] Error en el bus SSE de la terminal:', error);
       };
     });
   }
 
-  /**
-   * Es invocado por el dispositivo móvil vía WireGuard para destrabar la PC.
-   */
-  public authorizeTerminal(terminalId: string, userId: string): Observable<any> {
-    return this.http.post(`${this.backendUrl}/terminal-authorize`, {
+  authorizeTerminal(terminalId: string, userId: string): Observable<any> {
+    return this.http.post('http://10.10.0.66:8000/api/auth/terminal-authorize', {
       terminal_id: terminalId,
       user_id: userId
     });
+  }
+
+  closeConnection() {
+    if (this.eventSource) {
+      this.eventSource.close();
+      this.eventSource = null;
+    }
   }
 }

@@ -200,8 +200,9 @@ async def procesar_intencion_global(payload: TaskbarPrompt):
             
             yield json.dumps({"event": "ROUTER_START", "message": "Inicializando Router Semántico en Memoria..."}) + "\n"
             
-            # Fusión virtual jerárquica
-            tools_privadas = CACHE_VECTORS["usuarios"].get(payload.user_id, {})
+            # Fusión virtual jerárquica con normalización de ID
+            id_normalizado = payload.user_id.replace("_", "-")
+            tools_privadas = CACHE_VECTORS["usuarios"].get(id_normalizado, {})
             tools_disponibles = {**CACHE_VECTORS["sistema"], **tools_privadas}
             
             vector_usuario = simular_vector_texto(payload.prompt)
@@ -233,10 +234,17 @@ async def procesar_intencion_global(payload: TaskbarPrompt):
 
             openai_tools = [{"type": "function", "function": t} for t in filtered_tools] if filtered_tools else None
             
+            SYSTEM_PROMPT = """Sos el kernel principal de AGNUX OS. Responde siempre corto y ejecutivo.
+
+## 2.1 REGLAS ESTRICTAS DE NOMENCLATURA DE RED (ESTÁNDAR DE KERNEL LINUX Y DNS)
+- Está TAXATIVAMENTE PROHIBIDO el uso de guiones bajos ('_') en cualquier identificador de usuario, nombre de terminal, o nombre de herramienta dinámica que interactúe con el host. El guión bajo rompe la sintaxis de interfaces de WireGuard y las especificaciones de Hostnames de internet (RFC 1035).
+- Todo identificador debe normalizarse utilizando única y exclusivamente guiones medios ('-') o formato alfanumérico plano en minúsculas (ejemplo correcto: 'user-cristian', 'global-calculadora', 'term-desktop-101').
+- Si vas a autogenerar código en caliente para una nueva herramienta, el archivo físico en disco y su registro semántico deben usar guiones medios (ej. 'global-control-bomba.py')."""
+
             payload_local = {
                 "model": "ministral:latest",
                 "messages": [
-                    {"role": "system", "content": "Sos el kernel principal de AGNUX OS. Responde siempre corto y ejecutivo."},
+                    {"role": "system", "content": SYSTEM_PROMPT},
                     {"role": "user", "content": payload.prompt}
                 ],
                 "stream": True
@@ -332,17 +340,20 @@ async def terminal_stream(terminal_id: str):
 
 @app.post("/api/auth/terminal-authorize")
 async def terminal_authorize(payload: LinkTerminalPayload):
+    # Normalización forzada de red (RFC 1035)
+    id_red = payload.user_id.replace("_", "-")
+    
     # Llamado por el móvil bajo VPN WireGuard
     if payload.terminal_id in TERMINAL_SESSIONS:
         # Forzar la conmutación de estado a approved
-        TERMINAL_SESSIONS[payload.terminal_id] = {"status": "approved", "user_id": payload.user_id}
+        TERMINAL_SESSIONS[payload.terminal_id] = {"status": "approved", "user_id": id_red}
         
         # Evitar fallos de referencia en Router inicializando el slot de este usuario
-        if payload.user_id not in CACHE_VECTORS["usuarios"]:
-            CACHE_VECTORS["usuarios"][payload.user_id] = {}
-            logger.info(f"🗂️ [RAM KERNEL] Slot privado creado al vuelo para: {payload.user_id}")
+        if id_red not in CACHE_VECTORS["usuarios"]:
+            CACHE_VECTORS["usuarios"][id_red] = {}
+            logger.info(f"🗂️ [RAM KERNEL] Slot privado creado al vuelo para: {id_red}")
             
-        logger.info(f"🔓 [BYPASS VPN] Terminal {payload.terminal_id} desbloqueada por el celular de: {payload.user_id}")
+        logger.info(f"🔓 [BYPASS VPN] Terminal {payload.terminal_id} desbloqueada por el celular de: {id_red}")
         return {"status": "success"}
     else:
         raise HTTPException(status_code=404, detail="Terminal remota inactiva o ID inválido")
@@ -379,7 +390,7 @@ async def register_profile(payload: EnrolmentPayload):
         raise HTTPException(status_code=400, detail="Error de seguridad: ID de enrolamiento expirado o ficticio")
         
     vector_rostro = TEMPORARY_FACE_VECTORS[payload.enrolment_id]
-    user_id_limpio = payload.nombre_usuario.strip().lower().replace(" ", "_")
+    user_id_limpio = "user-" + payload.nombre_usuario.strip().lower().replace(" ", "-").replace("_", "-")
     
     punto_id = int(datetime.now().timestamp() * 1000)
     punto = PointStruct(

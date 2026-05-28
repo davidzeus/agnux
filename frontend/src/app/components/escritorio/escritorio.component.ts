@@ -7,6 +7,7 @@ import { Ventana } from '../../models/ventana.model';
 import { VentanaComponent } from '../ventana/ventana.component';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
+import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-escritorio',
@@ -32,7 +33,12 @@ export class EscritorioComponent implements OnInit, OnDestroy {
   public horaActual: Date = new Date();
   private clockInterval: any;
 
-  constructor(private agnuxService: AgnuxService) {
+  userId: string | null = null;
+  terminalId: string = '';
+  isLocked: boolean = true;
+  private authSub!: Subscription;
+
+  constructor(private agnuxService: AgnuxService, private authService: AuthService) {
     afterNextRender(() => {
       this.clockInterval = setInterval(() => {
         this.horaActual = new Date();
@@ -41,6 +47,17 @@ export class EscritorioComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
+    this.authSub = this.authService.currentUser$.subscribe(user => {
+      this.userId = user;
+      if (user) {
+        this.isLocked = false;
+        console.log(`🔓 [UI] Sistema Desbloqueado. Operador: ${user}`);
+      } else {
+        this.isLocked = true;
+        this.iniciarFlujoBloqueo();
+      }
+    });
+
     this.subscriptions.push(
       this.agnuxService.eventStatus$.subscribe(status => {
         if (status.type === 'TOOL_EXECUTE') {
@@ -75,11 +92,25 @@ export class EscritorioComponent implements OnInit, OnDestroy {
     );
   }
 
+  iniciarFlujoBloqueo() {
+    this.terminalId = 'TERM_DESKTOP_' + Math.floor(Math.random() * 100000);
+    console.warn(`🔒 [UI] Terminal Bloqueada. ID Asignado: ${this.terminalId}`);
+    
+    // Evitar ejecutar SSE en SSR Node.js
+    if (typeof window !== 'undefined') {
+      this.authService.listenTerminal(this.terminalId).subscribe();
+    }
+  }
+
   ngOnDestroy() {
     this.subscriptions.forEach(sub => sub.unsubscribe());
     if (this.clockInterval) {
       clearInterval(this.clockInterval);
     }
+    if (this.authSub) {
+      this.authSub.unsubscribe();
+    }
+    this.authService.closeConnection();
   }
 
   spawnVentana(tipo: 'html' | 'musica' | 'video' | 'texto', titulo: string, datos: any): string {

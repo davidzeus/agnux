@@ -1,37 +1,58 @@
-<div class="desktop-env" (click)="currentHtmlWindowId ? null : null">
-  <!-- Reloj de Escritorio -->
-  <div class="desktop-clock">
-    <div class="clock-time">{{ horaActual | date:'HH:mm' }}</div>
-    <div class="clock-date">{{ horaActual | date:'EEEE, d MMM y' | uppercase }}</div>
+<div class="agnux-container">
+  <!-- BÚNKER DE AUTENTICACIÓN -->
+  <div *ngIf="isLocked" class="lock-screen">
+    <div class="lock-window">
+      <div class="window-header">⚠️ SEGURIDAD DE ACCESO MULTI-USER</div>
+      <div class="window-body">
+        <p class="blink-text">SISTEMA CONTROLADO POR ENTORNO BIOMÉTRICO</p>
+        <p>Escanee el acceso desde su dispositivo móvil a través de la VPN privada:</p>
+        
+        <div class="qr-placeholder">
+          <p class="qr-text">IP: 10.10.0.66</p>
+          <p class="qr-link">ID: {{ terminalId }}</p>
+        </div>
+        
+        <p class="footer-msg">Esperando token de proximidad WireGuard...</p>
+      </div>
+    </div>
   </div>
 
-  <!-- Ventanas Flotantes -->
-  <ng-container *ngFor="let win of ventanas">
-    <app-ventana 
-      [win]="win"
-      (onCerrar)="cerrarVentana($event)"
-      (onMaximizar)="toggleMaximizar($event)"
-      (onEnfocar)="enfocarVentana($event)"
-      (onResponder)="responderVentana($event)">
-    </app-ventana>
-  </ng-container>
+  <!-- ESCRITORIO PRINCIPAL -->
+  <div *ngIf="!isLocked" class="desktop-env" (click)="currentHtmlWindowId ? null : null">
+    <!-- Reloj de Escritorio -->
+    <div class="desktop-clock">
+      <div class="clock-time">{{ horaActual | date:'HH:mm' }}</div>
+      <div class="clock-date">{{ horaActual | date:'EEEE, d MMM y' | uppercase }}</div>
+    </div>
 
-  <!-- Barra de Comandos Inferior (Terminal Input) -->
-  <div class="command-bar">
-    <div class="input-wrapper">
-      <mat-icon class="prompt-icon">chevron_right</mat-icon>
-      <input 
-        class="cyber-input"
-        type="text" 
-        [(ngModel)]="promptInput" 
-        (keydown.enter)="ejecutarComando()" 
-        placeholder="Ingrese comando para AGNUX OS..."
-        [disabled]="cargando"
-        autocomplete="off" />
-      <button mat-icon-button class="exec-btn" (click)="ejecutarComando()" [disabled]="cargando || !promptInput">
-        <mat-icon *ngIf="!cargando">send</mat-icon>
-        <mat-icon *ngIf="cargando" class="spin">sync</mat-icon>
-      </button>
+    <!-- Ventanas Flotantes -->
+    <ng-container *ngFor="let win of ventanas">
+      <app-ventana 
+        [win]="win"
+        (onCerrar)="cerrarVentana($event)"
+        (onMaximizar)="toggleMaximizar($event)"
+        (onEnfocar)="enfocarVentana($event)"
+        (onResponder)="responderVentana($event)">
+      </app-ventana>
+    </ng-container>
+
+    <!-- Barra de Comandos Inferior (Terminal Input) -->
+    <div class="command-bar">
+      <div class="input-wrapper">
+        <span class="user-prompt" style="color: #00e5ff; font-weight: bold; margin-right: 10px; text-shadow: 0 0 5px rgba(0,229,255,0.5);">🚀 {{ userId }} @ agnux_os:~$</span>
+        <input 
+          class="cyber-input"
+          type="text" 
+          [(ngModel)]="promptInput" 
+          (keydown.enter)="ejecutarComando()" 
+          placeholder="Ingrese comando para AGNUX OS..."
+          [disabled]="cargando"
+          autocomplete="off" />
+        <button mat-icon-button class="exec-btn" (click)="ejecutarComando()" [disabled]="cargando || !promptInput">
+          <mat-icon *ngIf="!cargando">send</mat-icon>
+          <mat-icon *ngIf="cargando" class="spin">sync</mat-icon>
+        </button>
+      </div>
     </div>
   </div>
 </div>
