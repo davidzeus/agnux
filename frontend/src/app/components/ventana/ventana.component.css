@@ -1,0 +1,214 @@
+/* Ventana Cyberpunk (Sobreescribiendo mat-card) */
+.cyber-window {
+  position: absolute;
+  width: 480px;
+  background: rgba(15, 15, 15, 0.35) !important;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(0, 255, 102, 0.25);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  transition: width 0.3s ease, height 0.3s ease, top 0.3s ease, left 0.3s ease, transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  color: #00ff66 !important;
+}
+
+.cyber-window.video-window {
+  width: 680px;
+}
+
+.cyber-window.maximized {
+  width: 100vw !important;
+  height: 100vh !important;
+  border-radius: 0;
+  border: none;
+  border-bottom: 1px solid rgba(0, 255, 102, 0.5);
+}
+
+/* Header */
+.window-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.2);
+  border-bottom: 1px solid rgba(0, 255, 102, 0.15);
+  padding: 8px 12px;
+  border-top-left-radius: 12px;
+  border-top-right-radius: 12px;
+  cursor: grab;
+}
+
+.window-header:active {
+  cursor: grabbing;
+}
+
+.window-title {
+  display: flex;
+  align-items: center;
+  font-family: monospace;
+  font-weight: bold;
+  font-size: 14px;
+  color: #00ff66;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.title-icon {
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+  margin-right: 8px;
+  color: #00ff66;
+}
+
+.window-actions button {
+  color: rgba(255, 255, 255, 0.6);
+  transform: scale(0.8);
+}
+
+.window-actions button:hover {
+  color: #fff;
+}
+
+/* Contenido */
+.window-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 255, 102, 0.3) transparent;
+}
+
+/* HTML Output (Consola) */
+.html-container .console-output {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #b3b3b3;
+}
+
+/* Window Reply Bar */
+.window-reply-bar {
+  display: flex;
+  align-items: center;
+  margin-top: auto;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(0, 255, 102, 0.2);
+  border-radius: 8px;
+  padding: 4px 12px;
+}
+
+.reply-icon {
+  color: #00ff66;
+  margin-right: 8px;
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+}
+
+.reply-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 13px;
+  outline: none;
+}
+
+.reply-input::placeholder {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.reply-btn {
+  color: #00ff66;
+  transform: scale(0.8);
+}
+
+/* Musica Output */
+.music-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+}
+
+.pulse-ring {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: rgba(0, 255, 102, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: pulse 2s infinite;
+  margin-bottom: 20px;
+}
+
+.pulse-icon {
+  font-size: 40px;
+  width: 40px;
+  height: 40px;
+  color: #00ff66;
+}
+
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 rgba(0, 255, 102, 0.4); }
+  70% { box-shadow: 0 0 0 20px rgba(0, 255, 102, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(0, 255, 102, 0); }
+}
+
+.track-info {
+  margin-bottom: 20px;
+  font-family: monospace;
+  color: #fff;
+}
+
+.media-controls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.play-btn {
+  background-color: #00ff66 !important;
+  color: #000 !important;
+}
+
+/* Video Output */
+.video-container {
+  background-color: #000;
+  height: 380px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #222;
+}
+.video-placeholder {
+  text-align: center;
+  color: #444;
+}
+
+/* Texto de Error */
+.text-container pre {
+  color: #ff3366;
+  white-space: pre-wrap;
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  100% { transform: rotate(360deg); }
+}
+
+::ng-deep mat-list {
+  background: transparent !important;
+  color: #fff !important;
+}
+::ng-deep mat-list-item {
+  border-bottom: 1px solid #222 !important;
+}

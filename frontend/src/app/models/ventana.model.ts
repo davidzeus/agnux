@@ -8,4 +8,6 @@ export interface Ventana {
   x: number;
   y: number;
   zIndex: number;
+  replyInput?: string;
+  cargandoRespuesta?: boolean;
 }

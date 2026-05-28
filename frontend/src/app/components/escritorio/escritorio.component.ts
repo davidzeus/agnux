@@ -4,12 +4,9 @@ import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
 import { AgnuxService } from '../../services/agnux.service';
 import { Ventana } from '../../models/ventana.model';
-import { SafeHtmlPipe, SafeUrlPipe } from '../../pipes/safe.pipe';
-import { MatCardModule } from '@angular/material/card';
+import { VentanaComponent } from '../ventana/ventana.component';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
-import { MatInputModule } from '@angular/material/input';
-import { MatFormFieldModule } from '@angular/material/form-field';
 
 @Component({
   selector: 'app-escritorio',
@@ -17,13 +14,9 @@ import { MatFormFieldModule } from '@angular/material/form-field';
   imports: [
     CommonModule, 
     FormsModule, 
-    SafeHtmlPipe, 
-    SafeUrlPipe,
-    MatCardModule,
+    VentanaComponent,
     MatIconModule,
-    MatButtonModule,
-    MatInputModule,
-    MatFormFieldModule
+    MatButtonModule
   ],
   templateUrl: './escritorio.component.html',
   styleUrls: ['./escritorio.component.css']
@@ -35,7 +28,7 @@ export class EscritorioComponent implements OnInit, OnDestroy {
   private idCounter = 0;
   private maxZIndex = 100;
   private subscriptions: Subscription[] = [];
-  private currentHtmlWindowId: string | null = null;
+  public currentHtmlWindowId: string | null = null;
 
   constructor(private agnuxService: AgnuxService) {}
 
@@ -47,10 +40,9 @@ export class EscritorioComponent implements OnInit, OnDestroy {
           if (msg.includes('reproducir_musica')) {
             this.spawnVentana('musica', '🎵 AGNUX Media Player', { status: 'Playing...' });
           } else if (msg.includes('tool_reproductor_video')) {
-            this.spawnVentana('video', '🎬 AGNUX Video Core', { url: '' }); // Extract URL if needed
+            this.spawnVentana('video', '🎬 AGNUX Video Core', { url: '' });
           }
-        } else if (status.type === 'RESULT') {
-          // Open or update HTML window
+        } else if (status.type === 'INFERENCE_START') {
           this.currentHtmlWindowId = this.spawnVentana('html', '⚡ AGNUX OS Intelligence Output', null);
         } else if (status.type === 'ERROR') {
           this.spawnVentana('texto', '❌ Error de Sistema', { error: status.message });
@@ -60,12 +52,13 @@ export class EscritorioComponent implements OnInit, OnDestroy {
 
     this.subscriptions.push(
       this.agnuxService.token$.subscribe(token => {
-        // Append token to the current HTML window if it exists
-        if (this.currentHtmlWindowId) {
-          const win = this.ventanas.find(v => v.id === this.currentHtmlWindowId);
-          if (win && win.tipo === 'html') {
-            win.htmlDinamico = (win.htmlDinamico || '') + token;
-          }
+        if (!this.currentHtmlWindowId) {
+           this.currentHtmlWindowId = this.spawnVentana('html', '⚡ AGNUX OS Intelligence Output', null);
+        }
+        const win = this.ventanas.find(v => v.id === this.currentHtmlWindowId);
+        if (win && win.tipo === 'html') {
+          win.htmlDinamico = (win.htmlDinamico || '') + token;
+          win.htmlDinamico = win.htmlDinamico.replace(/\*\*/g, '').replace(/```[a-zA-Z]*\n?/gi, '').replace(/```/g, '');
         }
       })
     );
@@ -124,11 +117,8 @@ export class EscritorioComponent implements OnInit, OnDestroy {
     if (!this.promptInput.trim()) return;
     this.cargando = true;
     
-    // Si hay una ventana HTML anterior, limpiamos
-    if (this.currentHtmlWindowId) {
-        const win = this.ventanas.find(v => v.id === this.currentHtmlWindowId);
-        if (win && win.tipo === 'html') win.htmlDinamico = '';
-    }
+    // Forzamos a abrir una ventana nueva por cada comando, desligando la actual
+    this.currentHtmlWindowId = null;
 
     try {
       await this.agnuxService.enviarPromptStream(this.promptInput);
@@ -138,6 +128,40 @@ export class EscritorioComponent implements OnInit, OnDestroy {
     } finally {
       this.cargando = false;
       this.promptInput = ''; // Limpiar input
+    }
+  }
+
+  async responderVentana(win: Ventana) {
+    if (!win.replyInput?.trim()) return;
+    win.cargandoRespuesta = true;
+
+    const userText = win.replyInput;
+    win.replyInput = '';
+
+    // Mostrar visualmente la entrada del usuario en la consola
+    win.htmlDinamico = (win.htmlDinamico || '') + `<br><br><span style="color: #fff; background: rgba(0,255,102,0.2); padding: 2px 4px; border-radius: 4px;">> ${userText}</span><br><br>`;
+
+    // Reasignamos esta ventana como objetivo para el próximo stream
+    this.currentHtmlWindowId = win.id;
+
+    // Extraer texto limpio para el contexto
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = win.htmlDinamico;
+    const contextText = tempDiv.innerText || tempDiv.textContent || '';
+
+    const promptConContexto = `[CONTEXTO PREVIO DE LA CONVERSACIÓN]:
+${contextText.slice(-1000)}
+
+[NUEVA ENTRADA DEL USUARIO CONTINUANDO EL TEMA]:
+${userText}`;
+
+    try {
+      await this.agnuxService.enviarPromptStream(promptConContexto);
+    } catch (err) {
+      console.error(err);
+      win.htmlDinamico += `<br><span style="color: #ff3366;">[Error Local]</span>`;
+    } finally {
+      win.cargandoRespuesta = false;
     }
   }
 }

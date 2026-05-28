@@ -220,13 +220,13 @@ async def procesar_intencion_global(payload: TaskbarPrompt):
         },
         {
             "name": "autogenerar_nueva_tool",
-            "description": "OBLIGATORIA ÚNICAMENTE si el usuario pide una automatización compleja que NO exista.",
+            "description": "Se activa obligatoriamente cuando el usuario pide explícitamente crear, programar, generar, mutar o escribir una nueva herramienta, script de python o tool para resolver tareas específicas como cálculos, matematicas o comandos nuevos.",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "nombre_funcion": {"type": "string"},
-                    "codigo_python": {"type": "string"},
-                    "descripcion_docstring": {"type": "string"}
+                    "nombre_funcion": {"type": "string", "description": "Nombre técnico corto en minúsculas separado por guión bajo (ej: 'calculos_matematicos')."},
+                    "codigo_python": {"type": "string", "description": "Lógica interna de la función indentada. Debe resolver lo pedido y retornar un string informativo obligatorio."},
+                    "descripcion_docstring": {"type": "string", "description": "Explicación breve de qué hace la nueva herramienta."}
                 },
                 "required": ["nombre_funcion", "codigo_python", "descripcion_docstring"]
             }
