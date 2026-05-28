@@ -260,16 +260,34 @@ async def procesar_intencion_global(payload: TaskbarPrompt):
                             yield json.dumps({"event": "ERROR", "message": f"Bus Inferencia Caído. HTTP {response.status_code}"}) + "\n"
                             return
                             
+                        # 1. Consolidamos el texto que nos mandó Ministral
+                        respuesta_completa = ""
                         async for line in response.aiter_lines():
                             if line:
                                 try:
                                     data = json.loads(line)
                                     token = data.get("response", "")
                                     if token:
+                                        respuesta_completa += token
                                         # Emitimos bajo el protocolo AG-UI para la barra verde
                                         yield f"event: TOKEN\ndata: {json.dumps(token)}\n\n"
                                 except Exception:
                                     continue
+                                    
+                        # 2. 🧠 EL CIRCUITO QUE SE HABÍA ROTO: Evaluación de acción
+                        logger.info(f"🧠 [KERNEL AGENTE] Evaluando acción para la respuesta: {respuesta_completa}")
+
+                        # Si la IA determinó que es una respuesta directa o texto para el operador,
+                        # el backend es el responsable de ordenarle a Angular que dibuje la ventana flotante
+                        payload_ventana = {
+                            "window_id": "agnux-ai-window",
+                            "title": "🧠 AGNUX OS Core - Ministral IA",
+                            "content": respuesta_completa,
+                            "type": "terminal"
+                        }
+
+                        # Emitimos el evento de infraestructura nativo que Angular espera para spawnear ventanas
+                        yield f"event: CREATE_WINDOW\ndata: {json.dumps(payload_ventana)}\n\n"
                             
             except Exception as e:
                 yield json.dumps({"event": "ERROR", "message": f"Ollama Stream Network Error: {e}"}) + "\n"

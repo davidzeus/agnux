@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit, afterNextRender, ViewChild, ElementRef } from '@angular/core';
+import { Component, OnDestroy, OnInit, afterNextRender, ViewChild, ElementRef, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Subscription, take } from 'rxjs';
@@ -43,7 +43,12 @@ export class EscritorioComponent implements OnInit, OnDestroy {
   // Local Biometric state
   tieneCamaraLocal: boolean = false;
 
-  constructor(private agnuxService: AgnuxService, private authService: AuthService, private presenceService: PresenceService) {
+  constructor(
+    private agnuxService: AgnuxService, 
+    private authService: AuthService, 
+    private presenceService: PresenceService,
+    private cdr: ChangeDetectorRef
+  ) {
     afterNextRender(() => {
       this.clockInterval = setInterval(() => {
         this.horaActual = new Date();
@@ -94,18 +99,38 @@ export class EscritorioComponent implements OnInit, OnDestroy {
     );
 
     this.subscriptions.push(
-      this.agnuxService.token$.subscribe(token => {
-        if (!this.currentHtmlWindowId) {
-           this.currentHtmlWindowId = this.spawnVentana('html', '⚡ AGNUX OS Intelligence Output', null);
+      this.agnuxService.token$.subscribe(tokenLimpio => {
+        // 1. Buscamos si la ventana de la IA ya está abierta en el escritorio
+        let ventanaIA: Ventana | undefined = this.ventanas.find(v => v.id === 'agnux-ai-window');
+        
+        if (!ventanaIA) {
+          // 2. SI NO EXISTE, LA CREAMOS AL VUELO CON SUS COORDENADAS Y FOCO
+          console.log("📺 [UI DESKTOP] Abriendo nueva ventana flotante reactiva para la IA...");
+          ventanaIA = {
+            id: 'agnux-ai-window',
+            titulo: '🧠 AGNUX OS Core - Ministral IA',
+            tipo: 'html',
+            htmlDinamico: '',
+            x: 150,
+            y: 100,
+            width: 500,
+            height: 400,
+            maximizada: false,
+            zIndex: ++this.maxZIndex
+          };
+          // Usamos el operador de propagación para asegurar que Angular detecte la mutación del array
+          this.ventanas = [...this.ventanas, ventanaIA];
         }
-        const win = this.ventanas.find(v => v.id === this.currentHtmlWindowId);
-        if (win && win.tipo === 'html') {
-          // Vamos acumulando el raw y luego formateamos visualmente todo el bloque
-          win.htmlDinamico = (win.htmlDinamico || '') + token;
-          
-          // Clonamos y embellecemos al vuelo para que el usuario no vea JSON feo
-          win.htmlDinamico = this.formatStreamText(win.htmlDinamico);
-        }
+        
+        // 3. CONCATENAMOS EL TOKEN EN VIVO (Efecto máquina de escribir)
+        const htmlPrevio = ventanaIA.htmlDinamico || '';
+        ventanaIA.htmlDinamico = htmlPrevio + tokenLimpio;
+        
+        // Clonamos y embellecemos al vuelo para que el usuario no vea JSON feo
+        ventanaIA.htmlDinamico = this.formatStreamText(ventanaIA.htmlDinamico);
+
+        // 🔥 OBLIGAMOS A ANGULAR A REDIBUJAR LA PANTALLA EN ESTE MICROSEGUNDO
+        this.cdr.detectChanges();
       })
     );
   }
