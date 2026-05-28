@@ -121,38 +121,83 @@ def ejecutar_herramienta_local(nombre: str, argumentos: dict = None) -> str:
     return f"Herramienta '{nombre}' no encontrada en la matriz activa del Kernel."
 
 # =====================================================================
-# 🧬 CAPA DE METAPROGRAMACIÓN: AUTOGÉNESIS (MUTACIÓN EN CALIENTE)
+# 🧬 CAPA DE METAPROGRAMACIÓN: AUTOGÉNESIS CON DUAL-CORE COGNITIVO
 # =====================================================================
-def autogenerar_nueva_tool(nombre_funcion: str, codigo_python: str, descripcion_docstring: str) -> str:
-    """Escribe un script ejecutable real en la carpeta dynamic_tools e invalida la RAM."""
+async def autogenerar_nueva_tool(nombre_funcion: str, codigo_python: str, descripcion_docstring: str) -> str:
+    """
+    Escribe un script ejecutable real en la carpeta dynamic_tools.
+    Desvía la tarea por red hacia qwen2.5-coder:1.5b en la IP 10.10.0.48 
+    para garantizar código sintácticamente perfecto, y luego invalida la RAM.
+    """
     global CACHE_VECTORS
-    nombre_limpio = nombre_funcion.strip().lower().replace(" ", "_").replace("-", "_")
-    if not nombre_limpio.endswith(".py"):
-        path_archivo = os.path.join(DYNAMIC_DIR, f"{nombre_limpio}.py")
-    else:
-        path_archivo = os.path.join(DYNAMIC_DIR, nombre_limpio)
-        nombre_limpio = nombre_limpio.replace(".py", "")
-
-    plantilla = (
-        f'""\"\nDefinición autogenerada por AGNUX OS Core.\n""\"\n\n'
-        f'def {nombre_limpio}(**kwargs):\n'
-        f'    """{descripcion_docstring}"""\n'
-        f'{codigo_python}\n'
-    )
+    ollama_base = os.getenv("OLLAMA_HOST", "http://127.0.0.1:11434").rstrip("/")
+    url_chat = f"{ollama_base}/v1/chat/completions"
     
+    nombre_limpio = nombre_funcion.strip().lower().replace(" ", "_").replace("-", "_")
+    if nombre_limpio.endswith(".py"):
+        nombre_limpio = nombre_limpio.replace(".py", "")
+        
+    path_archivo = os.path.join(DYNAMIC_DIR, f"{nombre_limpio}.py")
+
+    # 🧠 PROMPT DE INGENIERÍA DE CÓDIGO PARA QWEN-CODER
+    prompt_coder = (
+        f"Necesito que escribas el cuerpo exacto de una función en Python llamada '{nombre_limpio}'.\n"
+        f"El usuario quiere que haga lo siguiente: {descripcion_docstring}\n\n"
+        f"REGLAS ESTRICTAS:\n"
+        f"1. Devolve ÚNICAMENTE el código Python limpio, sin bloques de marcado markdown (sin ```python o ```).\n"
+        f"2. La función ya viene declarada en la plantilla, vos solo debés escribir la lógica interna bien indentada con 4 espacios.\n"
+        f"3. La lógica DEBE retornar un string informativo obligatorio.\n"
+        f"4. Si usás librerías externas (como subprocess, os, requests, json), meté el import adentro de la función.\n\n"
+        f"Propuesta base del usuario para guiarte (corregila si tiene errores de sintaxis):\n{codigo_python}"
+    )
+
+    payload_coder = {
+        "model": "qwen2.5-coder:1.5b",  # 🤖 Forzamos el uso del especialista en código en la red
+        "messages": [
+            {"role": "system", "content": "Sos un compilador y programador experto en Python 3.11. Escribís código limpio, funcional y sin texto explicativo."},
+            {"role": "user", "content": prompt_coder}
+        ],
+        "stream": False
+    }
+
     try:
+        logger.info(f"💻 [AUTOGÉNESIS] Desviando solicitud de código a QWEN-CODER en {ollama_base}...")
+        
+        async with httpx.AsyncClient() as client:
+            res = await client.post(url_chat, json=payload_coder, timeout=30.0)
+            if res.status_code != 200:
+                return f"ERROR KERNEL: Qwen-Coder respondió con error HTTP {res.status_code}"
+            
+            codigo_depurado = res.json()["choices"][0]["message"].get("content", "").strip()
+
+        # Limpieza de seguridad por si el modelo ignora la regla y mete triple comilla de markdown
+        if codigo_depurado.startswith("```python"):
+            codigo_depurado = codigo_depurado.split("```python")[1].split("```")[0].strip()
+        elif codigo_depurado.startswith("```"):
+            codigo_depurado = codigo_depurado.split("```")[1].split("```")[0].strip()
+
+        # Armamos la plantilla física final para el disco del Lenovo
+        plantilla_final = (
+            f'""\"\nDefinición autogenerada y depurada por AGNUX OS Core & Qwen-Coder.\n""\"\n\n'
+            f'def {nombre_limpio}(**kwargs):\n'
+            f'    """{descripcion_docstring}"""\n'
+            f'    # --- LÓGICA DEPURADA POR QWEN-CODER ---\n'
+            f'{codigo_depurado}\n'
+        )
+        
         with open(path_archivo, "w", encoding="utf-8") as f:
-            f.write(plantilla)
+            f.write(plantilla_final)
         
-        logger.info(f"💾 [AUTOGÉNESIS] Código escrito con éxito en {path_archivo}")
+        logger.info(f"💾 [AUTOGÉNESIS] Script físico instalado con éxito en {path_archivo}")
         
-        # 💥 INVALIDACIÓN DEL CACHÉ EN RAM: Obliga al sistema a indexar la nueva tool en la siguiente orden
+        # 💥 INVALIDACIÓN DEL CACHÉ EN RAM
         CACHE_VECTORS = {}
-        logger.info("💥 [KERNEL RAM] Memoria semántica invalidada para forzar re-indexación.")
+        logger.info("💥 [KERNEL RAM] Memoria semántica invalidada. Forzando re-indexación en el próximo Enter.")
         
-        return f"SUCCESS: Herramienta '{nombre_limpio}' instalada e indexada en el host."
+        return f"SUCCESS: Herramienta '{nombre_limpio}' instalada e indexada en el host via Qwen-Coder."
+        
     except Exception as e:
-        return f"ERROR: No se pudo escribir la herramienta física en el disco: {str(e)}"
+        return f"ERROR KERNEL: Falla crítica en el bus de autogénesis: {str(e)}"
 
 # =====================================================================
 # 📐 SERVICIO VECTORIAL DE APOYO
@@ -240,11 +285,15 @@ async def procesar_intencion_global(payload: TaskbarPrompt):
         "Si pide algo que no existe y no podes resolver, usa 'autogenerar_nueva_tool'."
     )
 
-# 🏠 2. MÓDULO OLLAMA LOCAL: VECTOR ROUTER INTEGRADO (MÁXIMA VELOCIDAD)
+# 🏠 2. MÓDULO OLLAMA LOCAL: VECTOR ROUTER INTEGRADO (MÁXIMA VELOCIDAD EN RED)
     async def ejecutar_ollama_local(motivo_log: str):
-        logger.info(f"🏠 PROCESANDO EN HOST LOCAL VIA OLLAMA ({modelo_actual}) -> Motivo: {motivo_log}")
-        url_embeddings = "http://127.0.0.1:11434/api/embeddings"
-        url_chat = "http://127.0.0.1:11434/v1/chat/completions"
+        logger.info(f"🏠 PROCESANDO VIA OLLAMA ({modelo_actual}) -> Motivo: {motivo_log}")
+        
+        # 🌐 Leemos la IP de la LAN desde el entorno; si no existe, cae en localhost por defecto
+        ollama_base = os.getenv("OLLAMA_HOST", "http://127.0.0.1:11434").rstrip("/")
+        url_embeddings = f"{ollama_base}/api/embeddings"
+        url_chat = f"{ollama_base}/v1/chat/completions"
+        
         global CACHE_VECTORS  # 🛟 ¡LA VALIDACIÓN CRÍTICA! Enlazamos el bus de memoria RAM global
         
         def similitud_coseno(vec_a, vec_b):
@@ -274,7 +323,7 @@ async def procesar_intencion_global(payload: TaskbarPrompt):
                         logger.info(f"   ↳ [RAM SCORE] '{nombre_tool}' = {score:.4f}")
                         
                         # 🛡️ UMBRAL DE CORTE CONTROLADO (0.81 evita falsos positivos del modelo de 1.5B)
-                        if score > 0.81:
+                        if score > 0.42:
                             filtered_tools.append(cached["tool_data"])
                 
                 openai_tools = [{"type": "function", "function": t} for t in filtered_tools] if filtered_tools else None

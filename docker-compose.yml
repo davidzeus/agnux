@@ -9,8 +9,8 @@ services:
       - "8000:8000"
     environment:
       - AGNUX_IA_PROVIDER=local
-      - AGNUX_ACTIVE_MODEL=ministral:latest
-      - OLLAMA_HOST=http://10.10.0.48:11434  # 🔥 Enlace directo al nodo de tu LAN
+      - AGNUX_ACTIVE_MODEL=ministral-es:latest  # 🔥 El orquestador principal del SO
+      - OLLAMA_HOST=http://10.10.0.48:11434
       - PYTHONUNBUFFERED=1
     volumes:
       - ./backend:/app
