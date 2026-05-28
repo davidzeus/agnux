@@ -9,6 +9,8 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 import httpx
 from sentence_transformers import SentenceTransformer
+from qdrant_client import AsyncQdrantClient
+from qdrant_client.models import Distance, VectorParams, PointStruct
 
 # =====================================================================
 # CONFIGURACIÓN DE ENTORNO Y LOGS INDUSTRIALES
@@ -33,6 +35,57 @@ app.add_middleware(
 # 🧠 INICIALIZACIÓN DEL MOTOR VECTORIAL LOCAL EN CPU
 logger.info("⚡ [KERNEL BOOT] Cargando modelo Nomic Embeddings local en hilos de CPU...")
 model_embedding_local = SentenceTransformer("nomic-ai/nomic-embed-text-v1.5", trust_remote_code=True)
+
+# 🧠 INICIALIZACIÓN DE LA MEMORIA QDRANT
+logger.info("🔌 [QDRANT] Conectando bus de memoria a largo plazo...")
+qdrant_client = AsyncQdrantClient(url="http://qdrant:6333")
+COLECCION_MEMORIA = "agnux_kernel_memory"
+
+@app.on_event("startup")
+async def inicializar_memoria_persistente():
+    try:
+        collections_response = await qdrant_client.get_collections()
+        collection_names = [col.name for col in collections_response.collections]
+        
+        if COLECCION_MEMORIA not in collection_names:
+            logger.info(f"🧠 [QDRANT] Creando colección de memoria '{COLECCION_MEMORIA}' (768d, COSINE)...")
+            await qdrant_client.create_collection(
+                collection_name=COLECCION_MEMORIA,
+                vectors_config=VectorParams(size=768, distance=Distance.COSINE),
+            )
+        else:
+            logger.info(f"🧠 [QDRANT] Colección '{COLECCION_MEMORIA}' detectada y lista.")
+    except Exception as e:
+        logger.error(f"❌ [QDRANT] Falla al inicializar bus vectorial: {e}")
+
+async def memorizar_interaccion_host(prompt_usuario: str, tool_usada: str, resultado: str, tipo_evento: str):
+    try:
+        texto_vectorizar = f"user_prompt: {prompt_usuario} -> executed_tool: {tool_usada}"
+        vector = model_embedding_local.encode(texto_vectorizar).tolist()
+        
+        punto_id = int(datetime.now().timestamp() * 1000)
+        resultado_trunc = str(resultado)[:400]
+        fecha_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        
+        punto = PointStruct(
+            id=punto_id,
+            vector=vector,
+            payload={
+                "fecha": fecha_str,
+                "prompt": prompt_usuario,
+                "tool": tool_usada,
+                "resultado_crudo": resultado_trunc,
+                "tipo": tipo_evento
+            }
+        )
+        
+        await qdrant_client.upsert(
+            collection_name=COLECCION_MEMORIA,
+            points=[punto]
+        )
+        logger.info(f"💾 [QDRANT] Recuerdo inyectado en bus LTM. (ID: {punto_id})")
+    except Exception as e:
+        logger.error(f"❌ [QDRANT] Falló la memorización de contexto: {e}")
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DYNAMIC_DIR = os.path.join(BASE_DIR, "dynamic_tools")
@@ -281,10 +334,31 @@ async def procesar_intencion_global(payload: TaskbarPrompt):
                 
                 openai_tools = [{"type": "function", "function": t} for t in filtered_tools] if filtered_tools else None
                 
+                # Búsqueda de recuerdos LTM en Qdrant
+                contexto_recuerdos = ""
+                try:
+                    search_result = await qdrant_client.search(
+                        collection_name=COLECCION_MEMORIA,
+                        query_vector=vector_usuario,
+                        limit=2
+                    )
+                    
+                    recuerdos_validos = [r for r in search_result if r.score > 0.78]
+                    if recuerdos_validos:
+                        contexto_recuerdos = "\n\n[RECUERDOS DE SISTEMA: HISTORIAL DE EJECUCIONES PASADAS EXITOSAS]:\n"
+                        for r in recuerdos_validos:
+                            p_prompt = r.payload.get("prompt", "")
+                            p_tool = r.payload.get("tool", "")
+                            contexto_recuerdos += f"- Cuando el usuario pidió: '{p_prompt}', la tool correcta fue: '{p_tool}'.\n"
+                except Exception as e:
+                    logger.error(f"❌ [QDRANT] Error leyendo recuerdos semánticos: {e}")
+
+                system_instruction_modificado = system_instruction + contexto_recuerdos
+
                 payload_local = {
                     "model": modelo_actual,
                     "messages": [
-                        {"role": "system", "content": system_instruction},
+                        {"role": "system", "content": system_instruction_modificado},
                         {"role": "user", "content": payload.prompt}
                     ],
                     "stream": True  # 🔥 Forzamos streaming real en Ollama
@@ -326,6 +400,8 @@ async def procesar_intencion_global(payload: TaskbarPrompt):
                     try:
                         args = json.loads(argumentos_acumulados) if argumentos_acumulados else {}
                         resultado_fierros = await ejecutar_herramienta_local(tool_call_detected, args)
+                        
+                        await memorizar_interaccion_host(payload.prompt, tool_call_detected, resultado_fierros, "system_execution")
                         
                         yield json.dumps({"event": "TOKEN", "text": f"\n\n[SISTEMA]: Datos de '{tool_call_detected}' capturados. Redactando informe...\n\n"}) + "\n"
                         

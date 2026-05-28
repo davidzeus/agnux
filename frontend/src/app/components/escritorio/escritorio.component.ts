@@ -57,8 +57,11 @@ export class EscritorioComponent implements OnInit, OnDestroy {
         }
         const win = this.ventanas.find(v => v.id === this.currentHtmlWindowId);
         if (win && win.tipo === 'html') {
+          // Vamos acumulando el raw y luego formateamos visualmente todo el bloque
           win.htmlDinamico = (win.htmlDinamico || '') + token;
-          win.htmlDinamico = win.htmlDinamico.replace(/\*\*/g, '').replace(/```[a-zA-Z]*\n?/gi, '').replace(/```/g, '');
+          
+          // Clonamos y embellecemos al vuelo para que el usuario no vea JSON feo
+          win.htmlDinamico = this.formatStreamText(win.htmlDinamico);
         }
       })
     );
@@ -150,19 +153,58 @@ export class EscritorioComponent implements OnInit, OnDestroy {
     tempDiv.innerHTML = win.htmlDinamico;
     const contextText = tempDiv.innerText || tempDiv.textContent || '';
 
-    const promptConContexto = `[CONTEXTO PREVIO DE LA CONVERSACIÓN]:
+    // Regla de Oro AGNUX: Limpieza para el Router Semántico
+    const esComandoDirecto = /^[0-9+\-*/().\s]+$/.test(userText) || 
+                             userText.toLowerCase().includes('resta') || 
+                             userText.toLowerCase().includes('suma') ||
+                             userText.toLowerCase().includes('calcula') ||
+                             userText.toLowerCase().includes('crea') ||
+                             userText.toLowerCase().includes('genera');
+
+    let promptFinal = userText;
+    
+    if (!esComandoDirecto) {
+      promptFinal = `[CONTEXTO PREVIO DE LA CONVERSACIÓN]:
 ${contextText.slice(-1000)}
 
 [NUEVA ENTRADA DEL USUARIO CONTINUANDO EL TEMA]:
 ${userText}`;
+    }
 
     try {
-      await this.agnuxService.enviarPromptStream(promptConContexto);
+      await this.agnuxService.enviarPromptStream(promptFinal);
     } catch (err) {
       console.error(err);
       win.htmlDinamico += `<br><span style="color: #ff3366;">[Error Local]</span>`;
     } finally {
       win.cargandoRespuesta = false;
     }
+  }
+
+  private formatStreamText(text: string): string {
+    // 1. Limpieza base de markdown
+    let clean = text.replace(/\*\*/g, '').replace(/```[a-zA-Z]*\n?/gi, '').replace(/```/g, '');
+    
+    // Si detectamos un JSON literal colado, le aplicamos sintaxis cyberpunk
+    // Colorea claves de JSON: "clave":
+    clean = clean.replace(/"([a-zA-Z0-9_]+)":/g, '<span style="color: #00e5ff;">"$1"</span>:');
+    
+    // Colorea valores string: : "valor"
+    clean = clean.replace(/: \s*"([^"]*)"/g, ': <span style="color: #ffaa00;">"$1"</span>');
+    
+    // Colorea palabras reservadas
+    clean = clean.replace(/: \s*(true|false|null)/g, ': <span style="color: #ff3366;">$1</span>');
+
+    // Colorea llaves y corchetes (Solo si están sueltos en el formato de JSON)
+    clean = clean.replace(/(\{|\}|\[|\])/g, '<span style="color: #ff3366; font-weight: bold;">$1</span>');
+    
+    // Limpieza de span corruptos (por si reemplazó corchetes de CSS)
+    clean = clean.replace(/<span style="color: #ff3366; font-weight: bold;">\{<\/span>/g, '{');
+    clean = clean.replace(/<span style="color: #ff3366; font-weight: bold;">\}<\/span>/g, '}');
+
+    // Ocultar palabra inicial json {
+    clean = clean.replace(/^json\s*\{/gmi, '{');
+
+    return clean;
   }
 }
