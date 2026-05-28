@@ -244,10 +244,11 @@ async def procesar_intencion_global(payload: TaskbarPrompt):
                 })
 
     system_instruction = (
-        "Sos el nucleo de AGNUX OS. Responde de forma ultra corta.\n"
-        "Si el usuario pide ver el hardware, usa 'tool_diagnostico_wrapper'.\n"
-        "Si pide videos, peliculas o youtube, usa 'tool_reproductor_video'.\n"
-        "Si pide algo que no existe y no podes resolver, usa 'autogenerar_nueva_tool'."
+        "Sos el componente cognitivo central de AGNUX OS.\n"
+        "REGLA CRÍTICA DE INVOCACIÓN:\n"
+        "1. Solo podés invocar una herramienta si está explícitamente disponible en tu parámetro 'tools'.\n"
+        "2. Si el usuario te pide una acción que requiere una herramienta disponible, debés llamarla usando una estructura 'tool_calls' nativa. No inventes código ni respondas con texto descriptivo si la herramienta existe.\n"
+        "3. Si 'tools' está vacío o no contiene una función adecuada para la orden (por ejemplo, preguntas generales, historia o cultura), ignorá las herramientas por completo y respondé directamente con texto plano de forma ultra corta, ejecutiva y en formato consola."
     )
 
     # 🔥 NUEVO MOTOR DE FLUJO CONTINUO ASÍNCRONO DE EVENTOS (AG-UI COMPATIBLE)
@@ -331,10 +332,23 @@ async def procesar_intencion_global(payload: TaskbarPrompt):
                         payload_segunda_vuelta = {
                             "model": modelo_actual,
                             "messages": [
-                                {"role": "system", "content": "Sos el núcleo de AGNUX OS. Explicá de forma corta y ejecutiva como consola los datos reales del host que devolvió la herramienta."},
+                                {"role": "system", "content": "Sos el núcleo de AGNUX OS. El sistema operativo ya ejecutó la herramienta en el host y te devolvió los datos reales. Explicá de forma corta, ejecutiva y en formato consola el resultado final al usuario."},
                                 {"role": "user", "content": payload.prompt},
-                                {"role": "assistant", "content": None, "tool_calls": [{"id": "call_1", "type": "function", "function": {"name": tool_call_detected, "arguments": argumentos_acumulados}}]},
-                                {"role": "tool", "tool_call_id": "call_1", "name": tool_call_detected, "content": str(resultado_fierros)}
+                                {
+                                    "role": "assistant", 
+                                    "content": "", 
+                                    "tool_calls": [{
+                                        "id": "call_1", 
+                                        "type": "function", 
+                                        "function": {"name": tool_call_detected, "arguments": argumentos_acumulados}
+                                    }]
+                                },
+                                {
+                                    "role": "tool", 
+                                    "tool_call_id": "call_1", 
+                                    "name": tool_call_detected, 
+                                    "content": str(resultado_fierros)
+                                }
                             ],
                             "stream": True
                         }
