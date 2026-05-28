@@ -196,7 +196,7 @@ async def procesar_intencion_global(payload: TaskbarPrompt):
         # Adquiriendo candado de concurrencia
         async with OLLAMA_BUS_LOCK:
             ollama_host = os.getenv("OLLAMA_HOST", "http://10.10.0.48:11434").rstrip("/")
-            url_chat = f"{ollama_host}/v1/chat/completions"
+            url_chat = f"{ollama_host}/api/chat"
             
             yield json.dumps({"event": "ROUTER_START", "message": "Inicializando Router Semántico en Memoria..."}) + "\n"
             
@@ -262,23 +262,24 @@ async def procesar_intencion_global(payload: TaskbarPrompt):
                             yield json.dumps({"event": "ERROR", "message": f"Bus Inferencia Caído. HTTP {response.status_code}"}) + "\n"
                             return
                             
-                        async for chunk in response.aiter_lines():
-                            if not chunk.strip(): continue
-                            if chunk.startswith("data: "): chunk = chunk[6:]
-                            if chunk == "[DONE]": break
-                            
-                            try:
-                                chunk_json = json.loads(chunk)
-                                delta = chunk_json["choices"][0]["delta"]
-                                
-                                if "tool_calls" in delta and delta["tool_calls"]:
-                                    tc = delta["tool_calls"][0]
-                                    if "function" in tc:
-                                        if tc["function"].get("name"): tool_call_detected = tc["function"]["name"]
-                                        if tc["function"].get("arguments"): argumentos_acumulados += tc["function"]["arguments"]
-                                elif "content" in delta and delta["content"]:
-                                    yield json.dumps({"event": "TOKEN", "text": delta["content"]}) + "\n"
-                            except Exception: continue
+                        async for line in response.aiter_lines():
+                            if line:
+                                try:
+                                    data = json.loads(line)
+                                    # Adaptación para compatibilidad de Tool Calling nativa en Ollama
+                                    if "message" in data and "tool_calls" in data["message"]:
+                                        for tc in data["message"]["tool_calls"]:
+                                            if tc.get("function"):
+                                                if tc["function"].get("name"): tool_call_detected = tc["function"]["name"]
+                                                if tc["function"].get("arguments"): 
+                                                    args = tc["function"]["arguments"]
+                                                    argumentos_acumulados += json.dumps(args) if isinstance(args, dict) else args
+                                    
+                                    token = data.get("message", {}).get("content", "")
+                                    if token:
+                                        # Emite el token bajo el protocolo AG-UI (formato JSONLine)
+                                        yield json.dumps({"event": "TOKEN", "text": token}) + "\n"
+                                except Exception: continue
                             
             except Exception as e:
                 yield json.dumps({"event": "ERROR", "message": f"Ollama Stream Network Error: {e}"}) + "\n"
