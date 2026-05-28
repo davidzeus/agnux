@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { Subject } from 'rxjs';
+import { AuthService } from './auth.service';
 
 export interface AgnuxResponse {
   status: string;
@@ -12,17 +13,26 @@ export interface AgnuxResponse {
   providedIn: 'root'
 })
 export class AgnuxService {
-private apiUrl = 'http://10.10.0.66:8000/api/system/intent';
+  private apiUrl = 'http://10.10.0.66:8000/api/system/intent';
 
   public token$ = new Subject<string>();
   public eventStatus$ = new Subject<any>();
 
+  constructor(private authService: AuthService) {}
+
   async enviarPromptStream(promptTexto: string): Promise<void> {
+    const userId = this.authService.getCurrentUser();
+    
+    if (!userId) {
+      this.eventStatus$.next({ type: 'ERROR', message: 'ERROR: Terminal bloqueada. Inicie sesión.' });
+      return;
+    }
+
     try {
       const response = await fetch(this.apiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: promptTexto })
+        body: JSON.stringify({ prompt: promptTexto, user_id: userId })
       });
 
       if (!response.ok) {

@@ -16,6 +16,7 @@ from qdrant_client.models import Distance, VectorParams, PointStruct
 # =====================================================================
 # 1. CONFIGURACIÓN INICIAL Y DEPENDENCIAS
 # =====================================================================
+# Configuración del logger para volcar telemetría limpia en la consola
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
@@ -42,19 +43,17 @@ os.makedirs(DYNAMIC_DIR, exist_ok=True)
 if not os.path.exists(os.path.join(DYNAMIC_DIR, "__init__.py")):
     with open(os.path.join(DYNAMIC_DIR, "__init__.py"), "w") as f: f.write("")
 
-# Simulación de un modelo de embeddings de rostro local
-# En un escenario real, esto se cargaría al arrancar.
+# Simulación de extracción matemática
 def simular_vector_rostro() -> list[float]:
     import random
     return [random.uniform(-1.0, 1.0) for _ in range(128)]
 
 def simular_vector_texto(texto: str) -> list[float]:
-    # Placeholder: simula la extracción de embedding (768 dimensiones)
     import random
     return [random.uniform(-1.0, 1.0) for _ in range(768)]
 
 # =====================================================================
-# 2. ESTRUCTURAS DE DATOS (Pydantic Models)
+# ESQUEMAS DE PYDANTIC (Modelos de Datos)
 # =====================================================================
 class TaskbarPrompt(BaseModel):
     prompt: str
@@ -69,14 +68,21 @@ class LinkTerminalPayload(BaseModel):
     user_id: str
 
 # =====================================================================
-# 3. GESTIÓN DE MEMORIA GLOBAL (RAM KERNEL)
+# 2. MATRICES DE MEMORIA GLOBAL (RAM KERNEL)
 # =====================================================================
+# Matriz principal segmentada en núcleo y contenedores de usuarios
 CACHE_VECTORS = {
     "sistema": {},
     "usuarios": {}
 }
+
+# Semáforo FIFO asíncrono para evitar saturar el bus de inferencia
 OLLAMA_BUS_LOCK = asyncio.Lock()
+
+# Volátil para enrolamiento de rostros no registrados
 TEMPORARY_FACE_VECTORS = {}
+
+# Mapeo de terminales físicas (monitores sin cámara esperando al celular)
 TERMINAL_SESSIONS = {}
 
 COLECCION_FACIAL = "perfiles_faciales"
@@ -84,7 +90,7 @@ COLECCION_MEMORIA = "agnux_kernel_memory"
 
 @app.on_event("startup")
 async def inicializar_sistema():
-    logger.info("⚡ [KERNEL BOOT] Inicializando servicios base...")
+    logger.info("⚡ [KERNEL BOOT] Inicializando servicios base de memoria persistente...")
     try:
         collections_response = await qdrant_client.get_collections()
         collection_names = [col.name for col in collections_response.collections]
@@ -149,14 +155,14 @@ async def autogenerar_nueva_tool(nombre_funcion: str, codigo_python: str, descri
         )
         
         with open(path_archivo, "w", encoding="utf-8") as f: f.write(plantilla_final)
-        logger.info(f"💾 [AUTOGÉNESIS] Tool instalada: {path_archivo}")
+        logger.info(f"💾 [AUTOGÉNESIS] Tool instalada asíncronamente en host: {path_archivo}")
         
         return f"SUCCESS: '{nombre_limpio}' instalada con éxito."
     except Exception as e:
         return f"ERROR KERNEL: Falla crítica en autogénesis: {e}"
 
 async def ejecutar_herramienta_local(nombre: str, argumentos: dict = None) -> str:
-    logger.info(f"🔌 [EJECUTOR] Invocando: '{nombre}'")
+    logger.info(f"🔌 [EJECUTOR] Invocando subproceso host: '{nombre}'")
     if argumentos is None: argumentos = {}
     
     if nombre == "autogenerar_nueva_tool":
@@ -175,40 +181,41 @@ async def ejecutar_herramienta_local(nombre: str, argumentos: dict = None) -> st
     except Exception as e:
         return f"❌ Falla en herramienta '{nombre}': {e}"
         
-    return f"Herramienta '{nombre}' no encontrada."
+    return f"Herramienta '{nombre}' no encontrada en el núcleo."
 
 # =====================================================================
-# 4. ENDPOINT CORE DE INTENCIONES CON STREAMING AG-UI
+# 3. ENDPOINT CENTRAL DE INTENCIONES CON STREAMING AG-UI
 # =====================================================================
 @app.post("/api/system/intent")
 async def procesar_intencion_global(payload: TaskbarPrompt):
     async def generador_eventos():
+        # Verificación del semáforo FIFO
         if OLLAMA_BUS_LOCK.locked():
             yield json.dumps({"event": "QUEUE_WAIT", "message": "Servidor ocupado. Solicitud en cola de espera en el Kernel..."}) + "\n"
             
+        # Adquiriendo candado de concurrencia
         async with OLLAMA_BUS_LOCK:
             ollama_host = os.getenv("OLLAMA_HOST", "http://10.10.0.48:11434").rstrip("/")
             url_chat = f"{ollama_host}/v1/chat/completions"
             
-            yield json.dumps({"event": "ROUTER_START", "message": "Inicializando Router Semántico..."}) + "\n"
+            yield json.dumps({"event": "ROUTER_START", "message": "Inicializando Router Semántico en Memoria..."}) + "\n"
             
-            # Fusión de tools
-            tools_disponibles = {**CACHE_VECTORS["sistema"], **CACHE_VECTORS["usuarios"].get(payload.user_id, {})}
+            # Fusión virtual jerárquica
+            tools_privadas = CACHE_VECTORS["usuarios"].get(payload.user_id, {})
+            tools_disponibles = {**CACHE_VECTORS["sistema"], **tools_privadas}
             
-            # TODO: Simulación de vector de usuario y coseno. En entorno real usar sentence_transformers real
             vector_usuario = simular_vector_texto(payload.prompt)
-            
             filtered_tools = []
             
-            # Router de herramientas
+            # Router Semántico y emisión geométrica en tiempo real
             for nombre_tool, data in tools_disponibles.items():
-                # placeholder score
-                score = 0.8 # En la práctica sería: similitud_coseno(vector_usuario, data["vector"])
+                score = 0.8 # TODO futuro: utilizar similitud de cosenos real aquí con SentenceTransformers
                 yield json.dumps({"event": "ROUTER_SCORE", "tool": nombre_tool, "score": score}) + "\n"
+                
+                # Umbral de corte calibrado para ministral:latest
                 if score > 0.42:
                     filtered_tools.append(data["schema"])
                     
-            # Inyección base de herramientas si no hay en cache
             if not filtered_tools:
                 filtered_tools.append({
                     "name": "autogenerar_nueva_tool",
@@ -227,9 +234,9 @@ async def procesar_intencion_global(payload: TaskbarPrompt):
             openai_tools = [{"type": "function", "function": t} for t in filtered_tools] if filtered_tools else None
             
             payload_local = {
-                "model": "ministral-es:latest",
+                "model": "ministral:latest",
                 "messages": [
-                    {"role": "system", "content": "Sos el kernel de AGNUX OS. Responde corto y ejecutivo."},
+                    {"role": "system", "content": "Sos el kernel principal de AGNUX OS. Responde siempre corto y ejecutivo."},
                     {"role": "user", "content": payload.prompt}
                 ],
                 "stream": True
@@ -240,10 +247,11 @@ async def procesar_intencion_global(payload: TaskbarPrompt):
             argumentos_acumulados = ""
             
             try:
+                # Streaming multiplexado al bus Ollama
                 async with httpx.AsyncClient() as client:
                     async with client.stream("POST", url_chat, json=payload_local, timeout=60.0) as response:
                         if response.status_code != 200:
-                            yield json.dumps({"event": "ERROR", "message": f"HTTP {response.status_code}"}) + "\n"
+                            yield json.dumps({"event": "ERROR", "message": f"Bus Inferencia Caído. HTTP {response.status_code}"}) + "\n"
                             return
                             
                         async for chunk in response.aiter_lines():
@@ -265,18 +273,18 @@ async def procesar_intencion_global(payload: TaskbarPrompt):
                             except Exception: continue
                             
             except Exception as e:
-                yield json.dumps({"event": "ERROR", "message": f"Ollama Stream Falló: {e}"}) + "\n"
+                yield json.dumps({"event": "ERROR", "message": f"Ollama Stream Network Error: {e}"}) + "\n"
                 return
 
             if tool_call_detected:
-                yield json.dumps({"event": "TOOL_EXECUTE", "message": f"Invocando comando: {tool_call_detected}"}) + "\n"
+                yield json.dumps({"event": "TOOL_EXECUTE", "message": f"Ejecución solicitada a Kernel: {tool_call_detected}"}) + "\n"
                 try:
                     args = json.loads(argumentos_acumulados) if argumentos_acumulados else {}
                     resultado_fierros = await ejecutar_herramienta_local(tool_call_detected, args)
                     
                     yield json.dumps({"event": "TOOL_RESULT", "data": resultado_fierros}) + "\n"
                     
-                    # Promoción de tool
+                    # Criterio de promoción: ¿es una tool de sistema u over-ride global?
                     if tool_call_detected == "autogenerar_nueva_tool" and args.get("nombre_funcion", "").startswith("global_"):
                         nombre_func = args["nombre_funcion"]
                         CACHE_VECTORS["sistema"][nombre_func] = {
@@ -287,21 +295,62 @@ async def procesar_intencion_global(payload: TaskbarPrompt):
                                 "parameters": {"type": "object", "properties": {}}
                             }
                         }
-                        logger.info(f"🌐 [RAM KERNEL] Herramienta '{nombre_func}' promovida a GLOBAL.")
+                        logger.info(f"🌐 [RAM KERNEL] Escalada de privilegios: Herramienta '{nombre_func}' promovida a GLOBAL.")
                         
                 except Exception as e:
-                    yield json.dumps({"event": "ERROR", "message": f"Falla en tool: {e}"}) + "\n"
+                    yield json.dumps({"event": "ERROR", "message": f"Falla física en tool_call: {e}"}) + "\n"
 
     return StreamingResponse(generador_eventos(), media_type="text/event-stream")
 
 # =====================================================================
-# 5. CONTROL DE ACCESO BIOMÉTRICO
+# 4. ENDPOINTS DE BYPASS BIOMÉTRICO Y LOGIN REMOTO
 # =====================================================================
+@app.get("/api/auth/terminal-stream/{terminal_id}")
+async def terminal_stream(terminal_id: str):
+    # Reserva inicial del socket
+    TERMINAL_SESSIONS[terminal_id] = {"status": "pending", "user_id": None}
+    logger.info(f"📡 [TERMINAL] Sesión abierta y esperando autenticación remota para: {terminal_id}")
+    
+    async def sse_bypass():
+        try:
+            while True:
+                estado = TERMINAL_SESSIONS.get(terminal_id)
+                if estado and estado.get("status") == "approved":
+                    user_id = estado.get("user_id")
+                    logger.info(f"✅ [TERMINAL] Aprobación detectada. Liberando terminal para: {user_id}")
+                    yield f"data: {json.dumps({'event': 'AUTH_SUCCESS', 'user_id': user_id})}\n\n"
+                    break
+                
+                # Mantenimiento del túnel SSE abierto
+                yield f"data: {json.dumps({'event': 'HEARTBEAT'})}\n\n"
+                await asyncio.sleep(1.0)
+        finally:
+            # Destruye el socket local de la tabla
+            TERMINAL_SESSIONS.pop(terminal_id, None)
+            
+    return StreamingResponse(sse_bypass(), media_type="text/event-stream")
+
+@app.post("/api/auth/terminal-authorize")
+async def terminal_authorize(payload: LinkTerminalPayload):
+    # Llamado por el móvil bajo VPN WireGuard
+    if payload.terminal_id in TERMINAL_SESSIONS:
+        # Forzar la conmutación de estado a approved
+        TERMINAL_SESSIONS[payload.terminal_id] = {"status": "approved", "user_id": payload.user_id}
+        
+        # Evitar fallos de referencia en Router inicializando el slot de este usuario
+        if payload.user_id not in CACHE_VECTORS["usuarios"]:
+            CACHE_VECTORS["usuarios"][payload.user_id] = {}
+            logger.info(f"🗂️ [RAM KERNEL] Slot privado creado al vuelo para: {payload.user_id}")
+            
+        logger.info(f"🔓 [BYPASS VPN] Terminal {payload.terminal_id} desbloqueada por el celular de: {payload.user_id}")
+        return {"status": "success"}
+    else:
+        raise HTTPException(status_code=404, detail="Terminal remota inactiva o ID inválido")
+
 @app.post("/api/auth/facial-login")
 async def facial_login(file: UploadFile = File(...)):
     try:
         contenido = await file.read()
-        # Simula extracción geométrica a partir de imagen
         vector_rostro = simular_vector_rostro()
         
         search_result = await qdrant_client.search(
@@ -310,22 +359,24 @@ async def facial_login(file: UploadFile = File(...)):
             limit=1
         )
         
-        if search_result and search_result[0].score > 0.85: # Umbral de similitud
+        if search_result and search_result[0].score > 0.85: 
             user_id = search_result[0].payload.get("user_id")
             return {"status": "authenticated", "user_id": user_id}
         else:
+            # Retiene el vector temporal e insta a aprobar desde app
             enrolment_id = str(uuid.uuid4())
             TEMPORARY_FACE_VECTORS[enrolment_id] = vector_rostro
+            logger.info(f"📸 [BIOMETRÍA] Rostro DESCONOCIDO detectado. Emisión de EnrolmentID: {enrolment_id}")
             return {"status": "unknown_face", "enrolment_id": enrolment_id}
             
     except Exception as e:
-        logger.error(f"Falla en biometría: {e}")
-        raise HTTPException(status_code=500, detail="Error biométrico")
+        logger.error(f"Falla en bus de biometría facial: {e}")
+        raise HTTPException(status_code=500, detail="Fallo catastrófico en análisis biométrico")
 
 @app.post("/api/auth/register-profile")
 async def register_profile(payload: EnrolmentPayload):
     if payload.enrolment_id not in TEMPORARY_FACE_VECTORS:
-        raise HTTPException(status_code=400, detail="Enrolment ID expirado o inválido")
+        raise HTTPException(status_code=400, detail="Error de seguridad: ID de enrolamiento expirado o ficticio")
         
     vector_rostro = TEMPORARY_FACE_VECTORS[payload.enrolment_id]
     user_id_limpio = payload.nombre_usuario.strip().lower().replace(" ", "_")
@@ -338,51 +389,21 @@ async def register_profile(payload: EnrolmentPayload):
     )
     
     try:
+        # Inserción en memoria permanente de largo plazo
         await qdrant_client.upsert(
             collection_name=COLECCION_FACIAL,
             points=[punto]
         )
         
-        # Inicializar slot en RAM
+        # Inserción asíncrona segura en RAM volátil del Kernel
         if user_id_limpio not in CACHE_VECTORS["usuarios"]:
             CACHE_VECTORS["usuarios"][user_id_limpio] = {}
             
+        # Destruir evidencia temporal
         del TEMPORARY_FACE_VECTORS[payload.enrolment_id]
-        logger.info(f"👤 [IDENTITY] Nuevo perfil registrado: {user_id_limpio}")
+        logger.info(f"👤 [IDENTITY KERNEL] Nuevo perfil creado y blindado en RAM/Qdrant: {user_id_limpio}")
         
         return {"status": "profile_created", "user_id": user_id_limpio}
     except Exception as e:
-        logger.error(f"Falla al registrar perfil: {e}")
-        raise HTTPException(status_code=500, detail="Error en Qdrant DB")
-
-# =====================================================================
-# 6. PUENTE DE BYPASS BIOMÉTRICO REMOTO
-# =====================================================================
-@app.get("/api/auth/terminal-stream")
-async def terminal_stream(terminal_id: str):
-    TERMINAL_SESSIONS[terminal_id] = "pending"
-    
-    async def sse_bypass():
-        try:
-            while True:
-                estado = TERMINAL_SESSIONS.get(terminal_id)
-                if estado and estado.startswith("approved:"):
-                    user_id = estado.split(":")[1]
-                    yield f"data: {json.dumps({'event': 'AUTH_SUCCESS', 'user_id': user_id})}\n\n"
-                    break
-                
-                yield f"data: {json.dumps({'event': 'HEARTBEAT'})}\n\n"
-                await asyncio.sleep(1.0)
-        finally:
-            TERMINAL_SESSIONS.pop(terminal_id, None)
-            
-    return StreamingResponse(sse_bypass(), media_type="text/event-stream")
-
-@app.post("/api/auth/terminal-authorize")
-async def terminal_authorize(payload: LinkTerminalPayload):
-    if payload.terminal_id in TERMINAL_SESSIONS:
-        TERMINAL_SESSIONS[payload.terminal_id] = f"approved:{payload.user_id}"
-        logger.info(f"🔓 [BYPASS] Terminal {payload.terminal_id} desbloqueada remotamente por {payload.user_id}")
-        return {"status": "success"}
-    else:
-        raise HTTPException(status_code=404, detail="Terminal no encontrada o inactiva")
+        logger.error(f"Falla en registro profundo: {e}")
+        raise HTTPException(status_code=500, detail="Error transaccional en persistencia de Qdrant DB")

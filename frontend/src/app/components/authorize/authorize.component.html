@@ -1,0 +1,38 @@
+<div class="mobile-authorize-container">
+  <div class="header-scan">
+    <h2 class="vpn-badge">AGNUX VPN SECURE LINK</h2>
+  </div>
+
+  <div class="content-box">
+    <!-- Estado: Cargando o Listo para Autorizar manual -->
+    <ng-container *ngIf="!statusMessage">
+      <div class="registration-form">
+        <h3 class="instruction-title">REGISTRE SU IDENTIDAD DE OPERADOR</h3>
+        <p class="subtitle">La terminal <b>{{ terminalId }}</b> requiere de su verificación biométrica o firma digital para desbloquearse.</p>
+        
+        <input 
+          type="text" 
+          class="cyber-input" 
+          placeholder="Escriba su nombre..." 
+          [(ngModel)]="usernameInput" 
+          (keyup.enter)="registrarEIngresar()"
+        />
+        
+        <button class="cyber-button auth-btn" (click)="registrarEIngresar()">
+          AUTORIZAR INGRESO
+        </button>
+      </div>
+    </ng-container>
+
+    <!-- Estado: Mensaje de resultado de la petición HTTP -->
+    <ng-container *ngIf="statusMessage">
+      <div class="result-box" [ngClass]="{'success-box': isSuccess, 'error-box': !isSuccess}">
+        <div class="status-icon">
+          <span *ngIf="isSuccess">✔️</span>
+          <span *ngIf="!isSuccess">❌</span>
+        </div>
+        <h3 class="status-text">{{ statusMessage }}</h3>
+      </div>
+    </ng-container>
+  </div>
+</div>
