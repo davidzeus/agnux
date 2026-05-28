@@ -57,7 +57,46 @@ export class EscritorioComponent implements OnInit, OnDestroy {
 
     this.subscriptions.push(
       this.agnuxService.eventStatus$.subscribe(status => {
-        if (status.type === 'TOOL_EXECUTE') {
+        const event = status;
+        
+        // 🔥 EL EVENTO QUE FALTA: Capturar la orden de creación estructurada del Kernel
+        if (event.type === 'CREATE_WINDOW' || event.event === 'CREATE_WINDOW' || (event.type === 'UNKNOWN' && event.payload?.event === 'CREATE_WINDOW')) {
+            try {
+                let rawData = event.data || event.payload?.data;
+                const winData = typeof rawData === 'string' ? JSON.parse(rawData) : rawData;
+                console.log("📺 [UI KERNEL] Orden de creación de ventana recibida:", winData);
+                
+                // Verificamos si la ventana ya existe para no duplicarla
+                let ventanaIA = this.ventanas.find(v => v.id === winData.window_id || v.id === winData.windowId);
+                
+                if (!ventanaIA) {
+                    // Respetamos la regla constitucional de no guiones bajos en el objeto de la interfaz
+                    ventanaIA = {
+                        id: winData.window_id || winData.windowId || 'agnux-ai-window',
+                        titulo: winData.title || '🧠 AGNUX OS Core',
+                        tipo: 'html',
+                        htmlDinamico: winData.content || '',
+                        x: 200,
+                        y: 120,
+                        width: 550,
+                        height: 420,
+                        maximizada: false,
+                        zIndex: ++this.maxZIndex
+                    };
+                    
+                    // Forzamos la mutación inmutable para que Angular se entere
+                    this.ventanas = [...this.ventanas, ventanaIA];
+                } else {
+                    // Si ya existía, actualizamos el contenido final consolidado
+                    ventanaIA.htmlDinamico = winData.content;
+                }
+                
+                // 🔥 Forzamos el redibujado inmediato del DOM de Chrome
+                this.cdr.detectChanges();
+            } catch (parseError) {
+                console.error("❌ Error crítico parseando el JSON de la ventana:", parseError);
+            }
+        } else if (status.type === 'TOOL_EXECUTE') {
           this.cargando = true;
           const msg = status.msg || '';
           if (msg.includes('reproducir_musica')) {

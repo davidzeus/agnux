@@ -189,133 +189,140 @@ async def ejecutar_herramienta_local(nombre: str, argumentos: dict = None) -> st
 @app.post("/api/system/intent")
 async def procesar_intencion_global(payload: TaskbarPrompt):
     async def generador_eventos():
-        # Verificación del semáforo FIFO
-        if OLLAMA_BUS_LOCK.locked():
-            yield json.dumps({"event": "QUEUE_WAIT", "message": "Servidor ocupado. Solicitud en cola de espera en el Kernel..."}) + "\n"
-            
-        # Adquiriendo candado de concurrencia
-        async with OLLAMA_BUS_LOCK:
-            base_host = os.getenv('OLLAMA_HOST', 'http://10.10.0.48:11434').rstrip("/")
-            url_ollama_universal = f"{base_host}/api/generate"
-            modelo_activo = os.getenv('AGNUX_ACTIVE_MODEL', 'ministral-es:latest')
-            
-            yield json.dumps({"event": "ROUTER_START", "message": "Inicializando Router Semántico en Memoria..."}) + "\n"
-            
-            # Fusión virtual jerárquica con normalización de ID
-            id_normalizado = payload.user_id.replace("_", "-")
-            tools_privadas = CACHE_VECTORS["usuarios"].get(id_normalizado, {})
-            tools_disponibles = {**CACHE_VECTORS["sistema"], **tools_privadas}
-            
-            vector_usuario = simular_vector_texto(payload.prompt)
-            filtered_tools = []
-            
-            # Router Semántico y emisión geométrica en tiempo real
-            for nombre_tool, data in tools_disponibles.items():
-                score = 0.8 # TODO futuro: utilizar similitud de cosenos real aquí con SentenceTransformers
-                yield json.dumps({"event": "ROUTER_SCORE", "tool": nombre_tool, "score": score}) + "\n"
-                
-                # Umbral de corte calibrado para ministral:latest
-                if score > 0.42:
-                    filtered_tools.append(data["schema"])
-                    
-            if not filtered_tools:
-                filtered_tools.append({
-                    "name": "autogenerar_nueva_tool",
-                    "description": "Se activa para programar una nueva herramienta",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "nombre_funcion": {"type": "string"},
-                            "codigo_python": {"type": "string"},
-                            "descripcion_docstring": {"type": "string"}
-                        },
-                        "required": ["nombre_funcion", "codigo_python", "descripcion_docstring"]
-                    }
-                })
-
-            openai_tools = [{"type": "function", "function": t} for t in filtered_tools] if filtered_tools else None
-            
-            SYSTEM_PROMPT = """Sos el kernel principal de AGNUX OS. Responde siempre corto y ejecutivo.
-
-## 2.1 REGLAS ESTRICTAS DE NOMENCLATURA DE RED (ESTÁNDAR DE KERNEL LINUX Y DNS)
-- Está TAXATIVAMENTE PROHIBIDO el uso de guiones bajos ('_') en cualquier identificador de usuario, nombre de terminal, o nombre de herramienta dinámica que interactúe con el host. El guión bajo rompe la sintaxis de interfaces de WireGuard y las especificaciones de Hostnames de internet (RFC 1035).
-- Todo identificador debe normalizarse utilizando única y exclusivamente guiones medios ('-') o formato alfanumérico plano en minúsculas (ejemplo correcto: 'user-cristian', 'global-calculadora', 'term-desktop-101').
-- Si vas a autogenerar código en caliente para una nueva herramienta, el archivo físico en disco y su registro semántico deben usar guiones medios (ej. 'global-control-bomba.py')."""
-
-            payload_ollama = {
-                "model": modelo_activo,
-                "prompt": f"{SYSTEM_PROMPT}\n\nUser: {payload.prompt}",
-                "stream": True
-            }
-            # Nota: El endpoint /api/generate es de texto plano y no procesa 'tools' de forma nativa.
-            
-            tool_call_detected = None
-            argumentos_acumulados = ""
-            
-            try:
-                # Streaming multiplexado al bus Ollama
-                async with httpx.AsyncClient() as client:
-                    async with client.stream("POST", url_ollama_universal, json=payload_ollama, timeout=60.0) as response:
-                        if response.status_code != 200:
-                            yield json.dumps({"event": "ERROR", "message": f"Bus Inferencia Caído. HTTP {response.status_code}"}) + "\n"
-                            return
-                            
-                        # 1. Consolidamos el texto que nos mandó Ministral
-                        respuesta_completa = ""
-                        async for line in response.aiter_lines():
-                            if line:
-                                try:
-                                    data = json.loads(line)
-                                    token = data.get("response", "")
-                                    if token:
-                                        respuesta_completa += token
-                                        # Emitimos bajo el protocolo AG-UI para la barra verde
-                                        yield f"event: TOKEN\ndata: {json.dumps(token)}\n\n"
-                                except Exception:
-                                    continue
-                                    
-                        # 2. 🧠 EL CIRCUITO QUE SE HABÍA ROTO: Evaluación de acción
-                        logger.info(f"🧠 [KERNEL AGENTE] Evaluando acción para la respuesta: {respuesta_completa}")
-
-                        # Si la IA determinó que es una respuesta directa o texto para el operador,
-                        # el backend es el responsable de ordenarle a Angular que dibuje la ventana flotante
-                        payload_ventana = {
-                            "window_id": "agnux-ai-window",
-                            "title": "🧠 AGNUX OS Core - Ministral IA",
-                            "content": respuesta_completa,
-                            "type": "terminal"
+        try:
+            # Verificación del semáforo FIFO
+            if OLLAMA_BUS_LOCK.locked():
+                yield json.dumps({"event": "QUEUE_WAIT", "message": "Servidor ocupado. Solicitud en cola de espera en el Kernel..."}) + "\n"
+    
+            # Adquiriendo candado de concurrencia
+            async with OLLAMA_BUS_LOCK:
+                base_host = os.getenv('OLLAMA_HOST', 'http://10.10.0.48:11434').rstrip("/")
+                url_ollama_universal = f"{base_host}/api/generate"
+                modelo_activo = os.getenv('AGNUX_ACTIVE_MODEL', 'ministral-es:latest')
+    
+                yield json.dumps({"event": "ROUTER_START", "message": "Inicializando Router Semántico en Memoria..."}) + "\n"
+    
+                # Fusión virtual jerárquica con normalización de ID
+                id_normalizado = payload.user_id.replace("_", "-")
+                tools_privadas = CACHE_VECTORS["usuarios"].get(id_normalizado, {})
+                tools_disponibles = {**CACHE_VECTORS["sistema"], **tools_privadas}
+    
+                vector_usuario = simular_vector_texto(payload.prompt)
+                filtered_tools = []
+    
+                # Router Semántico y emisión geométrica en tiempo real
+                for nombre_tool, data in tools_disponibles.items():
+                    score = 0.8 # TODO futuro: utilizar similitud de cosenos real aquí con SentenceTransformers
+                    yield json.dumps({"event": "ROUTER_SCORE", "tool": nombre_tool, "score": score}) + "\n"
+    
+                    # Umbral de corte calibrado para ministral:latest
+                    if score > 0.42:
+                        filtered_tools.append(data["schema"])
+    
+                if not filtered_tools:
+                    filtered_tools.append({
+                        "name": "autogenerar_nueva_tool",
+                        "description": "Se activa para programar una nueva herramienta",
+                        "parameters": {
+                            "type": "object",
+                            "properties": {
+                                "nombre_funcion": {"type": "string"},
+                                "codigo_python": {"type": "string"},
+                                "descripcion_docstring": {"type": "string"}
+                            },
+                            "required": ["nombre_funcion", "codigo_python", "descripcion_docstring"]
                         }
-
-                        # Emitimos el evento de infraestructura nativo que Angular espera para spawnear ventanas
-                        yield f"event: CREATE_WINDOW\ndata: {json.dumps(payload_ventana)}\n\n"
-                            
-            except Exception as e:
-                yield json.dumps({"event": "ERROR", "message": f"Ollama Stream Network Error: {e}"}) + "\n"
-                return
-
-            if tool_call_detected:
-                yield json.dumps({"event": "TOOL_EXECUTE", "message": f"Ejecución solicitada a Kernel: {tool_call_detected}"}) + "\n"
+                    })
+    
+                openai_tools = [{"type": "function", "function": t} for t in filtered_tools] if filtered_tools else None
+    
+                SYSTEM_PROMPT = """Sos el kernel principal de AGNUX OS. Responde siempre corto y ejecutivo.
+    
+    ## 2.1 REGLAS ESTRICTAS DE NOMENCLATURA DE RED (ESTÁNDAR DE KERNEL LINUX Y DNS)
+    - Está TAXATIVAMENTE PROHIBIDO el uso de guiones bajos ('_') en cualquier identificador de usuario, nombre de terminal, o nombre de herramienta dinámica que interactúe con el host. El guión bajo rompe la sintaxis de interfaces de WireGuard y las especificaciones de Hostnames de internet (RFC 1035).
+    - Todo identificador debe normalizarse utilizando única y exclusivamente guiones medios ('-') o formato alfanumérico plano en minúsculas (ejemplo correcto: 'user-cristian', 'global-calculadora', 'term-desktop-101').
+    - Si vas a autogenerar código en caliente para una nueva herramienta, el archivo físico en disco y su registro semántico deben usar guiones medios (ej. 'global-control-bomba.py')."""
+    
+                payload_ollama = {
+                    "model": modelo_activo,
+                    "prompt": f"{SYSTEM_PROMPT}\n\nUser: {payload.prompt}",
+                    "stream": True
+                }
+                # Nota: El endpoint /api/generate es de texto plano y no procesa 'tools' de forma nativa.
+    
+                tool_call_detected = None
+                argumentos_acumulados = ""
+    
                 try:
-                    args = json.loads(argumentos_acumulados) if argumentos_acumulados else {}
-                    resultado_fierros = await ejecutar_herramienta_local(tool_call_detected, args)
-                    
-                    yield json.dumps({"event": "TOOL_RESULT", "data": resultado_fierros}) + "\n"
-                    
-                    # Criterio de promoción: ¿es una tool de sistema u over-ride global?
-                    if tool_call_detected == "autogenerar_nueva_tool" and args.get("nombre_funcion", "").startswith("global_"):
-                        nombre_func = args["nombre_funcion"]
-                        CACHE_VECTORS["sistema"][nombre_func] = {
-                            "vector": simular_vector_texto(args.get("descripcion_docstring", "")),
-                            "schema": {
-                                "name": nombre_func,
-                                "description": args.get("descripcion_docstring", ""),
-                                "parameters": {"type": "object", "properties": {}}
+                    # Streaming multiplexado al bus Ollama
+                    async with httpx.AsyncClient() as client:
+                        async with client.stream("POST", url_ollama_universal, json=payload_ollama, timeout=60.0) as response:
+                            if response.status_code != 200:
+                                yield json.dumps({"event": "ERROR", "message": f"Bus Inferencia Caído. HTTP {response.status_code}"}) + "\n"
+                                return
+    
+                            # 1. Consolidamos el texto que nos mandó Ministral
+                            respuesta_completa = ""
+                            async for line in response.aiter_lines():
+                                if line:
+                                    try:
+                                        data = json.loads(line)
+                                        token = data.get("response", "")
+                                        if token:
+                                            respuesta_completa += token
+                                            # Emitimos bajo el protocolo AG-UI para la barra verde
+                                            yield f"event: TOKEN\ndata: {json.dumps(token)}\n\n"
+                                    except Exception:
+                                        continue
+    
+                            # 2. 🧠 EL CIRCUITO QUE SE HABÍA ROTO: Evaluación de acción
+                            logger.info(f"🧠 [KERNEL AGENTE] Evaluando acción para la respuesta: {respuesta_completa}")
+    
+                            # Si la IA determinó que es una respuesta directa o texto para el operador,
+                            # el backend es el responsable de ordenarle a Angular que dibuje la ventana flotante
+                            payload_ventana = {
+                                "window_id": "agnux-ai-window",
+                                "title": "🧠 AGNUX OS Core - Ministral IA",
+                                "content": respuesta_completa,
+                                "type": "terminal"
                             }
-                        }
-                        logger.info(f"🌐 [RAM KERNEL] Escalada de privilegios: Herramienta '{nombre_func}' promovida a GLOBAL.")
-                        
+    
+                            # Emitimos el evento de infraestructura nativo que Angular espera para spawnear ventanas
+                            yield f"event: CREATE_WINDOW\ndata: {json.dumps(payload_ventana, ensure_ascii=False)}\n\n"
+    
+                            # 🔥 EL FIX CRUCIAL: Forzamos la destrucción del generador asíncrono y cerramos el socket HTTP
+                            logger.info("🔌 [KERNEL AGENTE] Tarea cumplida. Liberando canal de intent de forma inmediata.")
+                            return
+    
                 except Exception as e:
-                    yield json.dumps({"event": "ERROR", "message": f"Falla física en tool_call: {e}"}) + "\n"
+                    yield json.dumps({"event": "ERROR", "message": f"Ollama Stream Network Error: {e}"}) + "\n"
+                    return
+    
+                if tool_call_detected:
+                    yield json.dumps({"event": "TOOL_EXECUTE", "message": f"Ejecución solicitada a Kernel: {tool_call_detected}"}) + "\n"
+                    try:
+                        args = json.loads(argumentos_acumulados) if argumentos_acumulados else {}
+                        resultado_fierros = await ejecutar_herramienta_local(tool_call_detected, args)
+    
+                        yield json.dumps({"event": "TOOL_RESULT", "data": resultado_fierros}) + "\n"
+    
+                        # Criterio de promoción: ¿es una tool de sistema u over-ride global?
+                        if tool_call_detected == "autogenerar_nueva_tool" and args.get("nombre_funcion", "").startswith("global_"):
+                            nombre_func = args["nombre_funcion"]
+                            CACHE_VECTORS["sistema"][nombre_func] = {
+                                "vector": simular_vector_texto(args.get("descripcion_docstring", "")),
+                                "schema": {
+                                    "name": nombre_func,
+                                    "description": args.get("descripcion_docstring", ""),
+                                    "parameters": {"type": "object", "properties": {}}
+                                }
+                            }
+                            logger.info(f"🌐 [RAM KERNEL] Escalada de privilegios: Herramienta '{nombre_func}' promovida a GLOBAL.")
+    
+                    except Exception as e:
+                        yield json.dumps({"event": "ERROR", "message": f"Falla física en tool_call: {e}"}) + "\n"
+        finally:
+            logger.info("🔌 [KERNEL AGENTE] Limpiando recursos del generador asíncrono.")
 
     return StreamingResponse(generador_eventos(), media_type="text/event-stream")
 
