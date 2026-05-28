@@ -48,7 +48,7 @@ class TaskbarPrompt(BaseModel):
 # =====================================================================
 # ⚙️ MOTOR DE CAPA FÍSICA: EJECUTOR DE ENTORNO HOST
 # =====================================================================
-def ejecutar_herramienta_local(nombre: str, argumentos: dict = None) -> str:
+async def ejecutar_herramienta_local(nombre: str, argumentos: dict = None) -> str:
     """
     Orquestador del núcleo de AGNUX OS. Intercepta herramientas estáticas
     o levanta scripts dinámicos pasándoles argumentos por desempaquetado kwargs.
@@ -365,7 +365,7 @@ async def procesar_intencion_global(payload: TaskbarPrompt):
                         args = json.loads(args_raw) if isinstance(args_raw, str) else args_raw
                         if args is None: args = {}
                         
-                        resultado_local = ejecutar_herramienta_local(nombre_call, args)
+                        resultado_local = await ejecutar_herramienta_local(nombre_call, args)
                         return {"status": "success", "user": "user_cristian", "response": resultado_local}
                 
                 # Extracción blindada del texto plano si no se usó ninguna herramienta
