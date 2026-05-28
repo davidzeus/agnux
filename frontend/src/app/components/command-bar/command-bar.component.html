@@ -18,8 +18,8 @@
     </button>
   </div>
 
-  <div *ngIf="cargando" style="color: #ffaa00; margin-bottom: 10px;">
-    🌐 Consultando matriz cognitiva...
+  <div *ngIf="statusMensaje" style="color: #aaffaa; margin-bottom: 10px;">
+    {{ statusMensaje }}
   </div>
 
   <div *ngIf="errorMsg" style="color: #ff3333; background: #331111; padding: 10px; border-radius: 4px; margin-bottom: 10px;">
