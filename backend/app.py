@@ -27,7 +27,7 @@ logger = logging.getLogger("AGNUX-CORE")
 QDRANT_HOST = os.getenv("QDRANT_HOST", "http://qdrant_db:6333")
 qdrant_client = AsyncQdrantClient(url=QDRANT_HOST)
 
-app = FastAPI(title="AGNUX OS Core API", version="2.0.0")
+app = FastAPI(title="AGNUX OS Core API", version="2.0.0", redirect_slashes=True)
 
 app.add_middleware(
     CORSMiddleware,
@@ -339,6 +339,7 @@ async def terminal_stream(terminal_id: str):
     return StreamingResponse(sse_bypass(), media_type="text/event-stream")
 
 @app.post("/api/auth/terminal-authorize")
+@app.post("/api/auth/terminal-authorize/")
 async def terminal_authorize(payload: LinkTerminalPayload):
     # Normalización forzada de red (RFC 1035)
     id_red = payload.user_id.replace("_", "-")
@@ -359,6 +360,7 @@ async def terminal_authorize(payload: LinkTerminalPayload):
         raise HTTPException(status_code=404, detail="Terminal remota inactiva o ID inválido")
 
 @app.post("/api/auth/facial-login")
+@app.post("/api/auth/facial-login/")
 async def facial_login(file: UploadFile = File(...)):
     try:
         contenido = await file.read()
@@ -385,6 +387,7 @@ async def facial_login(file: UploadFile = File(...)):
         raise HTTPException(status_code=500, detail="Fallo catastrófico en análisis biométrico")
 
 @app.post("/api/auth/register-profile")
+@app.post("/api/auth/register-profile/")
 async def register_profile(payload: EnrolmentPayload):
     if payload.enrolment_id not in TEMPORARY_FACE_VECTORS:
         raise HTTPException(status_code=400, detail="Error de seguridad: ID de enrolamiento expirado o ficticio")
