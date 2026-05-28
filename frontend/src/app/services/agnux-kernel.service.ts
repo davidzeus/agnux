@@ -21,7 +21,7 @@ export class AgnuxKernelService {
   constructor(private authService: AuthService) {}
 
   async procesarIntencionStream(prompt: string): Promise<void> {
-    const userId = this.authService.currentUser();
+    const userId = this.authService.getCurrentUser();
     
     if (!userId) {
       this.eventSubject.next({ type: 'ERROR', message: 'Usuario no autenticado en el Kernel' });
