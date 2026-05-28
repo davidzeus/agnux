@@ -82,18 +82,19 @@ export class EscritorioComponent implements OnInit, OnDestroy {
     }
 
     const nuevaVentana: Ventana = {
-      id,
+      id: `win_${Date.now()}`,
       titulo,
       tipo,
       datos,
-      htmlDinamico: '',
       maximizada: false,
       x: 50 + (this.idCounter * 20),
       y: 50 + (this.idCounter * 20),
-      zIndex: this.maxZIndex
+      zIndex: this.maxZIndex + 1,
+      width: tipo === 'video' ? 680 : 480,
+      height: 400
     };
     this.ventanas.push(nuevaVentana);
-    return id;
+    return nuevaVentana.id;
   }
 
   cerrarVentana(id: string) {

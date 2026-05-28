@@ -6,8 +6,15 @@
   [style.z-index]="win.zIndex"
   [style.left.px]="win.maximizada ? 0 : win.x"
   [style.top.px]="win.maximizada ? 0 : win.y"
+  [style.width.px]="!win.maximizada ? win.width : null"
+  [style.height.px]="!win.maximizada ? win.height : null"
   (mousedown)="onEnfocar.emit(win)">
   
+  <!-- Bordes de redimensionamiento -->
+  <div class="resizer resizer-r" (mousedown)="initResize($event, 'right')"></div>
+  <div class="resizer resizer-b" (mousedown)="initResize($event, 'bottom')"></div>
+  <div class="resizer resizer-br" (mousedown)="initResize($event, 'both')"></div>
+
   <!-- Header de la Ventana -->
   <div class="window-header" cdkDragHandle>
     <div class="window-title">
