@@ -8,6 +8,7 @@ import { VentanaComponent } from '../ventana/ventana.component';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { AuthService } from '../../services/auth.service';
+import { PresenceService } from '../../services/presence.service';
 
 @Component({
   selector: 'app-escritorio',
@@ -41,11 +42,8 @@ export class EscritorioComponent implements OnInit, OnDestroy {
 
   // Local Biometric state
   tieneCamaraLocal: boolean = false;
-  @ViewChild('videoElement') videoElement!: ElementRef<HTMLVideoElement>;
-  private streamCamara: MediaStream | null = null;
-  private intervalFacial: any;
 
-  constructor(private agnuxService: AgnuxService, private authService: AuthService) {
+  constructor(private agnuxService: AgnuxService, private authService: AuthService, private presenceService: PresenceService) {
     afterNextRender(() => {
       this.clockInterval = setInterval(() => {
         this.horaActual = new Date();
@@ -121,53 +119,70 @@ export class EscritorioComponent implements OnInit, OnDestroy {
     if (typeof window !== 'undefined') {
       this.authService.listenTerminal(this.terminalId).pipe(take(1)).subscribe();
 
-      // Sondeo silencioso de periféricos
+      // Sondeo silencioso de periféricos para habilitar los botones
       navigator.mediaDevices.enumerateDevices().then(devices => {
         const camara = devices.some(device => device.kind === 'videoinput');
         this.tieneCamaraLocal = camara;
-        if (camara) {
-          console.log("📹 [KERNEL UI] Periférico de video detectado. Inicializando reconocimiento facial secundario...");
-          this.activarStreamingCamaraLocal();
-        }
       });
     }
   }
 
-  activarStreamingCamaraLocal() {
-    if (typeof navigator !== 'undefined' && navigator.mediaDevices) {
-      navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
-        this.streamCamara = stream;
-        // Delay ligero para permitir que Angular renderice el *ngIf del canvas/video
+  ejecutarCapturaFacialDemanda() {
+    if (typeof navigator === 'undefined' || !navigator.mediaDevices) return;
+    
+    console.log("📸 [KERNEL UI] Iniciando captura facial a demanda...");
+    navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
+      const video = document.createElement('video');
+      video.srcObject = stream;
+      video.play();
+      
+      video.onloadeddata = () => {
+        // Pequeño delay para permitir que la cámara aclare el foco y la luz
         setTimeout(() => {
-          if (this.videoElement && this.videoElement.nativeElement) {
-            this.videoElement.nativeElement.srcObject = stream;
-            // Frame check cada 3 segundos
-            this.intervalFacial = setInterval(() => this.capturarFrameFacial(), 3000);
+          const canvas = document.createElement('canvas');
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+          const context = canvas.getContext('2d');
+          if (context) {
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            canvas.toBlob(blob => {
+              if (blob) {
+                const file = new File([blob], 'frame.jpg', { type: 'image/jpeg' });
+                this.authService.loginFacial(file).subscribe();
+              }
+              stream.getTracks().forEach(track => track.stop());
+            }, 'image/jpeg');
+          } else {
+            stream.getTracks().forEach(track => track.stop());
           }
-        }, 500);
-      }).catch(err => console.warn("⚠️ [KERNEL UI] Error bloqueando cámara local:", err));
-    }
+        }, 800);
+      };
+    }).catch(err => console.error("⚠️ [KERNEL UI] Error bloqueando cámara local:", err));
   }
 
-  capturarFrameFacial() {
-    if (!this.videoElement || !this.videoElement.nativeElement || !this.isLocked) return;
-    
-    const video = this.videoElement.nativeElement;
-    if (video.videoWidth === 0) return;
+  ejecutarCapturaVocalDemanda() {
+    if (typeof navigator === 'undefined' || !navigator.mediaDevices) return;
 
-    const canvas = document.createElement('canvas');
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    const context = canvas.getContext('2d');
-    if (context) {
-      context.drawImage(video, 0, 0, canvas.width, canvas.height);
-      canvas.toBlob(blob => {
-        if (blob) {
-          const file = new File([blob], 'frame.jpg', { type: 'image/jpeg' });
-          this.authService.loginFacial(file).subscribe();
-        }
-      }, 'image/jpeg');
-    }
+    console.log("🎙️ [KERNEL UI] Grabando 2 segundos de audio...");
+    navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+      const mediaRecorder = new MediaRecorder(stream);
+      const audioChunks: Blob[] = [];
+
+      mediaRecorder.addEventListener("dataavailable", event => {
+        audioChunks.push(event.data);
+      });
+
+      mediaRecorder.addEventListener("stop", () => {
+        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+        this.authService.loginVocal(audioBlob).subscribe();
+        stream.getTracks().forEach(track => track.stop());
+      });
+
+      mediaRecorder.start();
+      setTimeout(() => {
+        mediaRecorder.stop();
+      }, 2000);
+    }).catch(err => console.error("⚠️ [KERNEL UI] Error capturando audio:", err));
   }
 
   ngOnDestroy() {
@@ -179,13 +194,6 @@ export class EscritorioComponent implements OnInit, OnDestroy {
       this.authSub.unsubscribe();
     }
     this.authService.closeConnection();
-
-    if (this.streamCamara) {
-      this.streamCamara.getTracks().forEach(track => track.stop());
-    }
-    if (this.intervalFacial) {
-      clearInterval(this.intervalFacial);
-    }
   }
 
   spawnVentana(tipo: 'html' | 'musica' | 'video' | 'texto', titulo: string, datos: any): string {

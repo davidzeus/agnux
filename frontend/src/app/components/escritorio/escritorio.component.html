@@ -16,11 +16,18 @@
             </p>
           </div>
 
-          <!-- Módulo Secundario Dinámico: Biometría Local -->
-          <div class="cam-container" *ngIf="tieneCamaraLocal" style="text-align: center;">
-            <video #videoElement autoplay muted playsinline style="width: 250px; height: 250px; object-fit: cover; border: 4px solid #ff3366; box-shadow: 0 0 15px rgba(255, 51, 102, 0.5);"></video>
-            <p class="blink-text" style="color: #ff3366; font-family: monospace; margin-top: 10px; font-size: 12px; font-weight: bold;">
-              SCANNING LOCAL BIOMETRICS...
+          <!-- Módulo Secundario Dinámico: Biometría Local On-Demand -->
+          <div class="cam-container" *ngIf="tieneCamaraLocal" style="text-align: center; border: 1px solid #ff3366; padding: 20px; background: rgba(255, 51, 102, 0.05); box-shadow: inset 0 0 10px rgba(255, 51, 102, 0.2);">
+            <div style="display: flex; flex-direction: column; gap: 15px;">
+              <button mat-button class="cyber-btn-facial" (click)="ejecutarCapturaFacialDemanda()" style="background: rgba(255, 51, 102, 0.2); color: #ff3366; border: 1px solid #ff3366; padding: 10px 20px; font-family: monospace; font-weight: bold; cursor: pointer; transition: 0.3s;">
+                [ 📹 INICIO FACIAL ]
+              </button>
+              <button mat-button class="cyber-btn-vocal" (click)="ejecutarCapturaVocalDemanda()" style="background: rgba(255, 51, 102, 0.2); color: #ff3366; border: 1px solid #ff3366; padding: 10px 20px; font-family: monospace; font-weight: bold; cursor: pointer; transition: 0.3s;">
+                [ 🎙️ INICIO VOCAL ]
+              </button>
+            </div>
+            <p class="blink-text" style="color: #ff3366; font-family: monospace; margin-top: 15px; font-size: 11px;">
+              Esperando operador local o token de proximidad WireGuard...
             </p>
           </div>
         </div>

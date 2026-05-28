@@ -81,6 +81,36 @@ export class AuthService {
     return req;
   }
 
+  loginVocal(file: Blob): Observable<any> {
+    const formData = new FormData();
+    formData.append('file', file, 'audio.webm');
+    const req = this.http.post('http://10.10.0.66:8000/api/auth/vocal-login', formData);
+    
+    req.subscribe({
+      next: (res: any) => {
+        if (res.status === 'authenticated' && res.user_id) {
+          console.log('🎤 [AGNUX BIOMETRICS] Reconocimiento vocal exitoso:', res.user_id);
+          if (typeof localStorage !== 'undefined') {
+            localStorage.setItem('agnux_user_id', res.user_id);
+          }
+          this.currentUserSubject.next(res.user_id);
+          this.closeConnection();
+        }
+      },
+      error: (err) => console.error('Error en autenticación vocal:', err)
+    });
+    return req;
+  }
+
+  logoutForzado() {
+    console.warn('⚠️ [AGNUX KERNEL] Logout forzado emitido (Fallo de Presencia / Invalidación).');
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem('agnux_user_id');
+    }
+    this.currentUserSubject.next(null);
+    this.closeConnection();
+  }
+
   closeConnection() {
     if (this.eventSource) {
       this.eventSource.close();
