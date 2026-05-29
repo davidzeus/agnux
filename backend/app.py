@@ -532,15 +532,20 @@ async def procesar_intencion_global(payload: TaskbarPrompt):
                         # =================================================================
                         if tool_call_detected == "openMediaApp":
                             platform = args.get("platform")
+                            platform_urls = {
+                                "spotify": "https://open.spotify.com",
+                                "youtubeMusic": "https://music.youtube.com",
+                                "netflix": "https://www.netflix.com"
+                            }
+                            url = platform_urls.get(platform, "https://google.com")
                             media_payload = {
                                 "event": "OPEN_MEDIA",
                                 "mediaPlatform": platform,
+                                "url": url,
                                 "status": "playing"
                             }
                             yield f"event: OPEN_MEDIA\ndata: {json.dumps(media_payload)}\n\n"
-                            from dynamic_tools.media_launcher import launch_chromium_kiosk
-                            asyncio.create_task(launch_chromium_kiosk(platform))
-                            resultado_fierros = f"Lanzado Kiosco Multimedia para {platform}"
+                            resultado_fierros = f"Ordenando al cliente web que abra {platform} en una nueva pestaña."
                             
                         elif tool_call_detected == "googleWorkspaceAction":
                             iframe_payload = {

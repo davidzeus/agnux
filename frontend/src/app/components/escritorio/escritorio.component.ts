@@ -118,6 +118,11 @@ export class EscritorioComponent implements OnInit, OnDestroy {
         } else if (status.type === 'OPEN_MEDIA') {
           // Mutar hyper-island o mostrar reproductor embebido
           this.cargando = false;
+          const targetUrl = status.payload?.url;
+          if (targetUrl) {
+            console.log(`🎵 [UI KERNEL] Abriendo reproductor de medios en nueva pestaña: ${targetUrl}`);
+            window.open(targetUrl, '_blank', 'noopener,noreferrer');
+          }
           // Evento propagado a hyper-island a través de un bus o servicio (lo gestionaremos en app-hyper-island)
         } else if (status.type === 'OPEN_IFRAME_APP') {
           this.cargando = false;
