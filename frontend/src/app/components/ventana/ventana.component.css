@@ -78,12 +78,13 @@
 }
 
 .window-actions button {
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--agnux-text-primary);
+  opacity: 0.6;
   transform: scale(0.8);
 }
 
 .window-actions button:hover {
-  color: #fff;
+  opacity: 1;
 }
 
 /* Contenido */
