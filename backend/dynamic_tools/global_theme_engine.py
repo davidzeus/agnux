@@ -74,19 +74,40 @@ async def global_theme_engine(style_prompt: str, **kwargs) -> str:
     {dom_context}
     ```
 
-    Después del `:root`, puedes aplicar tu "Modo Anarquía Visual" inyectando estilos crudos a los selectores exactos que acabas de ver en el DOM escaneado.
+    OBLIGATORIO: Debes devolver ÚNICAMENTE código CSS puro. No uses JSON. Escribe libremente tu código CSS, pero asegúrate de envolverlo en un bloque ```css ... ```.
     
-    Retorna SOLO el objeto JSON. Ejemplo:
-    {{
-        "css": ":root {{ --agnux-panel-bg: rgba(20,20,20,0.9); --agnux-accent: #ff0000; }} .window-header {{ font-weight: bold; }}"
+    Puedes guiarte con este esqueleto básico (modificando los valores para adaptarlos al estilo solicitado), y eres totalmente libre de agregar animaciones, keyframes, filtros o selectores adicionales para alterar drásticamente la UI:
+    
+    ```css
+    :root {{
+      --agnux-accent: #00ff66;
+      --agnux-accent-glow: rgba(0, 255, 102, 0.5);
+      --agnux-accent-dim: rgba(0, 255, 102, 0.1);
+      --agnux-accent-hover: #00cc55;
+      --agnux-accent-border: #00ff66;
+      --agnux-panel-bg: rgba(10, 10, 15, 0.85);
+      --agnux-panel-solid: #0f0f13;
+      --agnux-panel-border: rgba(255, 255, 255, 0.1);
+      --agnux-font-main: "Courier New", monospace;
+      --agnux-font-clock: "Courier New", monospace;
+      --agnux-text-primary: #ffffff;
+      --agnux-text-secondary: #888888;
     }}
+    .window {{ border-radius: 10px; box-shadow: 0 0 20px var(--agnux-accent-glow); border: 2px solid var(--agnux-panel-border); background: var(--agnux-panel-bg); backdrop-filter: blur(10px); }}
+    .window-header {{ background: var(--agnux-panel-solid); color: var(--agnux-accent); font-family: var(--agnux-font-main); text-align: center; border-bottom: 1px solid var(--agnux-panel-border); }}
+    .window-body {{ padding: 15px; color: var(--agnux-text-primary); }}
+    .hyper-island {{ border-radius: 30px; border: 1px solid var(--agnux-accent); background: var(--agnux-panel-bg); box-shadow: 0 5px 15px rgba(0,0,0,0.5); }}
+    .cyber-input {{ background: rgba(0,0,0,0.5); border: 1px solid var(--agnux-accent-border); color: var(--agnux-accent); border-radius: 5px; font-family: var(--agnux-font-main); }}
+    .desktop-clock {{ font-family: var(--agnux-font-clock); color: var(--agnux-text-primary); text-shadow: 0 0 10px var(--agnux-accent-glow); }}
+    ```
+    
+    Recuerda: Devuelve SOLAMENTE el bloque de código CSS (nada de texto explicativo ni formato JSON).
     """
 
     payload = {
         "model": "qwen2.5-coder:1.5b",
         "prompt": prompt_ia,
-        "stream": False,
-        "format": "json"
+        "stream": False
     }
 
     try:
@@ -95,26 +116,24 @@ async def global_theme_engine(style_prompt: str, **kwargs) -> str:
             if res.status_code != 200:
                 return f"ERROR KERNEL: Falla en inferencia de diseño (HTTP {res.status_code})"
             
-            respuesta_json = res.json().get("response", "").strip()
+            respuesta_bruta = res.json().get("response", "").strip()
             import logging
             logger = logging.getLogger("AGNUX-KERNEL-BUS")
-            logger.info(f"🎨 [QWEN THEME ENGINE] Respuesta cruda: {respuesta_json}")
+            logger.info(f"🎨 [QWEN THEME ENGINE] Respuesta cruda: {respuesta_bruta}")
             
-            try:
-                css_vars = json.loads(respuesta_json)
-            except json.JSONDecodeError:
-                # Intento de parseo de rescate
-                import re
-                match = re.search(r'\{.*\}', respuesta_json, re.DOTALL)
-                if match:
-                    css_vars = json.loads(match.group(0))
-                else:
-                    return f"ERROR KERNEL: El modelo no devolvió JSON válido. Recibido: {respuesta_json}"
+            import re
+            # Intentar extraer el bloque CSS
+            match = re.search(r'```css\s*(.*?)\s*```', respuesta_bruta, re.DOTALL)
+            if match:
+                css_crudo = match.group(1)
+            else:
+                # Si el modelo no usó los backticks, asumimos que todo es CSS
+                css_crudo = respuesta_bruta.replace('```', '')
 
             # Construir payload para el Frontend con CSS crudo
             ws_payload = {
                 "type": "theme_update",
-                "data": {"css": css_vars.get("css", "") if isinstance(css_vars, dict) else css_vars}
+                "data": {"css": css_crudo}
             }
             
             # Notificar al bus
