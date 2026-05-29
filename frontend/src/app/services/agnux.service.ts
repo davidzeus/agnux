@@ -48,6 +48,8 @@ export class AgnuxService {
       const decoder = new TextDecoder('utf-8');
       let buffer = '';
 
+      let eventoActual = '';
+
       while (true) {
         const { value, done } = await reader.read();
         if (done) break;
@@ -57,32 +59,38 @@ export class AgnuxService {
         buffer = lineas.pop() || '';
 
         for (const linea of lineas) {
-          if (!linea.trim()) continue;
+          const lineaLimpia = linea.trim();
+          if (!lineaLimpia) continue;
 
-          try {
-            const dataObj = JSON.parse(linea);
-
-            switch (dataObj.event) {
-              case 'TOKEN':
-                this.token$.next(dataObj.text);
-                break;
-              case 'ROUTER_START':
-              case 'INFERENCE_START':
-              case 'TOOL_EXECUTE':
-                this.eventStatus$.next({ type: dataObj.event, msg: dataObj.message });
-                break;
-              case 'ROUTER_SCORE':
+          if (lineaLimpia.startsWith('event: ')) {
+            eventoActual = lineaLimpia.substring(7).trim();
+          } else if (lineaLimpia.startsWith('data: ')) {
+            const dataRaw = lineaLimpia.substring(6);
+            console.log("🔥 [AGNUX SERVICE] Raw data string recibido:", dataRaw, "para evento:", eventoActual);
+            
+            try {
+              const dataObj = JSON.parse(dataRaw);
+              console.log("🔥 [AGNUX SERVICE] Data parseada con éxito:", dataObj);
+              
+              if (eventoActual === 'CREATE_WINDOW' || (typeof dataObj === 'object' && (dataObj.window_id || dataObj.windowId))) {
+                this.eventStatus$.next({ type: 'CREATE_WINDOW', data: dataObj });
+              } else if (eventoActual === 'TOKEN') {
+                this.token$.next(dataObj);
+              } else if (eventoActual === 'ROUTER_START' || eventoActual === 'INFERENCE_START' || eventoActual === 'TOOL_EXECUTE') {
+                this.eventStatus$.next({ type: eventoActual, msg: dataObj.message || dataObj });
+              } else if (eventoActual === 'ROUTER_SCORE') {
                 this.eventStatus$.next({ type: 'SCORE', tool: dataObj.tool, score: dataObj.score });
-                break;
-              case 'TOOL_RESULT':
-                this.eventStatus$.next({ type: 'RESULT', data: dataObj.response });
-                break;
-              default:
-                this.eventStatus$.next({ type: 'UNKNOWN', payload: dataObj });
-                break;
+              } else if (eventoActual === 'TOOL_RESULT') {
+                this.eventStatus$.next({ type: 'RESULT', data: dataObj.response || dataObj.data });
+              } else if (eventoActual === 'ERROR') {
+                this.eventStatus$.next({ type: 'ERROR', message: dataObj.message });
+              } else {
+                this.eventStatus$.next({ type: 'UNKNOWN', payload: { event: eventoActual, data: dataObj } });
+              }
+            } catch (e) {
+              console.error("Error parsing data payload:", e);
             }
-          } catch (_error) {
-            // Ignoramos fragmentos JSON mal formateados en el corte del chunk
+            eventoActual = ''; // Limpiar el estado tras consumir la data
           }
         }
       }

@@ -66,18 +66,22 @@ export class EscritorioComponent implements OnInit, OnDestroy {
                 const winData = typeof rawData === 'string' ? JSON.parse(rawData) : rawData;
                 console.log("📺 [UI KERNEL] Orden de creación de ventana recibida:", winData);
                 
+                // Usamos la ventana actual anclada o generamos un ID único por seguridad
+                const targetId = this.currentHtmlWindowId || `agnux-ai-window-${Date.now()}`;
+                this.currentHtmlWindowId = targetId;
+                
                 // Verificamos si la ventana ya existe para no duplicarla
-                let ventanaIA = this.ventanas.find(v => v.id === winData.window_id || v.id === winData.windowId);
+                let ventanaIA = this.ventanas.find(v => v.id === targetId);
                 
                 if (!ventanaIA) {
                     // Respetamos la regla constitucional de no guiones bajos en el objeto de la interfaz
                     ventanaIA = {
-                        id: winData.window_id || winData.windowId || 'agnux-ai-window',
+                        id: targetId,
                         titulo: winData.title || '🧠 AGNUX OS Core',
                         tipo: 'html',
                         htmlDinamico: winData.content || '',
-                        x: 200,
-                        y: 120,
+                        x: 150 + (this.ventanas.length * 20),
+                        y: 100 + (this.ventanas.length * 20),
                         width: 550,
                         height: 420,
                         maximizada: false,
@@ -138,38 +142,51 @@ export class EscritorioComponent implements OnInit, OnDestroy {
     );
 
     this.subscriptions.push(
-      this.agnuxService.token$.subscribe(tokenLimpio => {
-        // 1. Buscamos si la ventana de la IA ya está abierta en el escritorio
-        let ventanaIA: Ventana | undefined = this.ventanas.find(v => v.id === 'agnux-ai-window');
-        
-        if (!ventanaIA) {
-          // 2. SI NO EXISTE, LA CREAMOS AL VUELO CON SUS COORDENADAS Y FOCO
-          console.log("📺 [UI DESKTOP] Abriendo nueva ventana flotante reactiva para la IA...");
-          ventanaIA = {
-            id: 'agnux-ai-window',
-            titulo: '🧠 AGNUX OS Core - Ministral IA',
-            tipo: 'html',
-            htmlDinamico: '',
-            x: 150,
-            y: 100,
-            width: 500,
-            height: 400,
-            maximizada: false,
-            zIndex: ++this.maxZIndex
-          };
-          // Usamos el operador de propagación para asegurar que Angular detecte la mutación del array
-          this.ventanas = [...this.ventanas, ventanaIA];
-        }
-        
-        // 3. CONCATENAMOS EL TOKEN EN VIVO (Efecto máquina de escribir)
-        const htmlPrevio = ventanaIA.htmlDinamico || '';
-        ventanaIA.htmlDinamico = htmlPrevio + tokenLimpio;
-        
-        // Clonamos y embellecemos al vuelo para que el usuario no vea JSON feo
-        ventanaIA.htmlDinamico = this.formatStreamText(ventanaIA.htmlDinamico);
+      this.agnuxService.token$.subscribe({
+        next: (tokenLimpio) => {
+          try {
+            console.log("🔥 [UI KERNEL] Token recibido en UI:", tokenLimpio);
+            // Si no hay ventana actual, forzamos un ID nuevo para este flujo de inferencia
+            if (!this.currentHtmlWindowId) {
+                this.currentHtmlWindowId = `agnux-ai-window-${Date.now()}`;
+            }
+            
+            // 1. Buscamos la ventana ACTUAL de inferencia
+            let ventanaIA: Ventana | undefined = this.ventanas.find(v => v.id === this.currentHtmlWindowId);
+            
+            if (!ventanaIA) {
+              // 2. SI NO EXISTE, LA CREAMOS AL VUELO CON SUS COORDENADAS Y FOCO
+              console.log(`📺 [UI DESKTOP] Abriendo nueva ventana flotante reactiva para la IA: ${this.currentHtmlWindowId}`);
+              ventanaIA = {
+                id: this.currentHtmlWindowId,
+                titulo: '🧠 AGNUX OS Core - Ministral IA',
+                tipo: 'html',
+                htmlDinamico: '',
+                x: 150 + (this.ventanas.length * 20),
+                y: 100 + (this.ventanas.length * 20),
+                width: 500,
+                height: 400,
+                maximizada: false,
+                zIndex: ++this.maxZIndex
+              };
+              // Usamos el operador de propagación para asegurar que Angular detecte la mutación del array
+              this.ventanas = [...this.ventanas, ventanaIA];
+            }
+            
+            // 3. CONCATENAMOS EL TOKEN EN VIVO (Efecto máquina de escribir)
+            const htmlPrevio = ventanaIA.htmlDinamico || '';
+            ventanaIA.htmlDinamico = htmlPrevio + tokenLimpio;
+            
+            // Clonamos y embellecemos al vuelo para que el usuario no vea JSON feo
+            ventanaIA.htmlDinamico = this.formatStreamText(ventanaIA.htmlDinamico);
 
-        // 🔥 OBLIGAMOS A ANGULAR A REDIBUJAR LA PANTALLA EN ESTE MICROSEGUNDO
-        this.cdr.detectChanges();
+            // 🔥 OBLIGAMOS A ANGULAR A REDIBUJAR LA PANTALLA EN ESTE MICROSEGUNDO
+            this.cdr.detectChanges();
+          } catch (e) {
+            console.error("❌ Error procesando token$ en UI:", e);
+          }
+        },
+        error: (err) => console.error("❌ Stream token$ abortado:", err)
       })
     );
   }
