@@ -52,36 +52,34 @@ async def global_theme_engine(style_prompt: str, **kwargs) -> str:
     Eres un diseñador experto en UI/UX CSS y un hacker visual. El usuario solicitó el siguiente estilo visual para su sistema operativo web:
     "{style_prompt}"
 
-    Debes devolver ÚNICAMENTE un objeto JSON estricto con la clave "css". El valor debe ser código CSS en crudo.
-    
-    ES VITAL QUE SIEMPRE INCLUYAS LA REESCRITURA DE LAS VARIABLES GLOBALES EN `:root` PARA QUE LAS VENTANAS Y PANELES CAMBIEN DE COLOR.
-    Las variables son:
-    --agnux-accent
-    --agnux-accent-glow
-    --agnux-accent-dim
-    --agnux-accent-hover
-    --agnux-accent-border
-    --agnux-panel-bg (Fondo de las ventanas flotantes, ej rgba(0,0,0,0.8))
-    --agnux-panel-solid (Fondo sólido)
-    --agnux-panel-border (Bordes de ventanas)
-    --agnux-font-main
-    --agnux-font-clock
-    --agnux-text-primary
-    --agnux-text-secondary
+    ES OBLIGATORIO que tu respuesta comience redefiniendo el bloque `:root` con las siguientes variables globales, asignándoles colores y valores reales (NO uses referencias a otras variables, usa HEX o RGBA reales que encajen con el estilo pedido):
+    :root {{
+        --agnux-accent: ...;
+        --agnux-accent-glow: ...;
+        --agnux-accent-dim: ...;
+        --agnux-accent-hover: ...;
+        --agnux-accent-border: ...;
+        --agnux-panel-bg: ...;
+        --agnux-panel-solid: ...;
+        --agnux-panel-border: ...;
+        --agnux-font-main: ...;
+        --agnux-font-clock: ...;
+        --agnux-text-primary: ...;
+        --agnux-text-secondary: ...;
+    }}
 
     Aquí tienes un mapeo en vivo de la arquitectura actual del DOM de la interfaz:
     ```
     {dom_context}
     ```
 
-    Tu tarea es escribir un bloque de código CSS puro que reestructure y rediseñe completamente estos componentes para lograr el estilo: "{style_prompt}".
+    Tu tarea es escribir un bloque de código CSS puro que reestructure y rediseñe completamente la interfaz para lograr el estilo: "{style_prompt}".
     
     INSTRUCCIONES CLAVES:
-    1. DEBES reescribir las siguientes variables globales en `:root` para cambiar la paleta base:
-       --agnux-accent, --agnux-accent-glow, --agnux-panel-bg, --agnux-panel-solid, --agnux-panel-border, --agnux-font-main, --agnux-text-primary, --agnux-text-secondary.
-    2. Eres LIBRE de modificar todo el aspecto estructural: usa `padding`, `margin`, `border-radius`, `box-shadow`, `backdrop-filter`, fuentes, y colores directamente sobre las clases que viste en el DOM (ej. `.window`, `.window-header`, `.cyber-input`, `.hyper-island`).
-    3. Puedes usar animaciones `@keyframes`, transformaciones `transform`, o cualquier truco avanzado de CSS.
-    4. NO expliques nada. Solo devuelve el bloque de código envuelto en ```css ... ```.
+    1. DEBES escribir el bloque `:root` con los nuevos valores, tal como se indicó arriba.
+    2. Luego del `:root`, eres LIBRE de modificar la geometría: usa `padding`, `margin`, `border-radius`, `box-shadow`, `backdrop-filter` directamente sobre las clases del DOM (ej. `.window`, `.window-header`, `.cyber-input`, `.hyper-island`).
+    3. Asegúrate de NO referenciar variables inexistentes. Usa valores reales o las variables que tú mismo redefiniste en el `:root`.
+    4. NO expliques nada. Devuelve ÚNICAMENTE el código envuelto en ```css ... ```.
     """
 
     payload = {
