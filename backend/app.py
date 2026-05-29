@@ -248,8 +248,21 @@ async def procesar_intencion_global(payload: TaskbarPrompt):
     
                 openai_tools = [{"type": "function", "function": t} for t in filtered_tools] if filtered_tools else None
     
-                SYSTEM_PROMPT = """Sos el kernel principal de AGNUX OS. Responde siempre corto y ejecutivo.
+                herramientas_disponibles_str = json.dumps(filtered_tools, indent=2, ensure_ascii=False) if filtered_tools else "Ninguna"
+
+                SYSTEM_PROMPT = f"""Sos el kernel principal de AGNUX OS. Responde siempre corto y ejecutivo.
     
+    ## HERRAMIENTAS DISPONIBLES:
+    {herramientas_disponibles_str}
+
+    Para ejecutar una herramienta existente, DEBES responder ÚNICAMENTE con un bloque JSON como este (y nada más):
+    ```json
+    {{
+        "tool_call": "nombre_de_la_herramienta",
+        "arguments": {{"param1": "valor"}}
+    }}
+    ```
+
     ## 2.1 REGLAS ESTRICTAS DE NOMENCLATURA DE RED (ESTÁNDAR DE KERNEL LINUX Y DNS)
     - Está TAXATIVAMENTE PROHIBIDO el uso de guiones bajos ('_') en cualquier identificador de usuario, nombre de terminal, o nombre de herramienta dinámica que interactúe con el host. El guión bajo rompe la sintaxis de interfaces de WireGuard y las especificaciones de Hostnames de internet (RFC 1035).
     - Todo identificador debe normalizarse utilizando única y exclusivamente guiones medios ('-') o formato alfanumérico plano en minúsculas (ejemplo correcto: 'user-cristian', 'global-calculadora', 'term-desktop-101').
@@ -297,10 +310,21 @@ async def procesar_intencion_global(payload: TaskbarPrompt):
                             logger.info(f"🧠 [KERNEL AGENTE] Evaluando acción para la respuesta: {respuesta_completa}")
                             
                             import re
+                            bloque_json = re.search(r'```json\s*(.*?)\s*```', respuesta_completa, re.DOTALL)
                             bloque_python = re.search(r'```python\s*(.*?)\s*```', respuesta_completa, re.DOTALL)
                             match_nombre = re.search(r'`([^`]+)\.py`', respuesta_completa) or re.search(r'\*\*Nombre sugerido:\*\*\s*`([^`]+)`', respuesta_completa)
 
-                            if bloque_python and match_nombre:
+                            if bloque_json:
+                                try:
+                                    json_data = json.loads(bloque_json.group(1))
+                                    if "tool_call" in json_data:
+                                        tool_call_detected = json_data["tool_call"]
+                                        argumentos_acumulados = json.dumps(json_data.get("arguments", {}))
+                                        logger.info(f"⚙️ [KERNEL AGENTE] Llamada a tool existente detectada: {tool_call_detected}")
+                                except Exception as e:
+                                    logger.error(f"❌ Error parseando tool_call JSON: {e}")
+                            
+                            if not tool_call_detected and bloque_python and match_nombre:
                                 tool_call_detected = "autogenerar_nueva_tool"
                                 nombre_func = match_nombre.group(1).replace(".py", "")
                                 argumentos_acumulados = json.dumps({
@@ -310,7 +334,8 @@ async def procesar_intencion_global(payload: TaskbarPrompt):
                                 })
                                 logger.info(f"⚙️ [KERNEL AGENTE] Tool heurística detectada en stream: {nombre_func}")
                                 # No retornamos. El flujo continuará abajo para invocar 'ejecutar_herramienta_local'.
-                            else:
+                            
+                            if not tool_call_detected:
                                 # Si la IA determinó que es una respuesta directa o texto para el operador,
                                 # el backend es el responsable de ordenarle a Angular que dibuje la ventana flotante
                                 payload_ventana = {

@@ -19,30 +19,19 @@ async def global_theme_engine(style_prompt: str, **kwargs) -> str:
     url_generate = f"{ollama_base}/api/generate"
 
     prompt_ia = f"""
-    Eres un diseñador experto en UI/UX CSS. El usuario solicitó el siguiente estilo visual para su sistema operativo web:
+    Eres un diseñador experto en UI/UX CSS y un hacker visual. El usuario solicitó el siguiente estilo visual para su sistema operativo web:
     "{style_prompt}"
 
-    Debes devolver ÚNICAMENTE un objeto JSON estricto con las siguientes variables CSS globales ajustadas a este estilo.
-    Usa colores hexagonales o rgba válidos. Usa fuentes genéricas o de Google Fonts populares (ej. 'Inter', 'Roboto', 'monospace', 'sans-serif').
+    Debes devolver ÚNICAMENTE un objeto JSON estricto con la clave "css". El valor de esa clave debe ser el código CSS en crudo que reemplace por completo las variables CSS definidas en la raíz del documento o directamente sobreescriba selectores existentes como `.desktop-env`, `.hyper-island`, `.cyber-input`, `.clock-time`.
     
-    Las variables son:
-    "--agnux-bg-color": Color de fondo sólido oscuro o claro según el tema.
-    "--agnux-bg-image": (Opcional) Puedes poner 'none' o dejarlo como 'url(...)'. Mejor pon 'none' para priorizar colores lisos si el estilo es minimalista.
-    "--agnux-accent": Color principal de acento.
-    "--agnux-accent-glow": Color de sombra (box-shadow) del acento.
-    "--agnux-accent-dim": Color de acento con mucha transparencia.
-    "--agnux-accent-hover": Color de acento para hover.
-    "--agnux-accent-border": Color para bordes de paneles con acento.
-    "--agnux-panel-bg": Color de fondo de los paneles translúcidos (ej. rgba(0,0,0,0.5) para dark, rgba(255,255,255,0.7) para light).
-    "--agnux-panel-solid": Fondo sólido para la HyperIsland.
-    "--agnux-panel-border": Borde sutil general.
-    "--agnux-panel-blur": Nivel de blur, ej. 'blur(20px)'.
-    "--agnux-font-main": Fuente principal.
-    "--agnux-font-clock": Fuente para el reloj grande.
-    "--agnux-text-primary": Color de texto primario (blanco o negro).
-    "--agnux-text-secondary": Color de texto secundario (grisáceo).
+    Puedes hacer uso del modo Anarquía Visual, inyectando estilos agresivos, animaciones keyframes, filtros o reemplazando todo el `:root`.
+    
+    Usa colores hexagonales o rgba válidos. Usa fuentes genéricas o de Google Fonts populares.
 
-    Retorna SOLO el objeto JSON, nada más.
+    Retorna SOLO el objeto JSON, nada más. Ejemplo:
+    {{
+        "css": ":root {{ --agnux-bg-color: #fff; --agnux-accent: #000; }}"
+    }}
     """
 
     payload = {
@@ -71,10 +60,10 @@ async def global_theme_engine(style_prompt: str, **kwargs) -> str:
                 else:
                     return f"ERROR KERNEL: El modelo no devolvió JSON válido. Recibido: {respuesta_json}"
 
-            # Construir payload para el Frontend
+            # Construir payload para el Frontend con CSS crudo
             ws_payload = {
                 "type": "theme_update",
-                "data": css_vars
+                "data": {"css": css_vars.get("css", "") if isinstance(css_vars, dict) else css_vars}
             }
             
             # Notificar al bus

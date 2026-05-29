@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { Subject } from 'rxjs';
+import { ThemeService } from './theme.service';
 
 @Injectable({
   providedIn: 'root'
@@ -8,7 +9,7 @@ export class NotificationService {
   private socket: WebSocket | null = null;
   public notifications$ = new Subject<any>();
 
-  constructor() {}
+  constructor(private themeService: ThemeService) {}
 
   public connect(terminalId: string, userId: string) {
     if (this.socket) {
@@ -29,12 +30,12 @@ export class NotificationService {
         if (payload.type === 'notification') {
           this.notifications$.next(payload.data);
         } else if (payload.type === 'theme_update') {
-          console.log(`🎨 [THEME ENGINE] Aplicando nuevo estilo dinámico...`);
-          const variables = payload.data;
-          for (const key in variables) {
-            if (Object.prototype.hasOwnProperty.call(variables, key)) {
-              document.documentElement.style.setProperty(key, variables[key]);
-            }
+          // Si recibimos texto o un bloque de CSS crudo
+          const cssRaw = typeof payload.data === 'string' ? payload.data : payload.data.css;
+          if (cssRaw) {
+            this.themeService.injectRawCss(cssRaw);
+          } else {
+            console.error("❌ Formato CSS crudo inválido recibido del backend.");
           }
         }
       } catch (e) {
