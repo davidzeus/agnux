@@ -10,14 +10,14 @@
 }
 
 .hyper-island {
-  background: rgba(10, 10, 12, 0.95);
-  border: 1px solid rgba(0, 255, 102, 0.2);
+  background: var(--agnux-panel-solid);
+  border: 1px solid var(--agnux-accent-border);
   border-radius: 25px;
-  color: #fff;
+  color: var(--agnux-text-primary);
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.7), 0 0 10px rgba(0, 255, 102, 0.05);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.7), 0 0 10px var(--agnux-accent-dim);
   transition: all 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   cursor: pointer;
   pointer-events: auto;
@@ -42,8 +42,8 @@
   width: 450px;
   height: 45px;
   padding: 0 20px;
-  border-color: #00ff66;
-  box-shadow: 0 0 15px rgba(0, 255, 102, 0.2);
+  border-color: var(--agnux-accent);
+  box-shadow: 0 0 15px var(--agnux-accent-border);
 }
 
 .content-notif {
@@ -57,7 +57,7 @@
 }
 
 .notif-badge {
-  color: #ff3366;
+  color: #ff3366; /* Keep warning color fixed or add var later */
   font-weight: bold;
   font-size: 12px;
 }
@@ -65,7 +65,7 @@
 .notif-text {
   margin: 0;
   font-size: 13px;
-  font-family: monospace;
+  font-family: var(--agnux-font-main);
 }
 
 .expanded-widget {
@@ -89,10 +89,10 @@
 .pulse-dot {
   width: 8px;
   height: 8px;
-  background: #00ff66;
+  background: var(--agnux-accent);
   border-radius: 50%;
   margin-right: 8px;
-  box-shadow: 0 0 8px #00ff66;
+  box-shadow: 0 0 8px var(--agnux-accent);
   animation: blink 1.5s infinite;
 }
 
@@ -109,17 +109,17 @@
   background: rgba(255, 255, 255, 0.03);
   padding: 10px;
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--agnux-panel-border);
   width: 100%;
   margin-top: 10px;
 }
 .task-info { display: flex; align-items: center; gap: 12px; }
 .task-avatar { font-size: 24px; }
-.task-title { margin: 0; font-size: 14px; color: #00ff66; font-family: monospace; }
-.task-subtitle { margin: 0; font-size: 11px; color: #888; }
+.task-title { margin: 0; font-size: 14px; color: var(--agnux-accent); font-family: var(--agnux-font-main); }
+.task-subtitle { margin: 0; font-size: 11px; color: var(--agnux-text-secondary); }
 .player-controls { display: flex; justify-content: center; gap: 15px; margin-top: 5px; }
-.ctrl-btn { background: none; border: none; color: #aaa; cursor: pointer; font-size: 16px; }
-.ctrl-btn.active { color: #00ff66; text-shadow: 0 0 5px #00ff66; }
-.widget-header { display: flex; justify-content: space-between; width: 100%; font-size: 11px; color: #666; font-family: monospace; letter-spacing: 1px; }
-.close-btn { background: none; border: none; color: #555; cursor: pointer; transition: 0.2s; }
-.close-btn:hover { color: #fff; }
+.ctrl-btn { background: none; border: none; color: var(--agnux-text-secondary); cursor: pointer; font-size: 16px; }
+.ctrl-btn.active { color: var(--agnux-accent); text-shadow: 0 0 5px var(--agnux-accent-glow); }
+.widget-header { display: flex; justify-content: space-between; width: 100%; font-size: 11px; color: var(--agnux-text-secondary); font-family: var(--agnux-font-main); letter-spacing: 1px; }
+.close-btn { background: none; border: none; color: var(--agnux-text-secondary); cursor: pointer; transition: 0.2s; }
+.close-btn:hover { color: var(--agnux-text-primary); }

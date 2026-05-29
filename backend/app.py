@@ -114,6 +114,24 @@ async def inicializar_sistema():
     except Exception as e:
         logger.error(f"❌ [QDRANT] Falla al inicializar bus vectorial: {e}")
 
+    # Registrar herramientas del sistema estáticas
+    CACHE_VECTORS["sistema"]["global_theme_engine"] = {
+        "schema": {
+            "name": "global_theme_engine",
+            "description": "Motor de Inteligencia Artificial para cambiar el tema/diseño de la interfaz visual del sistema. Úsalo cuando el usuario pida cambiar los colores, estilo (ej. 'macOS', 'oscuro', 'cálido') o estética general del escritorio.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "style_prompt": {
+                        "type": "string",
+                        "description": "El prompt de estilo visual que el usuario solicitó."
+                    }
+                },
+                "required": ["style_prompt"]
+            }
+        }
+    }
+
 # =====================================================================
 # FUNCIONES AUXILIARES FÍSICAS Y AUTOGÉNESIS
 # =====================================================================
@@ -159,7 +177,10 @@ async def ejecutar_herramienta_local(nombre: str, argumentos: dict = None, termi
                     modulo = importlib.import_module(f"dynamic_tools.{nombre}")
                     importlib.reload(modulo)
                     funcion_dinamica = getattr(modulo, nombre)
-                    resultado = funcion_dinamica(**argumentos) if argumentos else funcion_dinamica()
+                    if asyncio.iscoroutinefunction(funcion_dinamica):
+                        resultado = await funcion_dinamica(**argumentos) if argumentos else await funcion_dinamica()
+                    else:
+                        resultado = funcion_dinamica(**argumentos) if argumentos else funcion_dinamica()
                     return str(resultado)
     except Exception as e:
         return f"❌ Falla en herramienta '{nombre}': {e}"

@@ -28,6 +28,14 @@ export class NotificationService {
         console.log(`📩 [NOTIF BUS] Notificación recibida:`, payload);
         if (payload.type === 'notification') {
           this.notifications$.next(payload.data);
+        } else if (payload.type === 'theme_update') {
+          console.log(`🎨 [THEME ENGINE] Aplicando nuevo estilo dinámico...`);
+          const variables = payload.data;
+          for (const key in variables) {
+            if (Object.prototype.hasOwnProperty.call(variables, key)) {
+              document.documentElement.style.setProperty(key, variables[key]);
+            }
+          }
         }
       } catch (e) {
         console.error(`❌ [NOTIF BUS] Error parseando mensaje WS:`, e);
