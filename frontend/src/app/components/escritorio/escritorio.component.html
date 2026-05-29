@@ -60,6 +60,12 @@
 
     <!-- Barra de Comandos Inferior (Terminal Input) -->
     <div class="command-bar">
+      <!-- Badge de Google Workspace -->
+      <div class="auth-badge" [ngClass]="isGoogleConnected ? 'badge-connected' : 'badge-disconnected'" style="position: absolute; left: -180px; top: 12px; display: flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; background: rgba(0,0,0,0.5);">
+        <mat-icon style="font-size: 16px; width: 16px; height: 16px; line-height: 16px;" [ngStyle]="{'color': isGoogleConnected ? '#00ff66' : '#ff3366'}">{{ isGoogleConnected ? 'cloud_done' : 'cloud_off' }}</mat-icon>
+        <span [ngStyle]="{'color': isGoogleConnected ? '#00ff66' : '#ff3366'}">{{ isGoogleConnected ? 'Workspace Conectado' : 'Google Desconectado' }}</span>
+      </div>
+
       <div class="input-wrapper">
         <span class="user-prompt" style="color: #00e5ff; font-weight: bold; margin-right: 10px; text-shadow: 0 0 5px rgba(0,229,255,0.5);">🚀 {{ userId }} &#64; agnux_os:~$</span>
         <input 

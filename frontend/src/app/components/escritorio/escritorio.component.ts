@@ -43,6 +43,7 @@ export class EscritorioComponent implements OnInit, OnDestroy {
   qrUrl: string = '';
   isLocked: boolean = true;
   private authSub!: Subscription;
+  isGoogleConnected: boolean = false;
 
   // Local Biometric state
   tieneCamaraLocal: boolean = false;
@@ -114,6 +115,20 @@ export class EscritorioComponent implements OnInit, OnDestroy {
           } else if (msg.includes('tool_reproductor_video')) {
             this.spawnVentana('video', '🎬 AGNUX Video Core', { url: '' });
           }
+        } else if (status.type === 'OPEN_MEDIA') {
+          // Mutar hyper-island o mostrar reproductor embebido
+          this.cargando = false;
+          // Evento propagado a hyper-island a través de un bus o servicio (lo gestionaremos en app-hyper-island)
+        } else if (status.type === 'OPEN_IFRAME_APP') {
+          this.cargando = false;
+          const { appService, appAction, appParams } = status.payload;
+          const dummyUrl = `https://workspace.google.com/agnux-embedded?service=${appService}&action=${appAction}`;
+          const iframeContent = `<iframe src="${dummyUrl}" style="width:100%; height:100%; border:none; border-radius:8px;"></iframe>`;
+          this.spawnVentana('html', `☁️ Workspace: ${appService}`, iframeContent);
+        } else if (status.type === 'SET_WALLPAPER') {
+          this.cargando = false;
+          const imageUrl = status.payload.imageUrl;
+          document.documentElement.style.setProperty('--agnux-bg-image', `url('${imageUrl}')`);
         } else if (status.type === 'TOOL_END' || status.type === 'ERROR') {
           this.cargando = false;
         } else if (status.type === 'INFERENCE_START') {
@@ -135,6 +150,11 @@ export class EscritorioComponent implements OnInit, OnDestroy {
         this.userId = user;
         this.isLocked = false;
         console.log(`🔓 [UI KERNEL] Terminal liberada con éxito para: ${user}`);
+        
+        // Consultar estado de Google Workspace
+        this.authService.checkGoogleAuthStatus(user).subscribe(status => {
+          this.isGoogleConnected = status.connected;
+        });
         
         // Conectar WebSocket de Notificaciones
         if (this.terminalId) {

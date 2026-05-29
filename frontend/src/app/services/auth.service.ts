@@ -23,6 +23,10 @@ export class AuthService {
     return this.currentUserSubject.value;
   }
 
+  checkGoogleAuthStatus(userId: string): Observable<{connected: boolean, userId: string}> {
+    return this.http.get<{connected: boolean, userId: string}>(`http://10.10.0.66:8000/api/auth/google/status?user_id=${userId}`);
+  }
+
   listenTerminal(terminalId: string): Observable<string> {
     return new Observable<string>(observer => {
       console.log(`📡 [AGNUX KERNEL] Abriendo canal SSE para Terminal: ${terminalId}`);

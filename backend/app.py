@@ -168,6 +168,70 @@ async def inicializar_sistema():
     }
 
 # =====================================================================
+# CATÁLOGO GLOBAL: SYSTEM_TOOLS
+# =====================================================================
+SYSTEM_TOOLS = {
+    "googleWorkspaceAction": {
+        "type": "function",
+        "function": {
+            "name": "googleWorkspaceAction",
+            "description": "Interactúa con la suite de Google (Docs, Sheets, Gmail). REQUIERE validación de token.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "service": {"type": "string", "enum": ["docs", "sheets", "slides", "gmail", "calendar"]},
+                    "action": {"type": "string", "enum": ["create", "open", "list", "sendEmail", "addEvent"]},
+                    "params": {"type": "object", "description": "Parámetros específicos (ej. to, subject, title)"}
+                },
+                "required": ["service", "action"]
+            }
+        }
+    },
+    "openMediaApp": {
+        "type": "function",
+        "function": {
+            "name": "openMediaApp",
+            "description": "Abre aplicaciones de streaming en modo Kiosco (Chromium aislado).",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "platform": {"type": "string", "enum": ["spotify", "youtubeMusic", "netflix"]}
+                },
+                "required": ["platform"]
+            }
+        }
+    },
+    "calculateExpression": {
+        "type": "function",
+        "function": {
+            "name": "calculateExpression",
+            "description": "Evalúa expresiones aritméticas complejas en el Host.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "expression": {"type": "string"}
+                },
+                "required": ["expression"]
+            }
+        }
+    },
+    "setWallpaper": {
+        "type": "function",
+        "function": {
+            "name": "setWallpaper",
+            "description": "Cambia el fondo de pantalla del escritorio usando una URL de imagen válida.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "imageUrl": {"type": "string"}
+                },
+                "required": ["imageUrl"]
+            }
+        }
+    }
+}
+
+# =====================================================================
 # FUNCIONES AUXILIARES FÍSICAS Y AUTOGÉNESIS
 # =====================================================================
 async def autogenerar_nueva_tool(nombre_funcion: str, codigo_python: str, descripcion_docstring: str) -> str:
@@ -249,10 +313,21 @@ async def procesar_intencion_global(payload: TaskbarPrompt):
     
                 yield json.dumps({"event": "ROUTER_START", "message": "Inicializando Router Semántico en Memoria..."}) + "\n"
     
+                # Verificación de Token OAuth2 Preventiva
+                auth_status = await google_auth_status(payload.user_id)
+                is_google_connected = auth_status["connected"]
+
                 # Fusión virtual jerárquica con normalización de ID
                 id_normalizado = payload.user_id.replace("_", "-")
                 tools_privadas = CACHE_VECTORS["usuarios"].get(id_normalizado, {})
-                tools_disponibles = {**CACHE_VECTORS["sistema"], **tools_privadas}
+                
+                system_tools_converted = {}
+                for k, v in SYSTEM_TOOLS.items():
+                    if k == "googleWorkspaceAction" and not is_google_connected:
+                        continue
+                    system_tools_converted[k] = {"schema": v["function"]}
+
+                tools_disponibles = {**CACHE_VECTORS["sistema"], **tools_privadas, **system_tools_converted}
     
                 vector_usuario = generar_vector_texto(payload.prompt)
                 filtered_tools = []
@@ -451,12 +526,51 @@ async def procesar_intencion_global(payload: TaskbarPrompt):
                     yield json.dumps({"event": "TOOL_EXECUTE", "message": f"Ejecución solicitada a Kernel: {tool_call_detected}"}) + "\n"
                     try:
                         args = json.loads(argumentos_acumulados) if argumentos_acumulados else {}
-                        resultado_fierros = await ejecutar_herramienta_local(
-                            tool_call_detected, 
-                            args, 
-                            terminal_id=payload.terminal_id, 
-                            user_id=payload.user_id
-                        )
+                        
+                        # =================================================================
+                        # DISPATCHER DE SYSTEM_TOOLS (Intercepción Directa)
+                        # =================================================================
+                        if tool_call_detected == "openMediaApp":
+                            platform = args.get("platform")
+                            yield json.dumps({
+                                "event": "OPEN_MEDIA",
+                                "mediaPlatform": platform,
+                                "status": "playing"
+                            }) + "\n"
+                            from dynamic_tools.media_launcher import launch_chromium_kiosk
+                            asyncio.create_task(launch_chromium_kiosk(platform))
+                            resultado_fierros = f"Lanzado Kiosco Multimedia para {platform}"
+                            
+                        elif tool_call_detected == "googleWorkspaceAction":
+                            yield json.dumps({
+                                "event": "OPEN_IFRAME_APP",
+                                "appService": args.get("service"),
+                                "appAction": args.get("action"),
+                                "appParams": args.get("params", {})
+                            }) + "\n"
+                            resultado_fierros = f"Abriendo interfaz de {args.get('service')} en el cliente."
+                            
+                        elif tool_call_detected == "calculateExpression":
+                            exp = args.get("expression", "")
+                            try:
+                                val = eval(exp, {"__builtins__": None}, {})
+                                resultado_fierros = str(val)
+                            except Exception as e:
+                                resultado_fierros = f"Error evaluando expresión: {e}"
+                                
+                        elif tool_call_detected == "setWallpaper":
+                            yield json.dumps({
+                                "event": "SET_WALLPAPER",
+                                "imageUrl": args.get("imageUrl")
+                            }) + "\n"
+                            resultado_fierros = "Fondo de pantalla actualizado con éxito."
+                        else:
+                            resultado_fierros = await ejecutar_herramienta_local(
+                                tool_call_detected, 
+                                args, 
+                                terminal_id=payload.terminal_id, 
+                                user_id=payload.user_id
+                            )
     
                         yield json.dumps({"event": "TOOL_RESULT", "data": resultado_fierros}) + "\n"
     
@@ -630,3 +744,11 @@ async def register_profile(payload: EnrolmentPayload):
     except Exception as e:
         logger.error(f"Falla en registro profundo: {e}")
         raise HTTPException(status_code=500, detail="Error transaccional en persistencia de Qdrant DB")
+
+@app.get("/api/auth/google/status")
+@app.get("/api/auth/google/status/")
+async def google_auth_status(user_id: str = Query(None, description="El ID del usuario")):
+    # TODO: Implementar validación real de Google OAuth2 Token en Base de Datos
+    # Por ahora devolvemos True si el user_id está presente, simulando que está autenticado.
+    is_connected = bool(user_id and user_id.lower() != "guest")
+    return {"connected": is_connected, "userId": user_id}

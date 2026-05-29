@@ -2,6 +2,7 @@ import { Component, OnInit, ChangeDetectorRef, HostListener, ElementRef, OnDestr
 import { CommonModule } from '@angular/common';
 import { Subscription } from 'rxjs';
 import { NotificationService } from '../../services/notification.service';
+import { AgnuxService } from '../../services/agnux.service';
 
 export type IslandState = 'compact' | 'expanded-notif' | 'expanded-widget';
 
@@ -24,6 +25,7 @@ export class HyperIslandComponent implements OnInit, OnDestroy {
   currentState: IslandState = 'compact';
   currentNotification: string | null = null;
   private notifSub!: Subscription;
+  private agnuxSub!: Subscription;
   
   // Tarea del reproductor mockeada por defecto en el bus del sistema
   activeTasks: BackgroundTask[] = [
@@ -33,7 +35,8 @@ export class HyperIslandComponent implements OnInit, OnDestroy {
   constructor(
     private cdr: ChangeDetectorRef,
     private el: ElementRef,
-    private notificationService: NotificationService
+    private notificationService: NotificationService,
+    private agnuxService: AgnuxService
   ) {}
 
   ngOnInit() {
@@ -42,12 +45,25 @@ export class HyperIslandComponent implements OnInit, OnDestroy {
     this.notifSub = this.notificationService.notifications$.subscribe(notif => {
       this.showNotification(notif.message || 'Notificación del Sistema');
     });
+
+    this.agnuxSub = this.agnuxService.eventStatus$.subscribe(event => {
+      if (event.type === 'OPEN_MEDIA') {
+        this.currentState = 'expanded-widget';
+        this.activeTasks = [{
+            id: 'media-kiosk',
+            type: 'player',
+            title: `Reproduciendo en ${event.payload?.mediaPlatform || 'Kiosco'}`,
+            subtitle: 'Kiosco Activo',
+            icon: '🎵'
+        }];
+        this.cdr.detectChanges();
+      }
+    });
   }
 
   ngOnDestroy() {
-    if (this.notifSub) {
-      this.notifSub.unsubscribe();
-    }
+    if (this.notifSub) this.notifSub.unsubscribe();
+    if (this.agnuxSub) this.agnuxSub.unsubscribe();
   }
 
   showNotification(message: string) {

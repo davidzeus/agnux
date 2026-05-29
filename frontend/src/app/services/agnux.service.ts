@@ -91,6 +91,19 @@ export class AgnuxService {
               console.error("Error parsing data payload:", e);
             }
             eventoActual = ''; // Limpiar el estado tras consumir la data
+          } else if (lineaLimpia.startsWith('{')) {
+            // Soporte para eventos raw JSON (ej: backend arroja JSON puro sin SSE format)
+            try {
+              const rawParsed = JSON.parse(lineaLimpia);
+              if (rawParsed.event) {
+                this.eventStatus$.next({
+                  type: rawParsed.event,
+                  payload: rawParsed
+                });
+              }
+            } catch (e) {
+              console.error("Error parsing raw JSON event:", e);
+            }
           }
         }
       }

@@ -9,6 +9,11 @@ export interface AgUiEvent {
   tool?: string;
   score?: number;
   data?: any;
+  mediaPlatform?: string;
+  appService?: string;
+  appAction?: string;
+  appParams?: any;
+  imageUrl?: string;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -57,7 +62,12 @@ export class AgnuxKernelService {
               text: parsed.text,
               tool: parsed.tool,
               score: parsed.score,
-              data: parsed.data
+              data: parsed.data,
+              mediaPlatform: parsed.mediaPlatform,
+              appService: parsed.appService,
+              appAction: parsed.appAction,
+              appParams: parsed.appParams,
+              imageUrl: parsed.imageUrl
             });
           } catch (e) {
             console.warn('Error parseando chunk JSON en stream:', line);
