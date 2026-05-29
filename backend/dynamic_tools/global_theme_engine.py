@@ -80,23 +80,24 @@ async def global_theme_engine(style_prompt: str, **kwargs) -> str:
     
     ```css
     :root {{
-      --agnux-accent: #00ff66;
-      --agnux-accent-glow: rgba(0, 255, 102, 0.5);
-      --agnux-accent-dim: rgba(0, 255, 102, 0.1);
-      --agnux-accent-hover: #00cc55;
-      --agnux-accent-border: #00ff66;
-      --agnux-panel-bg: rgba(10, 10, 15, 0.85);
-      --agnux-panel-solid: #0f0f13;
-      --agnux-panel-border: rgba(255, 255, 255, 0.1);
-      --agnux-font-main: "Courier New", monospace;
-      --agnux-font-clock: "Courier New", monospace;
-      --agnux-text-primary: #ffffff;
-      --agnux-text-secondary: #888888;
+      --agnux-accent: [COLOR_HEX_PRINCIPAL];
+      --agnux-accent-glow: [COLOR_RGBA_RESPLANDOR];
+      --agnux-accent-dim: [COLOR_RGBA_OSCURO];
+      --agnux-accent-hover: [COLOR_HEX_SECUNDARIO];
+      --agnux-accent-border: [COLOR_HEX_BORDES];
+      --agnux-panel-bg: [COLOR_FONDO_VENTANAS_RGBA];
+      --agnux-panel-solid: [COLOR_FONDO_SOLIDO_HEX];
+      --agnux-panel-border: [COLOR_BORDES_VENTANA_RGBA];
+      --agnux-font-main: "[NOMBRE_FUENTE]", sans-serif;
+      --agnux-font-clock: "[NOMBRE_FUENTE_RELOJ]", monospace;
+      --agnux-text-primary: [COLOR_TEXTO_PRINCIPAL];
+      --agnux-text-secondary: [COLOR_TEXTO_SECUNDARIO];
     }}
-    .window {{ border-radius: 10px; box-shadow: 0 0 20px var(--agnux-accent-glow); border: 2px solid var(--agnux-panel-border); background: var(--agnux-panel-bg); backdrop-filter: blur(10px); }}
+    
+    .window {{ border-radius: [TAMAÑO_BORDE]px; box-shadow: 0 0 20px var(--agnux-accent-glow); border: 2px solid var(--agnux-panel-border); background: var(--agnux-panel-bg); backdrop-filter: blur([NIVEL_BLUR]px); }}
     .window-header {{ background: var(--agnux-panel-solid); color: var(--agnux-accent); font-family: var(--agnux-font-main); text-align: center; border-bottom: 1px solid var(--agnux-panel-border); }}
     .window-body {{ padding: 15px; color: var(--agnux-text-primary); }}
-    .hyper-island {{ border-radius: 30px; border: 1px solid var(--agnux-accent); background: var(--agnux-panel-bg); box-shadow: 0 5px 15px rgba(0,0,0,0.5); }}
+    .hyper-island {{ border-radius: [TAMAÑO_BORDE]px; border: 1px solid var(--agnux-accent); background: var(--agnux-panel-bg); box-shadow: 0 5px 15px rgba(0,0,0,0.5); }}
     .cyber-input {{ background: rgba(0,0,0,0.5); border: 1px solid var(--agnux-accent-border); color: var(--agnux-accent); border-radius: 5px; font-family: var(--agnux-font-main); }}
     .desktop-clock {{ font-family: var(--agnux-font-clock); color: var(--agnux-text-primary); text-shadow: 0 0 10px var(--agnux-accent-glow); }}
     ```
@@ -105,9 +106,10 @@ async def global_theme_engine(style_prompt: str, **kwargs) -> str:
     """
 
     payload = {
-        "model": "qwen2.5-coder:1.5b",
+        "model": "deepseek-coder:6.7b",
         "prompt": prompt_ia,
-        "stream": False
+        "stream": False,
+        "keep_alive": 0
     }
 
     try:
@@ -123,12 +125,14 @@ async def global_theme_engine(style_prompt: str, **kwargs) -> str:
             
             import re
             # Intentar extraer el bloque CSS
-            match = re.search(r'```css\s*(.*?)\s*```', respuesta_bruta, re.DOTALL)
+            match = re.search(r'```css\s*(.*)', respuesta_bruta, re.DOTALL | re.IGNORECASE)
             if match:
                 css_crudo = match.group(1)
+                # Quitar posibles backticks de cierre
+                css_crudo = re.sub(r'```\s*$', '', css_crudo).strip()
             else:
                 # Si el modelo no usó los backticks, asumimos que todo es CSS
-                css_crudo = respuesta_bruta.replace('```', '')
+                css_crudo = respuesta_bruta.replace('```', '').strip()
 
             # Construir payload para el Frontend con CSS crudo
             ws_payload = {
