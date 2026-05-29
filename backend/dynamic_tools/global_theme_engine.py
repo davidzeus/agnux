@@ -74,35 +74,14 @@ async def global_theme_engine(style_prompt: str, **kwargs) -> str:
     {dom_context}
     ```
 
-    OBLIGATORIO: Debes devolver ÚNICAMENTE código CSS puro. No uses JSON. Escribe libremente tu código CSS, pero asegúrate de envolverlo en un bloque ```css ... ```.
+    Tu tarea es escribir un bloque de código CSS puro que reestructure y rediseñe completamente estos componentes para lograr el estilo: "{style_prompt}".
     
-    ATENCIÓN: Aquí tienes una plantilla de ejemplo con valores por defecto. TU TAREA ES CAMBIAR TODOS ESTOS COLORES Y VALORES para que coincidan con el estilo que pidió el usuario. NO devuelvas los mismos valores que te doy, invéntalos tú mismo.
-    
-    ```css
-    :root {{
-      --agnux-accent: #00ff66;
-      --agnux-accent-glow: rgba(0, 255, 102, 0.5);
-      --agnux-accent-dim: rgba(0, 255, 102, 0.1);
-      --agnux-accent-hover: #00cc55;
-      --agnux-accent-border: #00ff66;
-      --agnux-panel-bg: rgba(10, 10, 15, 0.85);
-      --agnux-panel-solid: #0f0f13;
-      --agnux-panel-border: rgba(255, 255, 255, 0.1);
-      --agnux-font-main: "Courier New", monospace;
-      --agnux-font-clock: "Courier New", monospace;
-      --agnux-text-primary: #ffffff;
-      --agnux-text-secondary: #888888;
-    }}
-    
-    .window {{ border-radius: 10px; box-shadow: 0 0 20px var(--agnux-accent-glow); border: 2px solid var(--agnux-panel-border); background: var(--agnux-panel-bg); backdrop-filter: blur(10px); }}
-    .window-header {{ background: var(--agnux-panel-solid); color: var(--agnux-accent); font-family: var(--agnux-font-main); text-align: center; border-bottom: 1px solid var(--agnux-panel-border); }}
-    .window-body {{ padding: 15px; color: var(--agnux-text-primary); }}
-    .hyper-island {{ border-radius: 30px; border: 1px solid var(--agnux-accent); background: var(--agnux-panel-bg); box-shadow: 0 5px 15px rgba(0,0,0,0.5); }}
-    .cyber-input {{ background: rgba(0,0,0,0.5); border: 1px solid var(--agnux-accent-border); color: var(--agnux-accent); border-radius: 5px; font-family: var(--agnux-font-main); }}
-    .desktop-clock {{ font-family: var(--agnux-font-clock); color: var(--agnux-text-primary); text-shadow: 0 0 10px var(--agnux-accent-glow); }}
-    ```
-    
-    Recuerda: Devuelve SOLAMENTE el bloque de código CSS con los nuevos valores. NO me pidas más detalles.
+    INSTRUCCIONES CLAVES:
+    1. DEBES reescribir las siguientes variables globales en `:root` para cambiar la paleta base:
+       --agnux-accent, --agnux-accent-glow, --agnux-panel-bg, --agnux-panel-solid, --agnux-panel-border, --agnux-font-main, --agnux-text-primary, --agnux-text-secondary.
+    2. Eres LIBRE de modificar todo el aspecto estructural: usa `padding`, `margin`, `border-radius`, `box-shadow`, `backdrop-filter`, fuentes, y colores directamente sobre las clases que viste en el DOM (ej. `.window`, `.window-header`, `.cyber-input`, `.hyper-island`).
+    3. Puedes usar animaciones `@keyframes`, transformaciones `transform`, o cualquier truco avanzado de CSS.
+    4. NO expliques nada. Solo devuelve el bloque de código envuelto en ```css ... ```.
     """
 
     payload = {
@@ -121,7 +100,7 @@ async def global_theme_engine(style_prompt: str, **kwargs) -> str:
             respuesta_bruta = res.json().get("response", "").strip()
             import logging
             logger = logging.getLogger("AGNUX-KERNEL-BUS")
-            logger.info(f"🎨 [QWEN THEME ENGINE] Respuesta cruda: {respuesta_bruta}")
+            logger.info(f"🎨 [DEEPSEEK THEME ENGINE] Respuesta cruda: {respuesta_bruta}")
             
             import re
             # Intentar extraer el bloque CSS
