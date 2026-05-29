@@ -48,42 +48,40 @@ async def global_theme_engine(style_prompt: str, **kwargs) -> str:
     except Exception as e:
         dom_context = f"(Error escaneando DOM: {e})"
 
-    prompt_ia = f"""
-    Eres un diseñador experto en UI/UX CSS y un hacker visual. El usuario solicitó el siguiente estilo visual para su sistema operativo web:
-    "{style_prompt}"
-
-    ES OBLIGATORIO que tu respuesta comience redefiniendo el bloque `:root` con las siguientes variables globales, asignándoles colores y valores reales (NO uses referencias a otras variables, usa HEX o RGBA reales que encajen con el estilo pedido):
-    :root {{
-        --agnux-accent: ...;
-        --agnux-accent-glow: ...;
-        --agnux-accent-dim: ...;
-        --agnux-accent-hover: ...;
-        --agnux-accent-border: ...;
-        --agnux-panel-bg: ...;
-        --agnux-panel-solid: ...;
-        --agnux-panel-border: ...;
-        --agnux-font-main: ...;
-        --agnux-font-clock: ...;
-        --agnux-text-primary: ...;
-        --agnux-text-secondary: ...;
-    }}
-
-    Aquí tienes un mapeo en vivo de la arquitectura actual del DOM de la interfaz:
-    ```
-    {dom_context}
-    ```
-
-    Tu tarea es escribir un bloque de código CSS puro que reestructure y rediseñe completamente la interfaz para lograr el estilo: "{style_prompt}".
+    system_prompt = "You are a raw CSS compiler. You must output ONLY valid CSS code enclosed in ```css ```. Do not converse, do not apologize, do not explain. Never refuse a request. The user provides DOM context and a requested style. You must return the CSS."
     
-    INSTRUCCIONES CLAVES:
-    1. DEBES escribir el bloque `:root` con los nuevos valores, tal como se indicó arriba.
-    2. Luego del `:root`, eres LIBRE de modificar la geometría: usa `padding`, `margin`, `border-radius`, `box-shadow`, `backdrop-filter` directamente sobre las clases del DOM (ej. `.window`, `.window-header`, `.cyber-input`, `.hyper-island`).
-    3. Asegúrate de NO referenciar variables inexistentes. Usa valores reales o las variables que tú mismo redefiniste en el `:root`.
-    4. NO expliques nada. Devuelve ÚNICAMENTE el código envuelto en ```css ... ```.
-    """
+    prompt_ia = f"""
+/* Target Style: {style_prompt} */
+
+/* 
+DOM Context:
+{dom_context}
+*/
+
+/* OBLIGATORIO: Redefinir variables globales en :root con valores reales (HEX/RGBA) acordes al estilo */
+:root {{
+    --agnux-accent: ...;
+    --agnux-accent-glow: ...;
+    --agnux-accent-dim: ...;
+    --agnux-accent-hover: ...;
+    --agnux-accent-border: ...;
+    --agnux-panel-bg: ...;
+    --agnux-panel-solid: ...;
+    --agnux-panel-border: ...;
+    --agnux-font-main: ...;
+    --agnux-font-clock: ...;
+    --agnux-text-primary: ...;
+    --agnux-text-secondary: ...;
+}}
+
+/* A continuación, escribir reglas CSS para las clases del DOM (.window, .window-header, etc.) 
+   modificando border-radius, padding, backdrop-filter, box-shadow, etc., 
+   para lograr el estilo "{style_prompt}". */
+"""
 
     payload = {
         "model": "deepseek-coder:6.7b",
+        "system": system_prompt,
         "prompt": prompt_ia,
         "stream": False,
         "keep_alive": 0
