@@ -441,7 +441,7 @@ async def procesar_intencion_global(payload: TaskbarPrompt):
                                                 continue
                                                 
                                             # Ocultar visualmente la sintaxis JSON/tool_calls en la interfaz
-                                            is_tool_call_stream = texto_limpio.startswith("{") or texto_limpio.startswith("```json")
+                                            is_tool_call_stream = texto_limpio.startswith("{") or texto_limpio.startswith("```")
                                             
                                             if not is_tool_call_stream:
                                                 # Si es el primer token real tras los espacios, enviamos todo lo acumulado para no perderlo
@@ -532,22 +532,24 @@ async def procesar_intencion_global(payload: TaskbarPrompt):
                         # =================================================================
                         if tool_call_detected == "openMediaApp":
                             platform = args.get("platform")
-                            yield json.dumps({
+                            media_payload = {
                                 "event": "OPEN_MEDIA",
                                 "mediaPlatform": platform,
                                 "status": "playing"
-                            }) + "\n"
+                            }
+                            yield f"event: OPEN_MEDIA\ndata: {json.dumps(media_payload)}\n\n"
                             from dynamic_tools.media_launcher import launch_chromium_kiosk
                             asyncio.create_task(launch_chromium_kiosk(platform))
                             resultado_fierros = f"Lanzado Kiosco Multimedia para {platform}"
                             
                         elif tool_call_detected == "googleWorkspaceAction":
-                            yield json.dumps({
+                            iframe_payload = {
                                 "event": "OPEN_IFRAME_APP",
                                 "appService": args.get("service"),
                                 "appAction": args.get("action"),
                                 "appParams": args.get("params", {})
-                            }) + "\n"
+                            }
+                            yield f"event: OPEN_IFRAME_APP\ndata: {json.dumps(iframe_payload)}\n\n"
                             resultado_fierros = f"Abriendo interfaz de {args.get('service')} en el cliente."
                             
                         elif tool_call_detected == "calculateExpression":
@@ -559,10 +561,11 @@ async def procesar_intencion_global(payload: TaskbarPrompt):
                                 resultado_fierros = f"Error evaluando expresión: {e}"
                                 
                         elif tool_call_detected == "setWallpaper":
-                            yield json.dumps({
+                            wallpaper_payload = {
                                 "event": "SET_WALLPAPER",
                                 "imageUrl": args.get("imageUrl")
-                            }) + "\n"
+                            }
+                            yield f"event: SET_WALLPAPER\ndata: {json.dumps(wallpaper_payload)}\n\n"
                             resultado_fierros = "Fondo de pantalla actualizado con éxito."
                         else:
                             resultado_fierros = await ejecutar_herramienta_local(
