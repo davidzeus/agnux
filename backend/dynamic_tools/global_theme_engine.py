@@ -58,25 +58,24 @@ DOM Context:
 {dom_context}
 */
 
-/* OBLIGATORIO: Redefinir variables globales en :root con valores reales (HEX/RGBA) acordes al estilo */
-:root {{
-    --agnux-accent: ...;
-    --agnux-accent-glow: ...;
-    --agnux-accent-dim: ...;
-    --agnux-accent-hover: ...;
-    --agnux-accent-border: ...;
-    --agnux-panel-bg: ...;
-    --agnux-panel-solid: ...;
-    --agnux-panel-border: ...;
-    --agnux-font-main: ...;
-    --agnux-font-clock: ...;
-    --agnux-text-primary: ...;
-    --agnux-text-secondary: ...;
-}}
+Escribe a continuación el código CSS completo.
+REGLA 1: Debes empezar escribiendo el bloque `:root` y redefinir TODAS las siguientes variables con valores HEX/RGBA reales que representen el estilo solicitado:
+--agnux-accent
+--agnux-accent-glow
+--agnux-accent-dim
+--agnux-accent-hover
+--agnux-accent-border
+--agnux-panel-bg
+--agnux-panel-solid
+--agnux-panel-border
+--agnux-font-main
+--agnux-font-clock
+--agnux-text-primary
+--agnux-text-secondary
 
-/* A continuación, escribir reglas CSS para las clases del DOM (.window, .window-header, etc.) 
-   modificando border-radius, padding, backdrop-filter, box-shadow, etc., 
-   para lograr el estilo "{style_prompt}". */
+REGLA 2: Después del `:root`, escribe las reglas CSS para las clases del DOM (.cyber-window, .window-header, .hyper-island, etc.) modificando su border-radius, padding, backdrop-filter, box-shadow, etc.
+
+Escribe TODO el código dentro de un bloque ```css
 """
 
     payload = {
