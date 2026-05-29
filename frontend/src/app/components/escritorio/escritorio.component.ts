@@ -11,6 +11,7 @@ import { AuthService } from '../../services/auth.service';
 import { PresenceService } from '../../services/presence.service';
 import { NotificationService } from '../../services/notification.service';
 import { HyperIslandComponent } from '../hyper-island/hyper-island.component';
+import { ThemeService } from '../../services/theme.service';
 
 @Component({
   selector: 'app-escritorio',
@@ -51,6 +52,7 @@ export class EscritorioComponent implements OnInit, OnDestroy {
     private authService: AuthService, 
     private presenceService: PresenceService,
     private notificationService: NotificationService,
+    private themeService: ThemeService,
     private cdr: ChangeDetectorRef
   ) {
     afterNextRender(() => {
@@ -138,6 +140,9 @@ export class EscritorioComponent implements OnInit, OnDestroy {
         if (this.terminalId) {
           this.notificationService.connect(this.terminalId, user);
         }
+        
+        // Cargar estilo físico persistente
+        this.themeService.loadBaseStyle(user);
       } else {
         this.isLocked = true;
         // Evita disparar el bloqueo si ya hay un ID de terminal inicializado escuchando

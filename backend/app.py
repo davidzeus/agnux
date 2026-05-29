@@ -11,7 +11,8 @@ from pydantic import BaseModel
 import httpx
 
 from qdrant_client import AsyncQdrantClient
-from qdrant_client.models import Distance, VectorParams, PointStruct
+from qdrant_client.models import Distance, VectorParams, PointStruct, Filter, FieldCondition, MatchValue
+from sentence_transformers import SentenceTransformer
 
 from kernel_bus import manager
 
@@ -45,14 +46,48 @@ os.makedirs(DYNAMIC_DIR, exist_ok=True)
 if not os.path.exists(os.path.join(DYNAMIC_DIR, "__init__.py")):
     with open(os.path.join(DYNAMIC_DIR, "__init__.py"), "w") as f: f.write("")
 
-# Simulación de extracción matemática
+# Cargar modelo de Embeddings en CPU (Mantenido en RAM)
+logger.info("🧠 [EMBEDDINGS] Cargando modelo semántico en CPU (paraphrase-multilingual-mpnet-base-v2)...")
+try:
+    embedding_model = SentenceTransformer('paraphrase-multilingual-mpnet-base-v2')
+except Exception as e:
+    logger.error(f"❌ [EMBEDDINGS] Falla al cargar SentenceTransformer: {e}")
+    embedding_model = None
+
+# Simulación de extracción matemática para rostro
 def simular_vector_rostro() -> list[float]:
     import random
     return [random.uniform(-1.0, 1.0) for _ in range(128)]
 
-def simular_vector_texto(texto: str) -> list[float]:
-    import random
-    return [random.uniform(-1.0, 1.0) for _ in range(768)]
+def generar_vector_texto(texto: str) -> list[float]:
+    if embedding_model is None:
+        import random
+        return [random.uniform(-1.0, 1.0) for _ in range(768)]
+    # Generar embedding real de 768d
+    return embedding_model.encode(texto).tolist()
+
+async def guardar_recuerdo_qdrant(user_id: str, tipo_evento: str, contenido: str, metadata_extra: dict = None):
+    try:
+        if not contenido or len(contenido.strip()) < 3: return
+        vector = generar_vector_texto(contenido)
+        point_id = str(uuid.uuid4())
+        
+        payload = {
+            "user_id": user_id,
+            "tipo": tipo_evento,
+            "contenido": contenido,
+            "timestamp": datetime.now().isoformat()
+        }
+        if metadata_extra:
+            payload.update(metadata_extra)
+            
+        await qdrant_client.upsert(
+            collection_name=COLECCION_MEMORIA,
+            points=[PointStruct(id=point_id, vector=vector, payload=payload)]
+        )
+        logger.info(f"💾 [MEMORIA] Recuerdo semántico ({tipo_evento}) almacenado para {user_id}.")
+    except Exception as e:
+        logger.error(f"❌ [MEMORIA] Error al guardar recuerdo: {e}")
 
 # =====================================================================
 # ESQUEMAS DE PYDANTIC (Modelos de Datos)
@@ -219,7 +254,7 @@ async def procesar_intencion_global(payload: TaskbarPrompt):
                 tools_privadas = CACHE_VECTORS["usuarios"].get(id_normalizado, {})
                 tools_disponibles = {**CACHE_VECTORS["sistema"], **tools_privadas}
     
-                vector_usuario = simular_vector_texto(payload.prompt)
+                vector_usuario = generar_vector_texto(payload.prompt)
                 filtered_tools = []
     
                 # Router Semántico y emisión geométrica en tiempo real
@@ -248,9 +283,32 @@ async def procesar_intencion_global(payload: TaskbarPrompt):
     
                 openai_tools = [{"type": "function", "function": t} for t in filtered_tools] if filtered_tools else None
     
+                # =====================================================================
+                # RECUPERACIÓN DE MEMORIA EPISÓDICA (OMNISCIENCIA)
+                # =====================================================================
+                try:
+                    resultados_memoria = await qdrant_client.search(
+                        collection_name=COLECCION_MEMORIA,
+                        query_vector=vector_usuario,
+                        query_filter=Filter(
+                            must=[
+                                FieldCondition(
+                                    key="user_id",
+                                    match=MatchValue(value=payload.user_id),
+                                )
+                            ]
+                        ),
+                        limit=3
+                    )
+                    recuerdos_str = "\n".join([f"- {r.payload.get('contenido', '')}" for r in resultados_memoria if r.score > 0.4])
+                    bloque_memoria = f"\n\n## RECUERDOS EPISÓDICOS RELEVANTES DEL USUARIO:\n{recuerdos_str}" if recuerdos_str else ""
+                except Exception as e:
+                    logger.error(f"❌ [MEMORIA] Error al recuperar contexto histórico: {e}")
+                    bloque_memoria = ""
+
                 herramientas_disponibles_str = json.dumps(filtered_tools, indent=2, ensure_ascii=False) if filtered_tools else "Ninguna"
 
-                SYSTEM_PROMPT = f"""Sos el kernel principal de AGNUX OS. Responde siempre corto y ejecutivo.
+                SYSTEM_PROMPT = f"""Sos el kernel principal de AGNUX OS. Responde siempre corto y ejecutivo.{bloque_memoria}
     
     ## HERRAMIENTAS DISPONIBLES:
     {herramientas_disponibles_str}
@@ -375,6 +433,14 @@ async def procesar_intencion_global(payload: TaskbarPrompt):
         
                                 # 🔥 EL FIX CRUCIAL: Forzamos la destrucción del generador asíncrono y cerramos el socket HTTP
                                 logger.info("🔌 [KERNEL AGENTE] Tarea cumplida. Liberando canal de intent de forma inmediata.")
+                                
+                                # Guardar memoria del chat
+                                asyncio.create_task(guardar_recuerdo_qdrant(
+                                    user_id=payload.user_id,
+                                    tipo_evento="chat_interaccion",
+                                    contenido=f"Usuario dijo: {payload.prompt}\nAGNUX respondió: {respuesta_completa}"
+                                ))
+                                
                                 return
     
                 except Exception as e:
@@ -394,6 +460,13 @@ async def procesar_intencion_global(payload: TaskbarPrompt):
     
                         yield json.dumps({"event": "TOOL_RESULT", "data": resultado_fierros}) + "\n"
     
+                        # Guardar memoria de la tool
+                        asyncio.create_task(guardar_recuerdo_qdrant(
+                            user_id=payload.user_id,
+                            tipo_evento="ejecucion_herramienta",
+                            contenido=f"Usuario pidió: {payload.prompt}\nAGNUX ejecutó la herramienta '{tool_call_detected}' con los argumentos: {args}\nResultado: {resultado_fierros}"
+                        ))
+
                         # Criterio de promoción: ¿es una tool de sistema u over-ride global?
                         if tool_call_detected == "autogenerar_nueva_tool" and args.get("nombre_funcion", "").startswith("global_"):
                             nombre_func = args["nombre_funcion"]
@@ -417,6 +490,15 @@ async def procesar_intencion_global(payload: TaskbarPrompt):
 # =====================================================================
 # 4. ENDPOINTS DE BYPASS BIOMÉTRICO Y LOGIN REMOTO
 # =====================================================================
+from fastapi.responses import FileResponse
+
+@app.get("/api/theme/{user_id}")
+async def obtener_tema_usuario(user_id: str):
+    theme_path = os.path.join(BASE_DIR, "theme_profiles", f"{user_id}.css")
+    if os.path.exists(theme_path):
+        return FileResponse(theme_path, media_type="text/css")
+    return {"status": "default_theme"}
+
 @app.get("/api/auth/terminal-stream/{terminal_id}")
 async def terminal_stream(terminal_id: str):
     # Reserva inicial del socket

@@ -119,6 +119,15 @@ async def global_theme_engine(style_prompt: str, **kwargs) -> str:
                 "data": {"css": css_crudo}
             }
             
+            # --- PERSISTENCIA FÍSICA ---
+            theme_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "theme_profiles")
+            os.makedirs(theme_dir, exist_ok=True)
+            theme_path = os.path.join(theme_dir, f"{user_id}.css")
+            with open(theme_path, "w", encoding="utf-8") as f:
+                f.write(css_crudo)
+            logger.info(f"💾 [THEME ENGINE] CSS físico guardado en: {theme_path}")
+            # ---------------------------
+            
             # Notificar al bus
             await manager.send_personal_message(terminal_id, user_id, ws_payload)
             

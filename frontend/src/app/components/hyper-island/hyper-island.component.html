@@ -5,7 +5,7 @@
     
     <div *ngIf="currentState === 'compact'" class="content-compact">
       <span class="pulse-dot"></span>
-      <span class="task-icon">{{ activeTasks[0]?.icon || '🛡️' }}</span>
+      <span class="task-icon">{{ activeTasks.length > 0 ? activeTasks[0].icon : '🛡️' }}</span>
     </div>
 
     <div *ngIf="currentState === 'expanded-notif'" class="content-notif">

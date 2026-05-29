@@ -1,10 +1,27 @@
 import { Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
 
 @Injectable({
   providedIn: 'root'
 })
 export class ThemeService {
   private styleElementId = 'agnux-ia-runtime-styles';
+
+  constructor(private http: HttpClient) {}
+
+  loadBaseStyle(userId: string) {
+    const finalUrl = `http://10.10.0.66:8000/api/theme/${userId}`;
+    
+    this.http.get(finalUrl, { responseType: 'text' }).subscribe({
+      next: (css) => {
+        if (css && !css.includes('default_theme')) {
+          console.log(`💾 [THEME ENGINE] Estilo físico cargado para ${userId}`);
+          this.injectRawCss(css);
+        }
+      },
+      error: (err) => console.log('Sin estilo físico previo:', err)
+    });
+  }
 
   injectRawCss(cssCode: string) {
     console.log("🎨 [THEME ENGINE] Recibido bloque de CSS libre desde el Kernel. Inyectando...");
