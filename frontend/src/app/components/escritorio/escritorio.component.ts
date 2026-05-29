@@ -116,20 +116,20 @@ export class EscritorioComponent implements OnInit, OnDestroy {
             this.spawnVentana('video', '🎬 AGNUX Video Core', { url: '' });
           }
         } else if (status.type === 'OPEN_MEDIA') {
-          // Mutar hyper-island o mostrar reproductor embebido
           this.cargando = false;
           const targetUrl = status.payload?.url;
+          const platformName = status.payload?.mediaPlatform || 'Media';
+          
           if (targetUrl) {
-            console.log(`🎵 [UI KERNEL] Abriendo reproductor de medios en nueva pestaña: ${targetUrl}`);
-            window.open(targetUrl, '_blank', 'noopener,noreferrer');
+            console.log(`🎵 [UI KERNEL] Abriendo reproductor interno para: ${targetUrl}`);
+            this.spawnVentana('iframe', `🎵 AGNUX Media - ${platformName}`, { url: targetUrl });
           }
           // Evento propagado a hyper-island a través de un bus o servicio (lo gestionaremos en app-hyper-island)
         } else if (status.type === 'OPEN_IFRAME_APP') {
           this.cargando = false;
           const { appService, appAction, appParams } = status.payload;
           const dummyUrl = `https://workspace.google.com/agnux-embedded?service=${appService}&action=${appAction}`;
-          const iframeContent = `<iframe src="${dummyUrl}" style="width:100%; height:100%; border:none; border-radius:8px;"></iframe>`;
-          this.spawnVentana('html', `☁️ Workspace: ${appService}`, iframeContent);
+          this.spawnVentana('iframe', `☁️ Workspace: ${appService}`, { url: dummyUrl });
         } else if (status.type === 'SET_WALLPAPER') {
           this.cargando = false;
           const imageUrl = status.payload.imageUrl;
@@ -317,7 +317,7 @@ export class EscritorioComponent implements OnInit, OnDestroy {
     this.notificationService.disconnect();
   }
 
-  spawnVentana(tipo: 'html' | 'musica' | 'video' | 'texto', titulo: string, datos: any): string {
+  spawnVentana(tipo: 'html' | 'musica' | 'video' | 'texto' | 'iframe', titulo: string, datos: any): string {
     this.maxZIndex++;
     const id = `win_${this.idCounter++}`;
     // Si ya existe una ventana HTML, podemos reusarla, o crear una nueva
@@ -335,6 +335,8 @@ export class EscritorioComponent implements OnInit, OnDestroy {
       titulo,
       tipo,
       datos,
+      htmlDinamico: tipo === 'html' ? datos : '',
+      urlDinamica: (tipo === 'video' || tipo === 'iframe') ? datos.url : '',
       maximizada: false,
       x: 50 + (this.idCounter * 20),
       y: 50 + (this.idCounter * 20),

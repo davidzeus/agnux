@@ -1,9 +1,10 @@
 export interface Ventana {
   id: string;
   titulo: string;
-  tipo: 'html' | 'musica' | 'video' | 'texto';
+  tipo: 'html' | 'musica' | 'video' | 'texto' | 'iframe';
   datos?: any;
   htmlDinamico?: string;
+  urlDinamica?: string;
   maximizada: boolean;
   x: number;
   y: number;

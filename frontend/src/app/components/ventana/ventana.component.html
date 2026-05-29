@@ -70,6 +70,11 @@
       </div>
     </div>
 
+    <!-- TIPO IFRAME (Apps Externas Integradas) -->
+    <div *ngSwitchCase="'iframe'" class="iframe-container" style="height: 100%; width: 100%; display: flex;">
+      <iframe [src]="win.urlDinamica | safeUrl" style="flex: 1; width: 100%; height: 100%; border: none; border-radius: 0 0 8px 8px;" allow="autoplay; encrypted-media; fullscreen; microphone; camera"></iframe>
+    </div>
+
     <!-- TIPO VIDEO (Reproductor) -->
     <div *ngSwitchCase="'video'" class="video-container">
       <div class="video-placeholder">
