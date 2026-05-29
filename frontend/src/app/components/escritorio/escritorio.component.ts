@@ -344,7 +344,8 @@ export class EscritorioComponent implements OnInit, OnDestroy {
       width: tipo === 'video' ? 680 : 480,
       height: 400
     };
-    this.ventanas.push(nuevaVentana);
+    this.ventanas = [...this.ventanas, nuevaVentana];
+    this.cdr.detectChanges();
     return nuevaVentana.id;
   }
 
