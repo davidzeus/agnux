@@ -56,8 +56,6 @@ async def global_theme_engine(style_prompt: str, **kwargs) -> str:
     
     ES VITAL QUE SIEMPRE INCLUYAS LA REESCRITURA DE LAS VARIABLES GLOBALES EN `:root` PARA QUE LAS VENTANAS Y PANELES CAMBIEN DE COLOR.
     Las variables son:
-    --agnux-bg-color
-    --agnux-bg-image (ej. url('...') o none)
     --agnux-accent
     --agnux-accent-glow
     --agnux-accent-dim
@@ -80,7 +78,7 @@ async def global_theme_engine(style_prompt: str, **kwargs) -> str:
     
     Retorna SOLO el objeto JSON. Ejemplo:
     {{
-        "css": ":root {{ --agnux-bg-color: #000; --agnux-panel-bg: rgba(20,20,20,0.9); --agnux-accent: #ff0000; }} .window-header {{ font-weight: bold; }}"
+        "css": ":root {{ --agnux-panel-bg: rgba(20,20,20,0.9); --agnux-accent: #ff0000; }} .window-header {{ font-weight: bold; }}"
     }}
     """
 

@@ -301,12 +301,21 @@ async def procesar_intencion_global(payload: TaskbarPrompt):
                                         token = data.get("response", "")
                                         if token:
                                             respuesta_completa += token
+                                            texto_limpio = respuesta_completa.strip()
                                             
+                                            # Buffer inicial para evitar crear ventanas vacías por espacios en blanco al inicio
+                                            if not texto_limpio:
+                                                continue
+                                                
                                             # Ocultar visualmente la sintaxis JSON/tool_calls en la interfaz
-                                            is_tool_call_stream = respuesta_completa.strip().startswith("{") or respuesta_completa.strip().startswith("```json")
+                                            is_tool_call_stream = texto_limpio.startswith("{") or texto_limpio.startswith("```json")
                                             
                                             if not is_tool_call_stream:
-                                                yield f"event: TOKEN\ndata: {json.dumps(token)}\n\n"
+                                                # Si es el primer token real tras los espacios, enviamos todo lo acumulado para no perderlo
+                                                if len(texto_limpio) == len(token.strip()) and len(respuesta_completa) > len(token):
+                                                    yield f"event: TOKEN\ndata: {json.dumps(respuesta_completa)}\n\n"
+                                                else:
+                                                    yield f"event: TOKEN\ndata: {json.dumps(token)}\n\n"
                                     except Exception:
                                         continue
     
