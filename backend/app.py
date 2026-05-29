@@ -4,7 +4,7 @@ import uuid
 import logging
 import asyncio
 from datetime import datetime
-from fastapi import FastAPI, HTTPException, UploadFile, File
+from fastapi import FastAPI, HTTPException, UploadFile, File, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
@@ -12,6 +12,8 @@ import httpx
 
 from qdrant_client import AsyncQdrantClient
 from qdrant_client.models import Distance, VectorParams, PointStruct
+
+from kernel_bus import manager
 
 # =====================================================================
 # 1. CONFIGURACIÓN INICIAL Y DEPENDENCIAS
@@ -58,6 +60,7 @@ def simular_vector_texto(texto: str) -> list[float]:
 class TaskbarPrompt(BaseModel):
     prompt: str
     user_id: str
+    terminal_id: str
 
 class EnrolmentPayload(BaseModel):
     enrolment_id: str
@@ -136,9 +139,14 @@ async def autogenerar_nueva_tool(nombre_funcion: str, codigo_python: str, descri
     except Exception as e:
         return f"ERROR KERNEL: Falla crítica en autogénesis: {e}"
 
-async def ejecutar_herramienta_local(nombre: str, argumentos: dict = None) -> str:
+async def ejecutar_herramienta_local(nombre: str, argumentos: dict = None, terminal_id: str = None, user_id: str = None) -> str:
     logger.info(f"🔌 [EJECUTOR] Invocando subproceso host: '{nombre}'")
     if argumentos is None: argumentos = {}
+    
+    # Inyectamos contexto de sistema en los argumentos para que las herramientas generadas
+    # puedan acceder a la terminal_id y user_id mediante kwargs
+    if terminal_id: argumentos["__terminal_id"] = terminal_id
+    if user_id: argumentos["__user_id"] = user_id
     
     if nombre == "autogenerar_nueva_tool":
         return await autogenerar_nueva_tool(**argumentos)
@@ -161,6 +169,14 @@ async def ejecutar_herramienta_local(nombre: str, argumentos: dict = None) -> st
 # =====================================================================
 # 3. ENDPOINT CENTRAL DE INTENCIONES CON STREAMING AG-UI
 # =====================================================================
+@app.websocket("/api/system/notifications/ws/{terminal_id}/{user_id}")
+async def websocket_notifications(websocket: WebSocket, terminal_id: str, user_id: str):
+    await manager.connect(websocket, terminal_id, user_id)
+    try:
+        while True:
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        manager.disconnect(terminal_id, user_id)
 @app.post("/api/system/intent")
 async def procesar_intencion_global(payload: TaskbarPrompt):
     async def generador_eventos():
@@ -216,7 +232,13 @@ async def procesar_intencion_global(payload: TaskbarPrompt):
     ## 2.1 REGLAS ESTRICTAS DE NOMENCLATURA DE RED (ESTÁNDAR DE KERNEL LINUX Y DNS)
     - Está TAXATIVAMENTE PROHIBIDO el uso de guiones bajos ('_') en cualquier identificador de usuario, nombre de terminal, o nombre de herramienta dinámica que interactúe con el host. El guión bajo rompe la sintaxis de interfaces de WireGuard y las especificaciones de Hostnames de internet (RFC 1035).
     - Todo identificador debe normalizarse utilizando única y exclusivamente guiones medios ('-') o formato alfanumérico plano en minúsculas (ejemplo correcto: 'user-cristian', 'global-calculadora', 'term-desktop-101').
-    - Si vas a autogenerar código en caliente para una nueva herramienta, el archivo físico en disco y su registro semántico deben usar guiones medios (ej. 'global-control-bomba.py')."""
+    - Si vas a autogenerar código en caliente para una nueva herramienta, el archivo físico en disco y su registro semántico deben usar guiones medios (ej. 'global-control-bomba.py').
+
+    ## NOTIFICACIONES PUSH (HYPERISLAND)
+    Si estás autogenerando una herramienta y necesitas notificar al usuario, puedes usar WebSockets puros.
+    Importa de forma asíncrona: `from kernel_bus import notificar_frontend` y ejecuta:
+    `await notificar_frontend(kwargs.get("__terminal_id"), kwargs.get("__user_id"), "Mensaje", "notif")`
+    """
     
                 payload_ollama = {
                     "model": modelo_activo,
@@ -292,7 +314,12 @@ async def procesar_intencion_global(payload: TaskbarPrompt):
                     yield json.dumps({"event": "TOOL_EXECUTE", "message": f"Ejecución solicitada a Kernel: {tool_call_detected}"}) + "\n"
                     try:
                         args = json.loads(argumentos_acumulados) if argumentos_acumulados else {}
-                        resultado_fierros = await ejecutar_herramienta_local(tool_call_detected, args)
+                        resultado_fierros = await ejecutar_herramienta_local(
+                            tool_call_detected, 
+                            args, 
+                            terminal_id=payload.terminal_id, 
+                            user_id=payload.user_id
+                        )
     
                         yield json.dumps({"event": "TOOL_RESULT", "data": resultado_fierros}) + "\n"
     

@@ -39,6 +39,8 @@
 
   <!-- ESCRITORIO PRINCIPAL -->
   <div *ngIf="!isLocked" class="desktop-env" (click)="currentHtmlWindowId ? null : null">
+    <app-hyper-island></app-hyper-island>
+
     <!-- Reloj de Escritorio -->
     <div class="desktop-clock">
       <div class="clock-time">{{ horaActual | date:'HH:mm' }}</div>

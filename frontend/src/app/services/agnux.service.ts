@@ -20,7 +20,7 @@ export class AgnuxService {
 
   constructor(private authService: AuthService) {}
 
-  async enviarPromptStream(promptTexto: string): Promise<void> {
+  async enviarPromptStream(promptTexto: string, terminalId: string): Promise<void> {
     const userId = this.authService.getCurrentUser();
     
     if (!userId) {
@@ -32,7 +32,7 @@ export class AgnuxService {
       const response = await fetch(this.apiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: promptTexto, user_id: userId })
+        body: JSON.stringify({ prompt: promptTexto, user_id: userId, terminal_id: terminalId })
       });
 
       if (!response.ok) {

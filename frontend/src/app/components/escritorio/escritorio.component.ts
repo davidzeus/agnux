@@ -9,6 +9,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { AuthService } from '../../services/auth.service';
 import { PresenceService } from '../../services/presence.service';
+import { HyperIslandComponent } from '../hyper-island/hyper-island.component';
 
 @Component({
   selector: 'app-escritorio',
@@ -17,6 +18,7 @@ import { PresenceService } from '../../services/presence.service';
     CommonModule, 
     FormsModule, 
     VentanaComponent,
+    HyperIslandComponent,
     MatIconModule,
     MatButtonModule
   ],
@@ -331,7 +333,7 @@ export class EscritorioComponent implements OnInit, OnDestroy {
     this.currentHtmlWindowId = null;
 
     try {
-      await this.agnuxService.enviarPromptStream(this.promptInput);
+      await this.agnuxService.enviarPromptStream(this.promptInput, this.terminalId);
     } catch (err) {
       console.error(err);
       this.spawnVentana('texto', '❌ Error Local', { error: 'No se pudo conectar con AGNUX' });
@@ -378,7 +380,7 @@ ${userText}`;
     }
 
     try {
-      await this.agnuxService.enviarPromptStream(promptFinal);
+      await this.agnuxService.enviarPromptStream(promptFinal, this.terminalId);
     } catch (err) {
       console.error(err);
       win.htmlDinamico += `<br><span style="color: #ff3366;">[Error Local]</span>`;

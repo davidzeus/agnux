@@ -1,0 +1,41 @@
+<div class="island-wrapper">
+  <div class="hyper-island" 
+       [ngClass]="currentState" 
+       (click)="toggleWidget()">
+    
+    <div *ngIf="currentState === 'compact'" class="content-compact">
+      <span class="pulse-dot"></span>
+      <span class="task-icon">{{ activeTasks[0]?.icon || '🛡️' }}</span>
+    </div>
+
+    <div *ngIf="currentState === 'expanded-notif'" class="content-notif">
+      <span class="notif-badge">⚠️ AG-KERNEL:</span>
+      <p class="notif-text">{{ currentNotification }}</p>
+    </div>
+
+    <div *ngIf="currentState === 'expanded-widget'" class="content-widget" (click)="$event.stopPropagation()">
+      <div class="widget-header">
+        <span>AGNUX BACKGROUND SYSTEMS</span>
+        <button class="close-btn" (click)="cerrarWidget($event)">✕</button>
+      </div>
+      
+      <div class="widget-body">
+        <div *ngFor="let task of activeTasks" class="task-card">
+          <div class="task-info">
+            <span class="task-avatar">{{ task.icon }}</span>
+            <div>
+              <h4 class="task-title">{{ task.title }}</h4>
+              <p class="task-subtitle">{{ task.subtitle }}</p>
+            </div>
+          </div>
+          <div class="player-controls" *ngIf="task.type === 'player'">
+            <button class="ctrl-btn">⏮</button>
+            <button class="ctrl-btn active">⏸</button>
+            <button class="ctrl-btn">⏭</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
