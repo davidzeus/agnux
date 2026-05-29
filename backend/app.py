@@ -301,8 +301,12 @@ async def procesar_intencion_global(payload: TaskbarPrompt):
                                         token = data.get("response", "")
                                         if token:
                                             respuesta_completa += token
-                                            # Emitimos bajo el protocolo AG-UI para la barra verde
-                                            yield f"event: TOKEN\ndata: {json.dumps(token)}\n\n"
+                                            
+                                            # Ocultar visualmente la sintaxis JSON/tool_calls en la interfaz
+                                            is_tool_call_stream = respuesta_completa.strip().startswith("{") or respuesta_completa.strip().startswith("```json")
+                                            
+                                            if not is_tool_call_stream:
+                                                yield f"event: TOKEN\ndata: {json.dumps(token)}\n\n"
                                     except Exception:
                                         continue
     
@@ -314,9 +318,21 @@ async def procesar_intencion_global(payload: TaskbarPrompt):
                             bloque_python = re.search(r'```python\s*(.*?)\s*```', respuesta_completa, re.DOTALL)
                             match_nombre = re.search(r'`([^`]+)\.py`', respuesta_completa) or re.search(r'\*\*Nombre sugerido:\*\*\s*`([^`]+)`', respuesta_completa)
 
+                            json_str = None
                             if bloque_json:
+                                json_str = bloque_json.group(1)
+                            else:
                                 try:
-                                    json_data = json.loads(bloque_json.group(1))
+                                    json.loads(respuesta_completa)
+                                    json_str = respuesta_completa
+                                except Exception:
+                                    match_raw = re.search(r'\{.*"tool_call".*\}', respuesta_completa, re.DOTALL)
+                                    if match_raw:
+                                        json_str = match_raw.group(0)
+
+                            if json_str:
+                                try:
+                                    json_data = json.loads(json_str)
                                     if "tool_call" in json_data:
                                         tool_call_detected = json_data["tool_call"]
                                         argumentos_acumulados = json.dumps(json_data.get("arguments", {}))

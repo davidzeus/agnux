@@ -48,6 +48,9 @@ async def global_theme_engine(style_prompt: str, **kwargs) -> str:
                 return f"ERROR KERNEL: Falla en inferencia de diseño (HTTP {res.status_code})"
             
             respuesta_json = res.json().get("response", "").strip()
+            import logging
+            logger = logging.getLogger("AGNUX-KERNEL-BUS")
+            logger.info(f"🎨 [QWEN THEME ENGINE] Respuesta cruda: {respuesta_json}")
             
             try:
                 css_vars = json.loads(respuesta_json)
