@@ -76,33 +76,33 @@ async def global_theme_engine(style_prompt: str, **kwargs) -> str:
 
     OBLIGATORIO: Debes devolver ÚNICAMENTE código CSS puro. No uses JSON. Escribe libremente tu código CSS, pero asegúrate de envolverlo en un bloque ```css ... ```.
     
-    Puedes guiarte con este esqueleto básico (modificando los valores para adaptarlos al estilo solicitado), y eres totalmente libre de agregar animaciones, keyframes, filtros o selectores adicionales para alterar drásticamente la UI:
+    ATENCIÓN: Aquí tienes una plantilla de ejemplo con valores por defecto. TU TAREA ES CAMBIAR TODOS ESTOS COLORES Y VALORES para que coincidan con el estilo que pidió el usuario. NO devuelvas los mismos valores que te doy, invéntalos tú mismo.
     
     ```css
     :root {{
-      --agnux-accent: [COLOR_HEX_PRINCIPAL];
-      --agnux-accent-glow: [COLOR_RGBA_RESPLANDOR];
-      --agnux-accent-dim: [COLOR_RGBA_OSCURO];
-      --agnux-accent-hover: [COLOR_HEX_SECUNDARIO];
-      --agnux-accent-border: [COLOR_HEX_BORDES];
-      --agnux-panel-bg: [COLOR_FONDO_VENTANAS_RGBA];
-      --agnux-panel-solid: [COLOR_FONDO_SOLIDO_HEX];
-      --agnux-panel-border: [COLOR_BORDES_VENTANA_RGBA];
-      --agnux-font-main: "[NOMBRE_FUENTE]", sans-serif;
-      --agnux-font-clock: "[NOMBRE_FUENTE_RELOJ]", monospace;
-      --agnux-text-primary: [COLOR_TEXTO_PRINCIPAL];
-      --agnux-text-secondary: [COLOR_TEXTO_SECUNDARIO];
+      --agnux-accent: #00ff66;
+      --agnux-accent-glow: rgba(0, 255, 102, 0.5);
+      --agnux-accent-dim: rgba(0, 255, 102, 0.1);
+      --agnux-accent-hover: #00cc55;
+      --agnux-accent-border: #00ff66;
+      --agnux-panel-bg: rgba(10, 10, 15, 0.85);
+      --agnux-panel-solid: #0f0f13;
+      --agnux-panel-border: rgba(255, 255, 255, 0.1);
+      --agnux-font-main: "Courier New", monospace;
+      --agnux-font-clock: "Courier New", monospace;
+      --agnux-text-primary: #ffffff;
+      --agnux-text-secondary: #888888;
     }}
     
-    .window {{ border-radius: [TAMAÑO_BORDE]px; box-shadow: 0 0 20px var(--agnux-accent-glow); border: 2px solid var(--agnux-panel-border); background: var(--agnux-panel-bg); backdrop-filter: blur([NIVEL_BLUR]px); }}
+    .window {{ border-radius: 10px; box-shadow: 0 0 20px var(--agnux-accent-glow); border: 2px solid var(--agnux-panel-border); background: var(--agnux-panel-bg); backdrop-filter: blur(10px); }}
     .window-header {{ background: var(--agnux-panel-solid); color: var(--agnux-accent); font-family: var(--agnux-font-main); text-align: center; border-bottom: 1px solid var(--agnux-panel-border); }}
     .window-body {{ padding: 15px; color: var(--agnux-text-primary); }}
-    .hyper-island {{ border-radius: [TAMAÑO_BORDE]px; border: 1px solid var(--agnux-accent); background: var(--agnux-panel-bg); box-shadow: 0 5px 15px rgba(0,0,0,0.5); }}
+    .hyper-island {{ border-radius: 30px; border: 1px solid var(--agnux-accent); background: var(--agnux-panel-bg); box-shadow: 0 5px 15px rgba(0,0,0,0.5); }}
     .cyber-input {{ background: rgba(0,0,0,0.5); border: 1px solid var(--agnux-accent-border); color: var(--agnux-accent); border-radius: 5px; font-family: var(--agnux-font-main); }}
     .desktop-clock {{ font-family: var(--agnux-font-clock); color: var(--agnux-text-primary); text-shadow: 0 0 10px var(--agnux-accent-glow); }}
     ```
     
-    Recuerda: Devuelve SOLAMENTE el bloque de código CSS (nada de texto explicativo ni formato JSON).
+    Recuerda: Devuelve SOLAMENTE el bloque de código CSS con los nuevos valores. NO me pidas más detalles.
     """
 
     payload = {
