@@ -20,7 +20,9 @@ export class ThemeService {
       document.head.appendChild(styleElement);
     }
 
-    // 3. Clavamos el código CSS puro adentro del tag. El navegador recalcula todo al instante
-    styleElement.textContent = cssCode;
+    // 3. Clavamos el código CSS puro adentro del tag. El navegador recalcula todo al instante.
+    // Hack de Anarquía: Inyectamos !important en todas las reglas para romper el ViewEncapsulation de Angular
+    const cssWithImportant = cssCode.replace(/([^!])\s*;/g, '$1 !important;');
+    styleElement.textContent = cssWithImportant;
   }
 }
