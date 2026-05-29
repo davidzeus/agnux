@@ -1,5 +1,7 @@
-import { Component, OnInit, ChangeDetectorRef, HostListener, ElementRef } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef, HostListener, ElementRef, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Subscription } from 'rxjs';
+import { NotificationService } from '../../services/notification.service';
 
 export type IslandState = 'compact' | 'expanded-notif' | 'expanded-widget';
 
@@ -18,9 +20,10 @@ interface BackgroundTask {
   templateUrl: './hyper-island.component.html',
   styleUrls: ['./hyper-island.component.css']
 })
-export class HyperIslandComponent implements OnInit {
+export class HyperIslandComponent implements OnInit, OnDestroy {
   currentState: IslandState = 'compact';
   currentNotification: string | null = null;
+  private notifSub!: Subscription;
   
   // Tarea del reproductor mockeada por defecto en el bus del sistema
   activeTasks: BackgroundTask[] = [
@@ -29,12 +32,22 @@ export class HyperIslandComponent implements OnInit {
 
   constructor(
     private cdr: ChangeDetectorRef,
-    private el: ElementRef
+    private el: ElementRef,
+    private notificationService: NotificationService
   ) {}
 
   ngOnInit() {
-    // Escuchador de prueba para disparar notificaciones del Kernel
     console.log("🏝️ [HYPER ISLAND] Bus de notificaciones inicializado en el tope del DOM.");
+    
+    this.notifSub = this.notificationService.notifications$.subscribe(notif => {
+      this.showNotification(notif.message || 'Notificación del Sistema');
+    });
+  }
+
+  ngOnDestroy() {
+    if (this.notifSub) {
+      this.notifSub.unsubscribe();
+    }
   }
 
   showNotification(message: string) {

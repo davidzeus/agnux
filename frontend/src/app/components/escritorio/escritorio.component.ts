@@ -9,6 +9,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { AuthService } from '../../services/auth.service';
 import { PresenceService } from '../../services/presence.service';
+import { NotificationService } from '../../services/notification.service';
 import { HyperIslandComponent } from '../hyper-island/hyper-island.component';
 
 @Component({
@@ -49,6 +50,7 @@ export class EscritorioComponent implements OnInit, OnDestroy {
     private agnuxService: AgnuxService, 
     private authService: AuthService, 
     private presenceService: PresenceService,
+    private notificationService: NotificationService,
     private cdr: ChangeDetectorRef
   ) {
     afterNextRender(() => {
@@ -131,6 +133,11 @@ export class EscritorioComponent implements OnInit, OnDestroy {
         this.userId = user;
         this.isLocked = false;
         console.log(`🔓 [UI KERNEL] Terminal liberada con éxito para: ${user}`);
+        
+        // Conectar WebSocket de Notificaciones
+        if (this.terminalId) {
+          this.notificationService.connect(this.terminalId, user);
+        }
       } else {
         this.isLocked = true;
         // Evita disparar el bloqueo si ya hay un ID de terminal inicializado escuchando
@@ -277,6 +284,7 @@ export class EscritorioComponent implements OnInit, OnDestroy {
       this.authSub.unsubscribe();
     }
     this.authService.closeConnection();
+    this.notificationService.disconnect();
   }
 
   spawnVentana(tipo: 'html' | 'musica' | 'video' | 'texto', titulo: string, datos: any): string {
