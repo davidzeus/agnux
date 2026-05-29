@@ -2,9 +2,10 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Instalar herramientas básicas de compilación por si alguna librería requiere C nativo
+# Instalar herramientas básicas y Chromium para Kioscos
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
+    chromium \
     && rm -rf /var/lib/apt/lists/*
 
 # Copiar el índice de librerías e instalarlas sin dejar basura en caché

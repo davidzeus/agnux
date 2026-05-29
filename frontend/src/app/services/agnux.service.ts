@@ -84,6 +84,8 @@ export class AgnuxService {
                 this.eventStatus$.next({ type: 'RESULT', data: dataObj.response || dataObj.data });
               } else if (eventoActual === 'ERROR') {
                 this.eventStatus$.next({ type: 'ERROR', message: dataObj.message });
+              } else if (eventoActual === 'OPEN_IFRAME_APP' || eventoActual === 'OPEN_MEDIA' || eventoActual === 'SET_WALLPAPER') {
+                this.eventStatus$.next({ type: eventoActual, payload: dataObj });
               } else {
                 this.eventStatus$.next({ type: 'UNKNOWN', payload: { event: eventoActual, data: dataObj } });
               }

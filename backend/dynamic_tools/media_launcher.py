@@ -54,7 +54,9 @@ async def launch_chromium_kiosk(platform: str):
         f"--app={url}",
         f"--user-data-dir={user_data_dir}",
         "--no-first-run",
-        "--no-default-browser-check"
+        "--no-default-browser-check",
+        "--no-sandbox",
+        "--disable-dev-shm-usage"
     ]
 
     logger.info(f"🎵 [MEDIA LAUNCHER] Lanzando kiosco para {platform}: {url}")
