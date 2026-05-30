@@ -108,6 +108,15 @@ Para ejecutar una herramienta existente, DEBES responder ÚNICAMENTE con un bloq
 - Todo identificador debe normalizarse utilizando única y exclusivamente guiones medios ('-') o formato alfanumérico plano en minúsculas (ejemplo correcto: 'user-cristian', 'global-calculadora', 'term-desktop-101').
 - Si vas a autogenerar código en caliente para una nueva herramienta, el archivo físico en disco y su registro semántico deben usar guiones medios (ej. 'global-control-bomba.py').
 
+## 3.0 GUÍA DE ESTILOS CSS (DISEÑO DE INTERFAZ AGNUX)
+Para la herramienta applyCssTheme, la interfaz web está controlada por variables CSS en :root. 
+Puedes inyectar temas pisando estas variables:
+- Colores base: `--agnux-bg-color`, `--agnux-text-primary`, `--agnux-text-secondary`
+- Colores de acento: `--agnux-accent`, `--agnux-accent-glow`, `--agnux-accent-dim`, `--agnux-accent-border`
+- Paneles (Glassmorphism): `--agnux-panel-bg`, `--agnux-panel-solid`, `--agnux-panel-border`, `--agnux-panel-blur`
+- Fuentes: `--agnux-font-main`, `--agnux-font-clock`
+Ejemplo de código para tema Hacker: `:root { --agnux-bg-color: #000000; --agnux-accent: #00ff00; --agnux-font-main: 'Courier New', monospace; }`
+
 ## REGLA DE AUTOGÉNESIS (CONSENTIMIENTO EXPLÍCITO)
 Si el usuario te pide una tarea para la cual NO existe una herramienta, **NO uses `autogenerar_nueva_tool` directamente**. Primero debes responderle (sin usar formato JSON de herramienta) explicándole que no tienes la herramienta y preguntándole si desea que la programes. Sólo si el usuario responde afirmativamente, entonces en tu siguiente respuesta ejecutarás `autogenerar_nueva_tool`.
 
@@ -179,13 +188,20 @@ Importa de forma asíncrona: `from kernel_bus import notificar_frontend` y ejecu
 
                         if json_str:
                             try:
-                                json_data = json.loads(json_str)
+                                json_data = json.loads(json_str, strict=False)
                                 if "tool_call" in json_data:
                                     tool_call_detected = json_data["tool_call"]
                                     argumentos_acumulados = json.dumps(json_data.get("arguments", {}))
                                     logger.info(f"⚙️ [KERNEL AGENTE] Llamada a tool existente detectada: {tool_call_detected}")
                             except Exception as e:
-                                logger.error(f"❌ Error parseando tool_call JSON: {e}")
+                                logger.error(f"❌ Error parseando tool_call JSON: {e}. Intentando extracción heurística...")
+                                if '"applyCssTheme"' in json_str:
+                                    tool_call_detected = "applyCssTheme"
+                                    # Extracción agresiva del CSS
+                                    match_css = re.search(r'"cssCode"\s*:\s*"(.*?)"\s*\}', json_str, re.DOTALL)
+                                    css_val = match_css.group(1) if match_css else ""
+                                    argumentos_acumulados = json.dumps({"cssCode": css_val})
+                                    logger.info(f"⚙️ [KERNEL AGENTE] Recuperación heurística exitosa para applyCssTheme")
                         
                         if not tool_call_detected and bloque_python and match_nombre:
                             tool_call_detected = "autogenerar_nueva_tool"

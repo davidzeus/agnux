@@ -73,7 +73,7 @@ SYSTEM_TOOLS = {
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "cssCode": {"type": "string", "description": "Código CSS puro para inyectar globalmente en el sistema. Debe modificar variables CSS como --agnux-bg-color, --agnux-accent o definir estilos de clases globales."}
+                    "cssCode": {"type": "string", "description": "Código CSS puro para inyectar globalmente en el sistema. DEBE ir minificado en una sola línea (sin saltos de línea) o tener los saltos de línea correctamente escapados con \\n."}
                 },
                 "required": ["cssCode"]
             }
