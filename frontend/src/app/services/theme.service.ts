@@ -10,7 +10,7 @@ export class ThemeService {
   constructor(private http: HttpClient) {}
 
   loadBaseStyle(userId: string) {
-    const finalUrl = `http://10.10.0.66:8000/api/theme/${userId}`;
+    const finalUrl = `/api/theme/${userId}`;
     
     this.http.get(finalUrl, { responseType: 'text' }).subscribe({
       next: (css) => {

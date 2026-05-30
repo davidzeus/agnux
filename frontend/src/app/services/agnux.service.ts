@@ -13,7 +13,7 @@ export interface AgnuxResponse {
   providedIn: 'root'
 })
 export class AgnuxService {
-  private apiUrl = 'http://10.10.0.66:8000/api/system/intent';
+  private apiUrl = '/api/system/intent';
 
   public token$ = new Subject<string>();
   public eventStatus$ = new Subject<any>();

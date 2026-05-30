@@ -5,7 +5,7 @@ import { AuthService } from './auth.service';
 
 @Injectable({ providedIn: 'root' })
 export class TerminalBridgeService {
-  private apiUrl = 'http://localhost:8000/api/auth';
+  private apiUrl = '/api/auth';
   private eventSource: EventSource | null = null;
   private retryTimeout: any = null;
 

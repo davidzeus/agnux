@@ -73,7 +73,7 @@ export class PresenceService {
                 const formData = new FormData();
                 formData.append('file', file);
                 
-                this.http.post('http://10.10.0.66:8000/api/system/validate-presence', formData)
+                this.http.post('/api/system/validate-presence', formData)
                   .subscribe({
                     next: (res: any) => {
                       if (res.status === 'valid') {

@@ -16,7 +16,12 @@ export class NotificationService {
       this.socket.close();
     }
 
-    const wsUrl = `ws://10.10.0.66:8000/api/system/notifications/ws/${terminalId}/${userId}`;
+    // Detectar si usamos HTTPS para usar WSS (WebSocket Seguro)
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const host = window.location.host;
+    const wsUrl = `${protocol}//${host}/api/system/notifications/ws/${terminalId}/${userId}`;
+    
+    console.log(`[NOTIF BUS] Conectando a ${wsUrl}`);
     this.socket = new WebSocket(wsUrl);
 
     this.socket.onopen = () => {

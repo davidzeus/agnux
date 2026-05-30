@@ -66,7 +66,7 @@ export class AuthService {
   listenTerminal(terminalId: string): Observable<string> {
     return new Observable<string>(observer => {
       console.log(`📡 [AGNUX KERNEL] Abriendo canal SSE para Terminal: ${terminalId}`);
-      this.eventSource = new EventSource(`http://10.10.0.66:8000/api/auth/terminal-stream/${terminalId}`);
+      this.eventSource = new EventSource(`/api/auth/terminal-stream/${terminalId}`);
 
       // Escucha el evento personalizado que dispara FastAPI al aprobar desde el celular
       this.eventSource.addEventListener('AUTH-SUCCESS', (event: any) => {
@@ -94,7 +94,7 @@ export class AuthService {
   }
 
   authorizeTerminal(terminalId: string, userId: string): Observable<any> {
-    return this.http.post('http://10.10.0.66:8000/api/auth/terminal-authorize', {
+    return this.http.post('/api/auth/terminal-authorize', {
       terminal_id: terminalId,
       user_id: userId
     });
@@ -103,7 +103,7 @@ export class AuthService {
   loginFacial(file: File): Observable<any> {
     const formData = new FormData();
     formData.append('file', file);
-    const req = this.http.post('http://10.10.0.66:8000/api/auth/facial-login', formData);
+    const req = this.http.post('/api/auth/facial-login', formData);
     
     req.subscribe({
       next: (res: any) => {
@@ -124,7 +124,7 @@ export class AuthService {
   loginVocal(file: Blob): Observable<any> {
     const formData = new FormData();
     formData.append('file', file, 'audio.webm');
-    const req = this.http.post('http://10.10.0.66:8000/api/auth/vocal-login', formData);
+    const req = this.http.post('/api/auth/vocal-login', formData);
     
     req.subscribe({
       next: (res: any) => {

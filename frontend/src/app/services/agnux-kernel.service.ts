@@ -18,7 +18,7 @@ export interface AgUiEvent {
 
 @Injectable({ providedIn: 'root' })
 export class AgnuxKernelService {
-  private apiUrl = 'http://localhost:8000/api/system/intent';
+  private apiUrl = '/api/system/intent';
   private eventSubject = new Subject<AgUiEvent>();
   
   public events$ = this.eventSubject.asObservable();
