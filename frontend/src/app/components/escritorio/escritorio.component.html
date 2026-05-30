@@ -1,38 +1,20 @@
 <div class="agnux-container">
   <!-- BÚNKER DE AUTENTICACIÓN -->
   <div *ngIf="isLocked" class="lock-screen">
-    <div class="lock-window">
-      <div class="window-header">⚠️ SEGURIDAD DE ACCESO MULTI-USER</div>
-      <div class="window-body">
-        <p class="blink-text">SISTEMA CONTROLADO POR ENTORNO BIOMÉTRICO</p>
-        <p>Escanee el acceso desde su dispositivo móvil a través de la VPN privada:</p>
+    <div class="lock-window" style="max-width: 600px; text-align: center;">
+      <div class="window-header" style="background-color: #ff3366; color: white;">⚠️ ACCESO DENEGADO - ZERO TRUST</div>
+      <div class="window-body" style="padding: 40px;">
+        <p class="blink-text" style="color: #ff3366; font-size: 1.2rem; font-weight: bold; margin-bottom: 20px;">SISTEMA PROTEGIDO POR CLOUDFLARE ACCESS</p>
+        <p style="font-size: 1rem;">No se han detectado las cabeceras de aserción criptográfica requeridas por el Kernel.</p>
+        <p style="margin-top: 10px; font-size: 0.9rem; color: #aaa;">Para ingresar al sistema operativo, debe autenticarse a través del túnel seguro:</p>
         
-        <div style="display: flex; justify-content: center; align-items: center; gap: 40px; margin: 20px 0;">
-          <!-- Nodo Central Inmutable: QR VPN -->
-          <div class="qr-container" style="text-align: center;">
-            <img [src]="qrUrl" alt="AG-CONF-QR" style="border: 4px solid #00e5ff; padding: 10px; background: white; box-shadow: 0 0 15px rgba(0, 229, 255, 0.5);" />
-            <p style="color: #00e5ff; font-family: monospace; margin-top: 10px; font-size: 12px; font-weight: bold;">
-              TARGET: 10.10.0.66 | NODE: {{ terminalId }}
-            </p>
-          </div>
-
-          <!-- Módulo Secundario Dinámico: Biometría Local On-Demand -->
-          <div class="cam-container" *ngIf="tieneCamaraLocal" style="text-align: center; border: 1px solid #ff3366; padding: 20px; background: rgba(255, 51, 102, 0.05); box-shadow: inset 0 0 10px rgba(255, 51, 102, 0.2);">
-            <div style="display: flex; flex-direction: column; gap: 15px;">
-              <button mat-button class="cyber-btn-facial" (click)="ejecutarCapturaFacialDemanda()" style="background: rgba(255, 51, 102, 0.2); color: #ff3366; border: 1px solid #ff3366; padding: 10px 20px; font-family: monospace; font-weight: bold; cursor: pointer; transition: 0.3s;">
-                [ 📹 INICIO FACIAL ]
-              </button>
-              <button mat-button class="cyber-btn-vocal" (click)="ejecutarCapturaVocalDemanda()" style="background: rgba(255, 51, 102, 0.2); color: #ff3366; border: 1px solid #ff3366; padding: 10px 20px; font-family: monospace; font-weight: bold; cursor: pointer; transition: 0.3s;">
-                [ 🎙️ INICIO VOCAL ]
-              </button>
-            </div>
-            <p class="blink-text" style="color: #ff3366; font-family: monospace; margin-top: 15px; font-size: 11px;">
-              Esperando operador local o token de proximidad WireGuard...
-            </p>
-          </div>
+        <div style="margin-top: 40px; margin-bottom: 20px;">
+          <a href="https://demo.agnux.net.ar" style="display: inline-block; padding: 15px 30px; background: rgba(0, 229, 255, 0.1); border: 1px solid #00e5ff; color: #00e5ff; text-decoration: none; font-family: monospace; font-weight: bold; border-radius: 4px; box-shadow: 0 0 15px rgba(0, 229, 255, 0.2); transition: 0.3s;">
+            [ INICIAR TÚNEL SEGURO ]
+          </a>
         </div>
         
-        <p class="footer-msg">Esperando token de proximidad WireGuard...</p>
+        <p style="color: #00e5ff; font-family: monospace; margin-top: 40px; font-size: 11px; opacity: 0.6;">TARGET: 10.10.0.66 | NODE: {{ terminalId }}</p>
       </div>
     </div>
   </div>
