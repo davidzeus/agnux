@@ -138,8 +138,11 @@ export class EscritorioComponent implements OnInit, OnDestroy {
           this.cargando = false;
         } else if (status.type === 'INFERENCE_START') {
           this.currentHtmlWindowId = this.spawnVentana('html', '⚡ AGNUX OS Intelligence Output', null);
+        } else if (status.type === 'TOOL_RESULT' || status.type === 'RESULT') {
+          this.cargando = false;
+          this.spawnVentana('html', '🛠️ AGNUX Tool Output', status.data || status.payload);
         } else if (status.type === 'ERROR') {
-          this.spawnVentana('texto', '❌ Error de Sistema', { error: status.message });
+          this.spawnVentana('html', '❌ Error de Sistema', status.message || 'Error desconocido');
         }
       })
     );

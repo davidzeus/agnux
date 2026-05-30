@@ -16,3 +16,4 @@ torch
 sentence-transformers==3.0.1
 einops>=0.7.0
 qdrant-client
+python-dotenv
