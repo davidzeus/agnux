@@ -1,135 +1,242 @@
 <div align="center">
+
+  <img src="https://agnux.net.ar/src/index.png" alt="AGNUX OS" width="480" />
+
   <h1>🧠 AGNUX OS</h1>
-  <p><strong>Un Sistema Operativo Cognitivo y Autónomo impulsado por IA, Metaprogramación y Biometría</strong></p>
-  
-  [![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi)](https://fastapi.tiangolo.com/)
-  [![Angular](https://img.shields.io/badge/Angular-DD0031?style=for-the-badge&logo=angular&logoColor=white)](https://angular.io/)
-  [![Ollama](https://img.shields.io/badge/Ollama-000000?style=for-the-badge&logo=Ollama&logoColor=white)](https://ollama.ai/)
-  [![Qdrant](https://img.shields.io/badge/Qdrant-FF5252?style=for-the-badge&logo=qdrant&logoColor=white)](https://qdrant.tech/)
+
+  <p><strong>Un Sistema Operativo Cognitivo, Autónomo y Autogenerador<br/>impulsado por IA local, Metaprogramación y Zero-Trust Security</strong></p>
+
+  <p>
+    <a href="https://fastapi.tiangolo.com/">
+      <img src="https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi" alt="FastAPI"/>
+    </a>
+    <a href="https://angular.io/">
+      <img src="https://img.shields.io/badge/Angular-DD0031?style=for-the-badge&logo=angular&logoColor=white" alt="Angular"/>
+    </a>
+    <a href="https://ollama.ai/">
+      <img src="https://img.shields.io/badge/Ollama-000000?style=for-the-badge&logo=Ollama&logoColor=white" alt="Ollama"/>
+    </a>
+    <a href="https://qdrant.tech/">
+      <img src="https://img.shields.io/badge/Qdrant-FF5252?style=for-the-badge&logo=qdrant&logoColor=white" alt="Qdrant"/>
+    </a>
+    <a href="https://www.cloudflare.com/">
+      <img src="https://img.shields.io/badge/Cloudflare_Access-F38020?style=for-the-badge&logo=cloudflare&logoColor=white" alt="Cloudflare"/>
+    </a>
+    <a href="https://www.docker.com/">
+      <img src="https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker"/>
+    </a>
+  </p>
+
+  <p>
+    <img src="https://img.shields.io/badge/Estado-En_Desarrollo_Activo-00ff66?style=flat-square" alt="Estado"/>
+    <img src="https://img.shields.io/badge/IA-100%25_Local_%26_Privada-blueviolet?style=flat-square" alt="IA Local"/>
+    <img src="https://img.shields.io/badge/LLM-DeepSeek_%2B_Ministral-orange?style=flat-square" alt="LLM"/>
+    <img src="https://img.shields.io/badge/Se_buscan-Colaboradores-ff3366?style=flat-square" alt="Colaboradores"/>
+  </p>
+
+  <br/>
+
+  <blockquote>
+    <em>"No construí otro chatbot. Construí el kernel de un sistema operativo donde la IA es el proceso raíz."</em>
+    <br/>
+    — <strong>David González</strong> · 🇦🇷 Desde Argentina para el mundo
+  </blockquote>
+
 </div>
 
 ---
 
-**AGNUX OS** no es simplemente un asistente virtual; es una arquitectura de **Kernel Cognitivo** diseñada para gobernar hardware, interfaces de usuario y bases de datos mediante el razonamiento semántico de grandes modelos de lenguaje (LLMs). AGNUX está diseñado para correr en servidores de alto rendimiento (ej. *Lenovo SR630*) y actuar como el cerebro maestro de múltiples terminales conectadas vía red o VPN (WireGuard).
+## 🤔 ¿Qué es AGNUX OS?
+
+**AGNUX OS** no es simplemente un asistente virtual. Es una arquitectura de **Kernel Cognitivo** diseñada para gobernar hardware, interfaces de usuario y bases de datos mediante el razonamiento semántico de grandes modelos de lenguaje (LLMs) corriendo **100% en tu propio hardware, con 100% de privacidad**.
+
+AGNUX corre en servidores de alto rendimiento (como un *Lenovo SR630*) y actúa como el **cerebro maestro** de múltiples terminales conectadas a través de la red. Desde su escritorio flotante en el navegador, cualquier usuario autenticado puede hablarle a la IA como si tuviese un ingeniero de sistemas a su disposición: que ejecute comandos en el host, que controle servicios, que se programe a sí misma nuevas habilidades... todo sin escribir una sola línea de código.
+
+---
 
 ## ✨ Características Principales
 
-### 🧬 Autogénesis (Metaprogramación en Caliente)
-AGNUX tiene la capacidad de **escribir su propio código** en tiempo real. Cuando el Agente detecta una intención del usuario que no puede resolver con sus herramientas estáticas, genera un script en Python, lo guarda en el host (`dynamic_tools/`), lo compila en memoria y lo ejecuta instantáneamente sin requerir reinicios del servidor.
+### 🧬 Autogénesis — Metaprogramación en Caliente
 
-### 👁️ Biometría y Bypass VPN (Control de Acceso)
-El sistema incluye un módulo de autenticación de doble vía:
-- **Biometría Facial/Vocal**: Análisis vectorial (128d) contra perfiles de usuario.
-- **Bypass Remoto Móvil**: Permite que un operador autenticado desde su teléfono móvil (conectado vía WireGuard VPN) desbloquee de forma remota una terminal física (monitor ciego) mediante túneles SSE.
+> AGNUX puede **escribir su propio código** en tiempo real.
+
+Cuando el Agente detecta una intención del usuario que no puede resolver con sus herramientas estáticas, genera un script Python, lo guarda en el host bajo `dynamic_tools/`, lo compila en memoria y lo ejecuta instantáneamente **sin reiniciar el servidor**. Si la tool que necesitas no existe, la IA simplemente te pregunta: *"¿Quieres que la programe?"* y si dices que sí, ¡la escribe y la ejecuta en segundos!
+
+### 🛡️ Zero-Trust Security con Cloudflare Access
+
+El acceso al escritorio está protegido por una cadena de seguridad doble:
+- **Cloudflare Access (Zero-Trust):** El túnel público no expone el servidor directamente. Cloudflare actúa como guardián de identidad, autenticando al usuario con su cuenta de Google mediante OAuth2 antes de siquiera tocar el backend.
+- **Validación en Backend:** Una vez que Cloudflare autentica al usuario, el Backend de FastAPI verifica el JWT de Cloudflare, extrae el email del usuario y lo mapea a su perfil de AGNUX. Si el token no es válido, el socket se corta.
+- **Resultado:** No hay login customizado vulnerable. No hay contraseñas expuestas. Google y Cloudflare garantizan que solo *tú* puedes entrar.
 
 ### 🧠 Memoria Episódica y Router Semántico (Omnisciencia)
-- **Qdrant Vector DB**: Toda interacción, ejecución de herramienta o registro biométrico se vectoriza (`SentenceTransformer: paraphrase-multilingual-mpnet-base-v2`, 768d) y se guarda en colecciones persistentes.
-- **Recuperación de Contexto**: En cada prompt, AGNUX inyecta automáticamente los recuerdos más relevantes del usuario para mantener una ilusión de omnisciencia real.
-- **Multiplexación Jerárquica**: Los perfiles de memoria e intenciones de red están rígidamente normalizados usando estándares de Kernel Linux (RFC 1035, usando únicamente guiones medios `-`).
 
-### ⚡ Event-Driven UI (HyperIsland & Kiosco)
-El backend y frontend (Angular 15+) se comunican estrictamente mediante flujos asíncronos unidireccionales (**SSE - Server-Sent Events**) y **WebSockets**.
-- **Ventanas Dinámicas**: El Kernel puede emitir eventos `CREATE_WINDOW` para dibujar contenedores flotantes en el escritorio del cliente.
-- **Ejecución en Host**: El Kernel puede controlar el hardware (encendido/apagado), reproducir audio de fondo, cambiar fondos de escritorio o abrir contenedores Kiosco (Chromium para Netflix, Spotify, etc).
+- **Qdrant Vector DB:** Toda interacción, ejecución de herramienta o evento del sistema se vectoriza (`SentenceTransformer: paraphrase-multilingual-mpnet-base-v2`, 768 dimensiones) y se persiste en colecciones separadas.
+- **Recuperación de Contexto Automática:** Antes de cada inferencia, AGNUX inyecta silenciosamente los recuerdos más relevantes del usuario en el prompt del sistema, creando una ilusión real de omnisciencia y continuidad conversacional.
+- **Umbral Semántico Dinámico:** El Router calcula la similitud de coseno entre el prompt del usuario y los *embeddings* de cada herramienta disponible, enviando a la IA solo las tools más relevantes para ahorrar contexto y mejorar la precisión.
+
+### ⚡ Escritorio Reactivo (Event-Driven UI)
+
+El Backend y el Frontend se comunican exclusivamente mediante flujos **SSE (Server-Sent Events)** y **WebSockets**. El escritorio es un canvas vivo que reacciona a eventos del Kernel en tiempo real:
+
+| Evento del Kernel | Resultado en el Escritorio |
+|---|---|
+| `CREATE_WINDOW` | Abre una ventana flotante con HTML dinámico |
+| `TOKEN` | Muestra la respuesta de la IA token a token (efecto máquina de escribir) |
+| `SET_WALLPAPER` | Cambia el fondo del escritorio al instante |
+| `SET_THEME` | Inyecta un bloque de CSS global, rediseñando toda la interfaz en tiempo real |
+| `OPEN_MEDIA` | Abre una pestaña externa con música, video, etc. |
+| `TOOL_RESULT` | Muestra el resultado de una herramienta ejecutada en el host |
+
+### 🎨 Temas CSS en Tiempo Real (Runtime Theming)
+
+La IA puede rediseñar toda la interfaz de AGNUX **simplemente hablando**. El sistema de variables CSS globales (`--agnux-accent`, `--agnux-panel-bg`, `--agnux-bg-color`, etc.) permite que la IA genere un bloque de CSS que el Frontend inyecta directamente en el `<head>` del DOM, recalculando todos los colores, fuentes y gradientes sin recargar la página.
 
 ---
 
 ## 🏗️ Arquitectura del Sistema
 
-El backend ha sido refactorizado recientemente usando un diseño de micro-módulos para garantizar la mantenibilidad y escalabilidad en FastAPI.
-
 ```text
-backend/
-├── main.py                  # Entrypoint de FastAPI y Middlewares (CORS)
-├── core/
-│   ├── config.py            # Variables de entorno y dependencias globales (.env)
-│   └── memory.py            # Instancia de Qdrant y CACHE_VECTORS en RAM
-├── schemas/
-│   └── models.py            # Entidades Pydantic (Validación estricta de payloads)
-├── services/
-│   ├── intent_orchestrator.py # Motor iterador asíncrono con Ollama (El "Cerebro")
-│   └── tools_service.py     # Gestor de autogénesis y subprocesos del host
-├── api/
-│   └── routes/
-│       ├── intent.py        # Websockets e inferencia de flujos
-│       └── auth.py          # Endpoints de enrolamiento y bypass biométrico
-├── dynamic_tools/           # (Directorio de scripts auto-generados por IA)
-└── tools/                   # (Herramientas estáticas del host)
+agnux/
+├── backend/                         # Kernel del sistema (FastAPI + Python)
+│   ├── main.py                      # Entrypoint, CORS y middlewares
+│   ├── core/
+│   │   ├── config.py                # Variables de entorno (.env)
+│   │   └── memory.py                # Instancia de Qdrant y caché vectorial en RAM
+│   ├── schemas/
+│   │   └── models.py                # Modelos Pydantic (validación estricta)
+│   ├── services/
+│   │   ├── intent_orchestrator.py   # 🧠 Motor de Inferencia Asíncrona (El Cerebro)
+│   │   └── tools_service.py         # Catálogo de herramientas del sistema
+│   ├── api/
+│   │   └── routes/
+│   │       ├── intent.py            # SSE, WebSockets e inferencia de flujos
+│   │       └── auth.py              # Autenticación Cloudflare JWT + Google OAuth2
+│   ├── dynamic_tools/               # 🧬 Scripts auto-generados por la IA en caliente
+│   └── tools/                       # Herramientas estáticas del host
+│
+├── frontend/                        # Escritorio de Usuario (Angular)
+│   └── src/app/
+│       ├── components/
+│       │   ├── escritorio/          # Desktop principal, clock, barra de comandos
+│       │   ├── ventana/             # Ventanas flotantes drag & drop, redimensionables
+│       │   └── hyper-island/        # Panel de sistema e información de red
+│       └── services/
+│           ├── agnux.service.ts     # Bus de streaming SSE (cliente del Kernel)
+│           ├── auth.service.ts      # Validación Cloudflare JWT en el cliente
+│           └── theme.service.ts     # Motor de inyección CSS en tiempo real
+│
+└── docker-compose.yml               # Orquestación de contenedores
 ```
 
 ---
 
-## 🚀 Requisitos y Configuración Inicial
+## 🚀 Configuración y Despliegue
 
 > [!NOTE]
-> **Estado de Despliegue**: Actualmente, el ecosistema backend está dockerizado para facilitar el desarrollo rápido y asegurar consistencia entre colaboradores. Sin embargo, **el objetivo arquitectónico final es montarlo de forma nativa directamente sobre un Kernel Linux (bare-metal)** para maximizar la ejecución de subprocesos de bajo nivel y el control absoluto del hardware.
+> **Estado de Despliegue**: El ecosistema está completamente dockerizado para facilitar el despliegue. El objetivo arquitectónico final es montarlo de forma nativa en **bare-metal Kernel Linux** para maximizar el control de hardware y la ejecución de subprocesos de bajo nivel.
 
-### Hardware Recomendado (Entorno Base de Referencia)
-Dado que AGNUX opera con modelos LLM locales en caliente y modelos de embeddings en RAM, se requiere hardware robusto para una experiencia fluida. La configuración actual de desarrollo recomendada es:
-- **GPU**: NVIDIA RTX 5070 (12GB VRAM) *[Para inferencia ágil de Ollama]*
-- **CPU**: Intel Core i7-12700F (o procesador equivalente multi-núcleo)
-- **RAM**: 64GB DDR4 *[Para absorción de buffers, matrices vectoriales en memoria y metaprogramación concurrente]*
+### Hardware Recomendado
 
-### Prerrequisitos
-- **Python 3.11+**
-- **Docker** (Entorno de desarrollo actual)
-- **Node.js 18+** y **Angular CLI 15+** (Para el cliente)
-- Nodos independientes u hospedados de:
-  - **Ollama** (Recomendado: `ministral-es:latest` para razonamiento y `deepseek-coder` para herramientas).
-  - **Qdrant DB** (Expuesto en el puerto 6333).
+Dado que AGNUX opera con modelos LLM locales en caliente y modelos de embeddings en RAM, se recomienda hardware robusto para una experiencia fluida:
 
-### Configuración del Backend
+| Componente | Mínimo | Referencia de Desarrollo |
+|---|---|---|
+| **GPU** | NVIDIA 8GB VRAM | RTX 5070 (12GB VRAM) |
+| **CPU** | 8 núcleos | Intel i7-12700F |
+| **RAM** | 32GB DDR4 | 64GB DDR4 |
+| **Almacenamiento** | 50GB SSD | NVMe dedicado |
 
-1. **Clonar y preparar entorno:**
-   ```bash
-   cd agnux/backend
-   python -m venv venv
-   source venv/bin/activate  # En Windows: venv\Scripts\activate
-   pip install -r requirements.txt
-   ```
+### Prerrequisitos de Software
 
-2. **Variables de Entorno (`backend/.env`):**
-   Crea un archivo `.env` en el directorio `backend` con la siguiente estructura:
-   ```env
-   OLLAMA_HOST=http://<IP_NODO_OLLAMA>:11434
-   QDRANT_HOST=http://<IP_NODO_QDRANT>:6333
-   AGNUX_ACTIVE_MODEL=ministral-es:latest
-   AGNUX_CODER_MODEL=deepseek-coder:1.5b
-   ```
+- **Docker** y **Docker Compose**
+- **Node.js 18+** y **Angular CLI 15+**
+- Nodos de **Ollama** con los modelos `ministral-es:latest` (razonamiento) y `deepseek-coder:1.5b` (herramientas)
+- Nodo de **Qdrant DB** expuesto en el puerto `6333`
+- Una cuenta en **Cloudflare** con un túnel configurado apuntando a tu servidor
 
-3. **Ejecutar el Kernel:**
-   ```bash
-   uvicorn main:app --host 0.0.0.0 --port 8000 --reload
-   ```
+### Instalación Rápida con Docker
 
-### Configuración del Frontend (Angular)
+```bash
+# 1. Clonar el repositorio
+git clone https://github.com/tu-usuario/agnux.git
+cd agnux
 
-1. **Instalar dependencias:**
-   ```bash
-   cd agnux/frontend
-   npm install
-   ```
+# 2. Configurar variables de entorno
+cp backend/.env.example backend/.env
+# Editar backend/.env con los datos de tu nodo Ollama, Qdrant y Cloudflare
 
-2. **Ejecutar el cliente:**
-   ```bash
-   ng serve --host 0.0.0.0 --port 4200
-   ```
-   *Nota: Asegúrate de que el servicio `agnux.service.ts` apunte a la IP de tu backend.*
+# 3. Levantar todo el ecosistema
+docker-compose up -d --build
+
+# 4. Abrir en el navegador (a través de tu túnel de Cloudflare)
+# https://tu-dominio.com
+```
+
+### Variables de Entorno (`backend/.env`)
+
+```env
+# Motor de IA (Ollama)
+OLLAMA_HOST=http://<IP_NODO_OLLAMA>:11434
+AGNUX_ACTIVE_MODEL=ministral-es:latest
+AGNUX_CODER_MODEL=deepseek-coder:1.5b
+
+# Base de datos vectorial (Qdrant)
+QDRANT_HOST=http://<IP_NODO_QDRANT>:6333
+
+# Seguridad (Cloudflare Access)
+CLOUDFLARE_TEAM_DOMAIN=<tu-equipo>.cloudflareaccess.com
+
+# Integraciones externas
+GOOGLE_CLIENT_ID=<tu-client-id>
+GOOGLE_CLIENT_SECRET=<tu-client-secret>
+```
 
 ---
 
-## 🛠️ Cómo colaborar (¡Se busca ayuda!)
+## 🛠️ ¿Cómo Colaborar? ¡Se busca equipo!
 
-Actualmente, el proyecto está en una fase de rápida expansión y busco colegas apasionados por los agentes autónomos, la ingeniería de prompts y arquitecturas asíncronas para resolver los siguientes desafíos:
+Este proyecto está en **expansión activa** y busco colegas apasionados por los agentes autónomos, la ingeniería de prompts y las arquitecturas asíncronas. Estas son las áreas donde la ayuda tiene mayor impacto:
 
-- **Optimización del Orquestador de Tools**: El extractor heurístico actual usa RegEx en `intent_orchestrator.py` para interceptar bloques de código en texto plano desde `/api/generate` de Ollama. Buscamos formas más nativas o resilientes de gestionar "Tool Calling".
-- **Memoria Semántica**: Mejorar el threshold (umbral de corte) y la similitud del coseno usando algoritmos más finos sobre la colección `agnux_kernel_memory`.
-- **UI en Angular**: Mejorar el motor de parsing de EventStreams (SSE) y la gestión del z-index de las ventanas flotantes en el `EscritorioComponent`.
+### 🔥 Desafíos Abiertos
 
-**Si tienes ideas o encuentras bugs, no dudes en abrir un Issue o mandar un Pull Request.**
+- **🧩 Tool Calling Nativo:** El extractor heurístico actual usa RegEx sobre el stream de Ollama para interceptar llamadas a herramientas. Queremos migrar a la API de `tool_calling` nativo de Ollama para mayor robustez.
+- **🧠 Memoria Semántica Avanzada:** Mejorar el umbral de similitud de coseno en la colección `agnux_kernel_memory` y explorar estrategias de re-ranking.
+- **🎨 Motor de Temas CSS:** Expandir el sistema de temas para incluir perfiles pre-guardados y transiciones animadas entre temas.
+- **📱 Interfaz Responsive:** El escritorio está optimizado para pantallas grandes. Necesitamos una versión tablet/móvil del escritorio.
+- **🔐 OAuth2 con Google Workspace:** Integración completa para que la IA pueda redactar correos en Gmail, crear documentos en Drive y agendar reuniones en Calendar de forma nativa desde el backend.
+- **🐛 Testing E2E:** No tenemos tests de integración. ¡Cualquier contribución con Playwright o Cypress es bienvenida!
+
+### 📋 ¿Cómo contribuir?
+
+1. Haz un **Fork** del repositorio.
+2. Crea una rama descriptiva: `git checkout -b feature/nombre-de-la-feature`.
+3. Commitea tus cambios con mensajes claros.
+4. Abre un **Pull Request** describiendo qué cambiaste y por qué.
+
+**Si encontrás un bug o tenés una idea, no dudes en abrir un [Issue](../../issues).** Toda participación es bienvenida, desde documentación hasta arquitectura de kernel.
+
+---
+
+## 📄 Licencia
+
+Distribuido bajo la licencia **MIT**. Ve el archivo `LICENSE` para más información.
 
 ---
 
 <div align="center">
-  <sub>Construido para el futuro del procesamiento edge. 📡</sub>
+
+  <h3>🇦🇷 Hecho con pasión en Argentina</h3>
+
+  <p>
+    Un saludo desde el sur del mundo. Este proyecto nació de la idea de que la inteligencia artificial no debería vivir en la nube de nadie más que en la tuya.<br/>
+    Si llegaste hasta acá, ya somos equipo.
+  </p>
+
+  <p><strong>— David González</strong> · <em>Desde Argentina para el mundo 🌍</em></p>
+
+  <br/>
+
+  <sub>Construido para el futuro del procesamiento edge y la soberanía tecnológica. 📡</sub>
+
 </div>
