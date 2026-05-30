@@ -64,6 +64,20 @@ SYSTEM_TOOLS = {
                 "required": ["imageUrl"]
             }
         }
+    },
+    "applyCssTheme": {
+        "type": "function",
+        "function": {
+            "name": "applyCssTheme",
+            "description": "Aplica un nuevo estilo físico (CSS) a la interfaz de AGNUX. Usa esto cuando el usuario pida cambiar el tema o estilo visual (ej. modo hacker, modo xp, modo dark, estilo cyberpunk).",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "cssCode": {"type": "string", "description": "Código CSS puro para inyectar globalmente en el sistema. Debe modificar variables CSS como --agnux-bg-color, --agnux-accent o definir estilos de clases globales."}
+                },
+                "required": ["cssCode"]
+            }
+        }
     }
 }
 

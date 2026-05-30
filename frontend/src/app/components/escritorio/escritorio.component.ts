@@ -121,26 +121,36 @@ export class EscritorioComponent implements OnInit, OnDestroy {
           const platformName = status.payload?.mediaPlatform || 'Media';
 
           if (targetUrl) {
-            console.log(`🎵 [UI KERNEL] Abriendo reproductor interno para: ${targetUrl}`);
-            this.spawnVentana('iframe', `🎵 AGNUX Media - ${platformName}`, { url: targetUrl });
+            console.log(`🎵 [UI KERNEL] Abriendo pestaña externa para: ${targetUrl}`);
+            window.open(targetUrl, '_blank');
           }
           // Evento propagado a hyper-island a través de un bus o servicio (lo gestionaremos en app-hyper-island)
         } else if (status.type === 'OPEN_IFRAME_APP') {
           this.cargando = false;
           const { appService, appAction, appParams } = status.payload;
-          const dummyUrl = `https://workspace.google.com/agnux-embedded?service=${appService}&action=${appAction}`;
-          this.spawnVentana('iframe', `☁️ Workspace: ${appService}`, { url: dummyUrl });
+          const targetUrl = appService.toLowerCase() === 'gmail' ? 'https://mail.google.com/' : 
+                            appService.toLowerCase() === 'calendar' ? 'https://calendar.google.com/' : 
+                            'https://workspace.google.com/';
+          window.open(targetUrl, '_blank');
         } else if (status.type === 'SET_WALLPAPER') {
           this.cargando = false;
           const imageUrl = status.payload.imageUrl;
           document.documentElement.style.setProperty('--agnux-bg-image', `url('${imageUrl}')`);
+        } else if (status.type === 'SET_THEME') {
+          this.cargando = false;
+          const cssCode = status.payload.cssCode;
+          this.themeService.injectRawCss(cssCode);
         } else if (status.type === 'TOOL_END' || status.type === 'ERROR') {
           this.cargando = false;
         } else if (status.type === 'INFERENCE_START') {
           this.currentHtmlWindowId = this.spawnVentana('html', '⚡ AGNUX OS Intelligence Output', null);
         } else if (status.type === 'TOOL_RESULT' || status.type === 'RESULT') {
           this.cargando = false;
-          this.spawnVentana('html', '🛠️ AGNUX Tool Output', status.data || status.payload);
+          let output = status.data || status.payload;
+          if (typeof output === 'object') {
+            output = `<pre style="color: #00e5ff; white-space: pre-wrap; font-size: 14px; margin: 0;">${JSON.stringify(output, null, 2)}</pre>`;
+          }
+          this.spawnVentana('html', '🛠️ AGNUX Tool Output', output);
         } else if (status.type === 'ERROR') {
           this.spawnVentana('html', '❌ Error de Sistema', status.message || 'Error desconocido');
         }
@@ -155,41 +165,44 @@ export class EscritorioComponent implements OnInit, OnDestroy {
     }
 
     this.authSub = this.authService.currentUser$.subscribe(user => {
-      console.log('🔄 [UI KERNEL] Cambio de estado de usuario detectado:', user);
+      // Se ejecuta de forma asíncrona para evitar que choque con el proceso de Hidratación de Angular
+      setTimeout(() => {
+        console.log('🔄 [UI KERNEL] Cambio de estado de usuario detectado:', user);
 
-      if (user) {
-        // 🔓 Si hay usuario, limpiamos CUALQUIER conexión residual primero
-        this.authService.closeConnection();
-        this.userId = user;
-        this.isLocked = false;
-        console.log(`🔓 [UI KERNEL] Terminal liberada con éxito para: ${user}`);
-        this.cdr.detectChanges();
+        if (user) {
+          // 🔓 Si hay usuario, limpiamos CUALQUIER conexión residual primero
+          this.authService.closeConnection();
+          this.userId = user;
+          this.isLocked = false;
+          console.log(`🔓 [UI KERNEL] Terminal liberada con éxito para: ${user}`);
+          this.cdr.detectChanges();
 
-        // Consultar estado de Google Workspace
-        this.authService.checkGoogleAuthStatus(user).subscribe({
-          next: status => {
-            this.isGoogleConnected = status.connected;
-          },
-          error: err => {
-            console.warn('⚠️ [UI KERNEL] No se pudo verificar estado de Google Workspace', err);
+          // Consultar estado de Google Workspace
+          this.authService.checkGoogleAuthStatus(user).subscribe({
+            next: status => {
+              this.isGoogleConnected = status.connected;
+            },
+            error: err => {
+              console.warn('⚠️ [UI KERNEL] No se pudo verificar estado de Google Workspace', err);
+            }
+          });
+
+          // Conectar WebSocket de Notificaciones
+          if (this.terminalId) {
+            this.notificationService.connect(this.terminalId, user);
           }
-        });
 
-        // Conectar WebSocket de Notificaciones
-        if (this.terminalId) {
-          this.notificationService.connect(this.terminalId, user);
+          // Cargar estilo físico persistente
+          this.themeService.loadBaseStyle(user);
+        } else {
+          this.isLocked = true;
+          this.cdr.detectChanges();
+          // Evita disparar el bloqueo si ya hay un ID de terminal inicializado escuchando
+          if (!this.terminalId) {
+            this.iniciarFlujoBloqueo();
+          }
         }
-
-        // Cargar estilo físico persistente
-        this.themeService.loadBaseStyle(user);
-      } else {
-        this.isLocked = true;
-        this.cdr.detectChanges();
-        // Evita disparar el bloqueo si ya hay un ID de terminal inicializado escuchando
-        if (!this.terminalId) {
-          this.iniciarFlujoBloqueo();
-        }
-      }
+      }, 0);
     });
 
     this.subscriptions.push(

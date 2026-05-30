@@ -270,6 +270,28 @@ Importa de forma asíncrona: `from kernel_bus import notificar_frontend` y ejecu
                         }
                         yield f"event: SET_WALLPAPER\ndata: {json.dumps(wallpaper_payload)}\n\n"
                         resultado_fierros = "Fondo de pantalla actualizado con éxito."
+                        
+                    elif tool_call_detected == "applyCssTheme":
+                        css_code = args.get("cssCode", "")
+                        theme_payload = {
+                            "event": "SET_THEME",
+                            "cssCode": css_code
+                        }
+                        try:
+                            from core.config import BASE_DIR
+                            import os
+                            themes_dir = os.path.join(BASE_DIR, "theme_profiles")
+                            os.makedirs(themes_dir, exist_ok=True)
+                            theme_path = os.path.join(themes_dir, f"{payload.user_id}.css")
+                            with open(theme_path, "w", encoding="utf-8") as f:
+                                f.write(css_code)
+                            logger.info(f"💾 [THEME] Tema CSS físico guardado para {payload.user_id}")
+                        except Exception as e:
+                            logger.error(f"❌ [THEME] Error guardando CSS: {e}")
+                            
+                        yield f"event: SET_THEME\ndata: {json.dumps(theme_payload)}\n\n"
+                        resultado_fierros = "Estilo CSS inyectado y persistido globalmente."
+                        
                     else:
                         resultado_fierros = await ejecutar_herramienta_local(
                             tool_call_detected, 
