@@ -163,6 +163,7 @@ export class EscritorioComponent implements OnInit, OnDestroy {
         this.userId = user;
         this.isLocked = false;
         console.log(`🔓 [UI KERNEL] Terminal liberada con éxito para: ${user}`);
+        this.cdr.detectChanges();
 
         // Consultar estado de Google Workspace
         this.authService.checkGoogleAuthStatus(user).subscribe({
@@ -183,6 +184,7 @@ export class EscritorioComponent implements OnInit, OnDestroy {
         this.themeService.loadBaseStyle(user);
       } else {
         this.isLocked = true;
+        this.cdr.detectChanges();
         // Evita disparar el bloqueo si ya hay un ID de terminal inicializado escuchando
         if (!this.terminalId) {
           this.iniciarFlujoBloqueo();
