@@ -9,6 +9,7 @@ load_dotenv()
 OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://10.10.0.48:11434")
 QDRANT_HOST = os.getenv("QDRANT_HOST", "http://10.10.0.66:6333")
 AGNUX_ACTIVE_MODEL = os.getenv("AGNUX_ACTIVE_MODEL", "ministral-es:latest")
+AGNUX_CODER_MODEL = os.getenv("AGNUX_CODER_MODEL", "deepseek-coder:1.5b")
 
 # Rutas estáticas del sistema
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

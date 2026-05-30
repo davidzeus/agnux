@@ -1,404 +1,135 @@
-# AGNUX — Motor de Orquestación Agéntica Local
-
-**AGNUX** es un motor de orquestación agéntica de bajo nivel diseñado para automatizar y controlar servicios del sistema operativo mediante modelos de Inteligencia Artificial locales (vía Ollama) con soporte híbrido para proveedores en la nube (Gemini, OpenAI).
-
-## 🎯 Propósito
-
-Proveer un núcleo (core) agnóstico capaz de:
-- Exponer una **API HTTP** y **WebSocket** para recibir prompts e inyectar inteligencia en aplicaciones.
-- Invocar herramientas del sistema (diagnóstico, energía, multimedia).
-- **Recargar dinámicamente** nuevas herramientas en caliente sin reiniciar.
-- Funcionar como **demonio del sistema** con autonomía cognitiva.
-- Escalar hacia un OS Linux completo gestionado por IA.
-
-## ⚠️ Advertencia de Seguridad
-
-Este proyecto incluye funcionalidades que **pueden controlar la energía del equipo** y **ejecutar procesos del sistema**. Revise cuidadosamente el código antes de ejecutarlo en producción. Los comandos de `shutdown`/`reboot` están **deshabilitados por defecto** en el backend seguro.
-
-## 🏗️ Arquitectura y Características
-
-- **Backend FastAPI** (`backend/app.py`): Orquestador cognoscitivo unificado con soporte multi-proveedor.
-- **Agente agnóstico** (`backend/agent_core.py`): Configuración flexible con Ollama local, Gemini o OpenAI.
-- **Subsistemas de herramientas**: Diagnóstico, multimedia, energía e inyección dinámica de scripts.
-- **Frontend Angular** (`frontend/`): Interfaz moderna para interactuar con el kernel.
-- **Autogénesis**: Capacidad de crear nuevas herramientas automáticamente cuando el usuario lo requiere.
-- **Failover inteligente**: Si la nube pincha, replica automáticamente a Ollama local.
-- **Telemetría**: Registro de consumo de tokens en el backend local (`dynamic_tools/historial_consumo.json`).
-
-## 📁 Estructura del Repositorio
-
-```
-agnux/
-├── backend/
-│   ├── app.py                          # Servidor FastAPI (orquestador principal)
-│   ├── agent_core.py                   # Configuración del agente con IA multi-proveedor
-│   ├── system_profile.json             # Perfil del sistema (proveedor, modelo, API keys)
-│   ├── tools/
-│   │   ├── system_tools.py             # Herramientas de diagnóstico y energía (seguras)
-│   │   └── multimedia_tools.py         # Control de reproducción multimedia
-│   └── dynamic_tools/                  # Herramientas autogeneradas en caliente
-│       ├── __init__.py
-│       ├── historial_consumo.json      # Telemetría de consumo de tokens
-│       └── *.py                        # Scripts inyectados dinámicamente
-├── frontend/
-│   ├── package.json
-│   ├── angular.json
-│   ├── src/
-│   │   ├── main.ts                     # Punto de entrada
-│   │   ├── main.server.ts              # SSR
-│   │   ├── app.component.ts            # Componente raíz
-│   │   ├── components/
-│   │   │   └── command-bar/            # Barra de comandos
-│   │   └── services/
-│   │       └── agnux.service.ts        # Cliente HTTP/WebSocket
-│   └── assets/
-├── requirements.txt                    # Dependencias Python
-└── README.md                           # Este archivo
-```
-
-## 🚀 Instalación Rápida
-
-### Requisitos Previos
-
-**Sistema Operativo**: Linux (Ubuntu/Debian/Fedora)
-
-**Software requerido**:
-- Python 3.9+
-- Node.js 18+ (para el frontend)
-- **Ollama** (para IA local) — [Descargar](https://ollama.ai)
-- MPV, MPG123 o PulseAudio (para multimedia)
-
-### 1️⃣ Configurar Ollama Local
-
-**Ollama** es el runtime que ejecuta modelos de IA localmente sin depender de APIs en la nube.
-
-#### Instalar Ollama:
-
-```bash
-# En Linux (Ubuntu/Debian):
-curl -fsSL https://ollama.ai/install.sh | sh
-
-# O descargar desde: https://ollama.ai/download
-```
-
-#### Iniciar Ollama como servicio:
-
-```bash
-# Ollama se ejecuta como daemon en puerto 11434
-ollama serve
-
-# En otra terminal, descargar un modelo (ej: qwen2.5:1.5b):
-ollama pull qwen2.5:1.5b
-ollama pull mistral
-ollama pull neural-chat
-```
-
-**Modelos recomendados** para AGNUX:
-- `qwen2.5:1.5b` (rápido, eficiente) ⚡
-- `mistral` (mejor calidad, más recursos)
-- `neural-chat` (optimizado para chat)
-
-### 2️⃣ Configurar el Entorno Python
-
-```bash
-# Navegar al directorio del proyecto
-cd /home/david/Documentos/agnux
-
-# Crear entorno virtual
-python3 -m venv .venv
-source .venv/bin/activate  # En Windows: .venv\Scripts\activate
-
-# Instalar dependencias
-pip install --upgrade pip
-pip install -r requirements.txt
-```
-
-### 3️⃣ Configurar Variables de Entorno
-
-Las variables de entorno controlan qué proveedor de IA usa AGNUX. Crea un archivo `.env` en la raíz:
-
-```bash
-# .env — Variables de Entorno para AGNUX
-# ================================================
-
-# ⚡ PROVEEDOR DE IA (local, gemini, openai)
-AGNUX_IA_PROVIDER=local
-
-# 🧠 MODELO A USAR (debe estar disponible en Ollama si es local)
-AGNUX_ACTIVE_MODEL=qwen2.5:1.5b
-
-# 🌐 SOLO PARA GEMINI (si AGNUX_IA_PROVIDER=gemini)
-GEMINI_API_KEY=tu-api-key-aqui
-
-# 🔑 SOLO PARA OPENAI (si AGNUX_IA_PROVIDER=openai)
-OPENAI_API_KEY=sk-...
-
-# 🏠 URL LOCAL DE OLLAMA (por defecto: http://127.0.0.1:11434)
-OLLAMA_BASE_URL=http://127.0.0.1:11434
-```
-
-#### Ejemplo 1: Usando Ollama Local (RECOMENDADO)
-
-```bash
-export AGNUX_IA_PROVIDER=local
-export AGNUX_ACTIVE_MODEL=qwen2.5:1.5b
-```
-
-Luego ejecuta en la terminal:
-```bash
-cd backend
-python3 -m uvicorn app:app --reload --port 8000
-```
-
-**Verificar que Ollama está corriendo**:
-```bash
-curl http://127.0.0.1:11434/api/tags
-```
-
-#### Ejemplo 2: Usando Gemini (Nube con Failover a Ollama)
-
-```bash
-export AGNUX_IA_PROVIDER=gemini
-export AGNUX_ACTIVE_MODEL=gemini-2.5-flash
-export GEMINI_API_KEY=AIzaSy...
-```
-
-Si la API de Gemini falla o no hay conexión, **AGNUX automáticamente replica a Ollama local**.
-
-### 4️⃣ Ejecutar el Backend
-
-```bash
-cd backend
-
-# Con recarga automática (desarrollo)
-AGNUX_IA_PROVIDER=local AGNUX_ACTIVE_MODEL=qwen2.5:1.5b \
-  python3 -m uvicorn app:app --reload --port 8000
-
-# Producción (sin recarga)
-AGNUX_IA_PROVIDER=local python3 -m uvicorn app:app --host 0.0.0.0 --port 8000
-```
-
-**Logs esperados**:
-```
-INFO:     Uvicorn running on http://127.0.0.1:8000
-🔍 AGNUX INITIAL BOOT: Configurando entorno...
-🚀 NÚCLEO CONFIGURADO -> Runtime: local
-```
-
-### 5️⃣ Ejecutar el Frontend (Angular)
-
-```bash
-cd frontend
-npm install
-npm start
-```
-
-Acceder en: **http://localhost:4200**
-
-## 📡 API Endpoints
-
-### POST `/api/system/intent`
-
-Envía un prompt al kernel agnóstico.
-
-**Request**:
-```bash
-curl -X POST http://localhost:8000/api/system/intent \
-  -H "Content-Type: application/json" \
-  -d '{"prompt": "¿Cuál es el estado de mi hardware?"}'
-```
-
-**Response**:
-```json
-{
-  "status": "success",
-  "user": "user_cristian",
-  "response": "{\"cpu_percent\": 45.2, \"memory_percent\": 62.1, \"disk_percent\": 78.5}"
-}
-```
-
-### WebSocket `/ws/system-events`
-
-Recibe eventos del sistema en tiempo real (se agregará pronto).
-
-## 🧠 Herramientas Disponibles
-
-| Herramienta | Descripción |
-|---|---|
-| `tool_diagnostico_wrapper` | Estado del hardware (CPU, RAM, disco) |
-| `tool_reproductor_video` | Reproducción de videos locales o YouTube |
-| `tool_musica_wrapper` | Reproducción de música de fondo |
-| `tool_control_audio_wrapper` | Control de reproducción (pausa, resume, detiene) |
-| `autogenerar_nueva_tool` | Crea nuevas herramientas dinámicamente |
-
-## 🔧 Desarrollo y Extensión
-
-### Crear una Herramienta Dinámica
-
-El agente puede crear automáticamente nuevas herramientas si las necesita. Si envías un prompt como:
-
-```
-"Crea una herramienta que liste todos los archivos .mp3 en mi home"
-```
-
-El agente invocará `autogenerar_nueva_tool` y creará un script en `backend/dynamic_tools/` que se cargará automáticamente.
-
-### Agregar una Herramienta Manualmente
-
-1. Crear archivo en `backend/dynamic_tools/mi_herramienta.py`:
-
-```python
-"""Descripción de mi herramienta"""
-
-def mi_herramienta():
-    """Realiza una tarea específica"""
-    return "Resultado de la tarea"
-```
-
-2. Reiniciar el backend (o esperar a que el agente llame a `recargar_herramientas_dinamicas()`).
-
-## 🔍 Depuración
-
-### Ver Logs del Backend
-
-```bash
-tail -f /tmp/agnux.log  # Si lo configuras con logging a archivo
-```
-
-### Probar Ollama
-
-```bash
-# ¿Está Ollama corriendo?
-curl http://127.0.0.1:11434/api/tags
-
-# Probar un modelo
-curl http://127.0.0.1:11434/api/generate \
-  -d '{"model": "qwen2.5:1.5b", "prompt": "Hola", "stream": false}'
-```
-
-### Problemas Comunes
-
-| Problema | Solución |
-|---|---|
-| `Connection refused: http://127.0.0.1:11434` | Ollama no está corriendo. Ejecuta `ollama serve` en otra terminal. |
-| `Model not found: qwen2.5:1.5b` | Descarga el modelo: `ollama pull qwen2.5:1.5b` |
-| `No module named 'agno'` | Instala dependencias: `pip install -r requirements.txt` |
-| Frontend no se conecta al backend | Verifica que el backend esté en `http://localhost:8000` y CORS habilitado. |
-
-## 📊 Monitoreo de Consumo (Gemini)
-
-Si usas Gemini, el consumo de tokens se registra en `backend/dynamic_tools/historial_consumo.json`:
-
-```json
-[
-  {
-    "fecha": "2025-05-27 14:32:10",
-    "prompt": "¿Cuál es el estado del hardware?",
-    "prompt_tokens": 145,
-    "candidates_tokens": 89,
-    "total_tokens": 234
-  }
-]
-```
-
-## 🎯 Roadmap
-
-- [ ] WebSocket para eventos del sistema en tiempo real
-- [ ] Panel de administración en el frontend
-- [ ] Autenticación y autorización
-- [ ] Soporte para GPT-4o local (LM Studio)
-- [ ] Integración con Telegram/Discord
-- [ ] Empaquetamiento como systemd service
-- [ ] Migración a kernel Linux customizado (Fase 2)
-
-## 📝 Contribución
-
-Si encuentras bugs o tienes mejoras:
-
-1. Abre un **issue** describiendo el problema
-2. Crea un **PR** con cambios enfocados y documentados
-3. Mantén el código limpio y los módulos desacoplados
-
-## ⚙️ Configuración Avanzada
-
-### Cambiar Puerto del Backend
-
-```bash
-python3 -m uvicorn app:app --port 9000
-```
-
-### Cambiar Modelo en Tiempo de Ejecución
-
-```bash
-export AGNUX_ACTIVE_MODEL=mistral
-python3 -m uvicorn app:app --reload
-```
-
-### Usar Múltiples Modelos
-
-En `backend/app.py` puedes agregar lógica para seleccionar modelos por contexto (p. ej., modelos pesados para análisis, ligeros para chat).
-
-## 📧 Contacto y Soporte
-
-Para preguntas técnicas sobre:
-- Integración de Ollama: revisa [Ollama Docs](https://github.com/ollama/ollama)
-- API de AGNUX: consulta `backend/app.py`
-- Frontend Angular: revisa `frontend/README.md`
+<div align="center">
+  <h1>🧠 AGNUX OS</h1>
+  <p><strong>Un Sistema Operativo Cognitivo y Autónomo impulsado por IA, Metaprogramación y Biometría</strong></p>
+  
+  [![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi)](https://fastapi.tiangolo.com/)
+  [![Angular](https://img.shields.io/badge/Angular-DD0031?style=for-the-badge&logo=angular&logoColor=white)](https://angular.io/)
+  [![Ollama](https://img.shields.io/badge/Ollama-000000?style=for-the-badge&logo=Ollama&logoColor=white)](https://ollama.ai/)
+  [![Qdrant](https://img.shields.io/badge/Qdrant-FF5252?style=for-the-badge&logo=qdrant&logoColor=white)](https://qdrant.tech/)
+</div>
 
 ---
 
-**Versión**: 1.0.0 | **Última actualización**: Mayo 2025 | **License**: MIT (agregar LICENSE.md)
-  - *Fase 3 (núcleo extendido):* Si se requiere funcionalidad que exige espacio de kernel (drivers propietarios, hooks ACPI específicos), desarrollar módulos del kernel o parches específicos. Evitar el kernel siempre que sea posible por complejidad y riesgos.
+**AGNUX OS** no es simplemente un asistente virtual; es una arquitectura de **Kernel Cognitivo** diseñada para gobernar hardware, interfaces de usuario y bases de datos mediante el razonamiento semántico de grandes modelos de lenguaje (LLMs). AGNUX está diseñado para correr en servidores de alto rendimiento (ej. *Lenovo SR630*) y actuar como el cerebro maestro de múltiples terminales conectadas vía red o VPN (WireGuard).
 
-- **Privilegios, seguridad y aislamiento:**
-  - Evite ejecutar código arbitrario como `root`. Minimize privilegios usando *capabilities* (`cap_sys_admin`, etc.) y dropping de privilegios después del arranque.
-  - Use `systemd` sandboxes (`PrivateTmp`, `ProtectSystem`, `NoNewPrivileges`) y perfiles `AppArmor`/`SELinux` para limitar el daño de herramientas dinámicas y cargas no confiables.
-  - Proteja los puntos de ejecución de comandos sensibles (shutdown/reboot): mantenga modo simulación por defecto y requiera confirmación o un token seguro para acciones destructivas.
+## ✨ Características Principales
 
-- **Ejemplo: unidad `systemd` para ejecutar AGNUX como servicio del sistema**
+### 🧬 Autogénesis (Metaprogramación en Caliente)
+AGNUX tiene la capacidad de **escribir su propio código** en tiempo real. Cuando el Agente detecta una intención del usuario que no puede resolver con sus herramientas estáticas, genera un script en Python, lo guarda en el host (`dynamic_tools/`), lo compila en memoria y lo ejecuta instantáneamente sin requerir reinicios del servidor.
 
+### 👁️ Biometría y Bypass VPN (Control de Acceso)
+El sistema incluye un módulo de autenticación de doble vía:
+- **Biometría Facial/Vocal**: Análisis vectorial (128d) contra perfiles de usuario.
+- **Bypass Remoto Móvil**: Permite que un operador autenticado desde su teléfono móvil (conectado vía WireGuard VPN) desbloquee de forma remota una terminal física (monitor ciego) mediante túneles SSE.
+
+### 🧠 Memoria Episódica y Router Semántico (Omnisciencia)
+- **Qdrant Vector DB**: Toda interacción, ejecución de herramienta o registro biométrico se vectoriza (`SentenceTransformer: paraphrase-multilingual-mpnet-base-v2`, 768d) y se guarda en colecciones persistentes.
+- **Recuperación de Contexto**: En cada prompt, AGNUX inyecta automáticamente los recuerdos más relevantes del usuario para mantener una ilusión de omnisciencia real.
+- **Multiplexación Jerárquica**: Los perfiles de memoria e intenciones de red están rígidamente normalizados usando estándares de Kernel Linux (RFC 1035, usando únicamente guiones medios `-`).
+
+### ⚡ Event-Driven UI (HyperIsland & Kiosco)
+El backend y frontend (Angular 15+) se comunican estrictamente mediante flujos asíncronos unidireccionales (**SSE - Server-Sent Events**) y **WebSockets**.
+- **Ventanas Dinámicas**: El Kernel puede emitir eventos `CREATE_WINDOW` para dibujar contenedores flotantes en el escritorio del cliente.
+- **Ejecución en Host**: El Kernel puede controlar el hardware (encendido/apagado), reproducir audio de fondo, cambiar fondos de escritorio o abrir contenedores Kiosco (Chromium para Netflix, Spotify, etc).
+
+---
+
+## 🏗️ Arquitectura del Sistema
+
+El backend ha sido refactorizado recientemente usando un diseño de micro-módulos para garantizar la mantenibilidad y escalabilidad en FastAPI.
+
+```text
+backend/
+├── main.py                  # Entrypoint de FastAPI y Middlewares (CORS)
+├── core/
+│   ├── config.py            # Variables de entorno y dependencias globales (.env)
+│   └── memory.py            # Instancia de Qdrant y CACHE_VECTORS en RAM
+├── schemas/
+│   └── models.py            # Entidades Pydantic (Validación estricta de payloads)
+├── services/
+│   ├── intent_orchestrator.py # Motor iterador asíncrono con Ollama (El "Cerebro")
+│   └── tools_service.py     # Gestor de autogénesis y subprocesos del host
+├── api/
+│   └── routes/
+│       ├── intent.py        # Websockets e inferencia de flujos
+│       └── auth.py          # Endpoints de enrolamiento y bypass biométrico
+├── dynamic_tools/           # (Directorio de scripts auto-generados por IA)
+└── tools/                   # (Herramientas estáticas del host)
 ```
-[Unit]
-Description=AGNUX Core Agent
-After=network.target
 
-[Service]
-Type=simple
-User=root
-Group=root
-WorkingDirectory=/home/david/Documentos/agnux/backend
-ExecStart=/home/david/Documentos/agnux/.venv/bin/python3 -m uvicorn app:app --host 0.0.0.0 --port 8000
-Restart=on-failure
-RestartSec=5
-PrivateTmp=true
-NoNewPrivileges=true
-ProtectSystem=full
+---
 
-[Install]
-WantedBy=multi-user.target
-```
+## 🚀 Requisitos y Configuración Inicial
 
-Guarde este fichero como `agnux.service` en `/etc/systemd/system/` y luego:
+> [!NOTE]
+> **Estado de Despliegue**: Actualmente, el ecosistema backend está dockerizado para facilitar el desarrollo rápido y asegurar consistencia entre colaboradores. Sin embargo, **el objetivo arquitectónico final es montarlo de forma nativa directamente sobre un Kernel Linux (bare-metal)** para maximizar la ejecución de subprocesos de bajo nivel y el control absoluto del hardware.
 
-```bash
-sudo systemctl daemon-reload
-sudo systemctl enable agnux.service
-sudo systemctl start agnux.service
-sudo journalctl -u agnux.service -f
-```
+### Hardware Recomendado (Entorno Base de Referencia)
+Dado que AGNUX opera con modelos LLM locales en caliente y modelos de embeddings en RAM, se requiere hardware robusto para una experiencia fluida. La configuración actual de desarrollo recomendada es:
+- **GPU**: NVIDIA RTX 5070 (12GB VRAM) *[Para inferencia ágil de Ollama]*
+- **CPU**: Intel Core i7-12700F (o procesador equivalente multi-núcleo)
+- **RAM**: 64GB DDR4 *[Para absorción de buffers, matrices vectoriales en memoria y metaprogramación concurrente]*
 
-- **Construcción de una imagen mínima (opciones rápidas):**
-  - *Debian/Ubuntu minimal ISO*: usar `debootstrap` para crear un chroot mínimo, instalar `systemd`, copiar AGNUX y sus dependencias, y generar una ISO de arranque con `grub`.
-  - *Buildroot*: para imagenes más controladas y pequeñas, use `buildroot` y empaquete AGNUX en `/usr/bin` o como servicio.
-  - *Contenedores/OCI images*: para pruebas y despliegues, empaquete AGNUX en una imagen Docker/OCI y ejecute sobre un host Linux o en máquinas virtuales.
+### Prerrequisitos
+- **Python 3.11+**
+- **Docker** (Entorno de desarrollo actual)
+- **Node.js 18+** y **Angular CLI 15+** (Para el cliente)
+- Nodos independientes u hospedados de:
+  - **Ollama** (Recomendado: `ministral-es:latest` para razonamiento y `deepseek-coder` para herramientas).
+  - **Qdrant DB** (Expuesto en el puerto 6333).
 
-- **Pruebas y despliegue seguro:**
-  - Primero pruebe todo dentro de una VM (QEMU/KVM, VirtualBox) antes de instalar en hardware real.
-  - Automatice instalaciones en VM usando cloud-init o scripts de `debootstrap` para reproducibilidad.
+### Configuración del Backend
 
-- **Recomendaciones prácticas:**
-  - Mantenga separación clara entre código que necesita privilegios y lógica de alto nivel; use IPC o sockets UNIX para comunicación segura entre procesos con distinta privilegiación.
-  - Documente cualquier comando del sistema que pueda afectar el hardware (apagar, reiniciar, manipular particiones) y pida confirmación explícita.
-  - Use control de versiones y CI para construir imágenes y ejecutar pruebas en entornos emulados antes de desplegar en dispositivos reales.
+1. **Clonar y preparar entorno:**
+   ```bash
+   cd agnux/backend
+   python -m venv venv
+   source venv/bin/activate  # En Windows: venv\Scripts\activate
+   pip install -r requirements.txt
+   ```
 
-Si quieres, actualizo el README con ejemplos concretos de `debootstrap` o un script de creación de imagen, o creo la unidad `systemd` y un script de empaquetado inicial para que lo pruebes en una VM. Indícame qué prefieres.
+2. **Variables de Entorno (`backend/.env`):**
+   Crea un archivo `.env` en el directorio `backend` con la siguiente estructura:
+   ```env
+   OLLAMA_HOST=http://<IP_NODO_OLLAMA>:11434
+   QDRANT_HOST=http://<IP_NODO_QDRANT>:6333
+   AGNUX_ACTIVE_MODEL=ministral-es:latest
+   AGNUX_CODER_MODEL=deepseek-coder:1.5b
+   ```
+
+3. **Ejecutar el Kernel:**
+   ```bash
+   uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+   ```
+
+### Configuración del Frontend (Angular)
+
+1. **Instalar dependencias:**
+   ```bash
+   cd agnux/frontend
+   npm install
+   ```
+
+2. **Ejecutar el cliente:**
+   ```bash
+   ng serve --host 0.0.0.0 --port 4200
+   ```
+   *Nota: Asegúrate de que el servicio `agnux.service.ts` apunte a la IP de tu backend.*
+
+---
+
+## 🛠️ Cómo colaborar (¡Se busca ayuda!)
+
+Actualmente, el proyecto está en una fase de rápida expansión y busco colegas apasionados por los agentes autónomos, la ingeniería de prompts y arquitecturas asíncronas para resolver los siguientes desafíos:
+
+- **Optimización del Orquestador de Tools**: El extractor heurístico actual usa RegEx en `intent_orchestrator.py` para interceptar bloques de código en texto plano desde `/api/generate` de Ollama. Buscamos formas más nativas o resilientes de gestionar "Tool Calling".
+- **Memoria Semántica**: Mejorar el threshold (umbral de corte) y la similitud del coseno usando algoritmos más finos sobre la colección `agnux_kernel_memory`.
+- **UI en Angular**: Mejorar el motor de parsing de EventStreams (SSE) y la gestión del z-index de las ventanas flotantes en el `EscritorioComponent`.
+
+**Si tienes ideas o encuentras bugs, no dudes en abrir un Issue o mandar un Pull Request.**
+
+---
+
+<div align="center">
+  <sub>Construido para el futuro del procesamiento edge. 📡</sub>
+</div>

@@ -52,3 +52,8 @@ Thumbs.db
 .vscode-test/
 .history/
 *.code-workspace
+
+# =====================================================
+# Infraestructura (Nginx / Cloudflare)
+# =====================================================
+nginx/

@@ -36,31 +36,7 @@ services:
       - agnux_net
     restart: unless-stopped
 
-  # 🔐 SERVIDOR DE SEGURIDAD: WIREGUARD VPN (TÚNELES DE ACCESO MOBILE)
-  vpn_agnux:
-    image: lscr.io/linuxserver/wireguard:latest
-    container_name: agnux_vpn
-    cap_add:
-      - NET_ADMIN
-      - SYS_MODULE
-    environment:
-      - PUID=1000
-      - PGID=1000
-      - TZ=America/Argentina/Buenos_Aires
-      - SERVERURL=10.10.0.66       # 🌐 Reemplazar por tu IP pública o DDNS al desplegar fuera de casa
-      - SERVERPORT=51820
-      - PEERS=cristianmobile,medicomobile  # 📱 Genera perfiles independientes y únicos para multi-usuario
-      - PEERDNS=auto
-      - ALLOWEDIPS=10.10.0.0/24,192.168.1.0/24  # Enrutamiento hacia tus contenedores y la LAN de casa
-      - WITH_CORE=false              # 🔥 CLAVE: Desactiva el módulo nativo para evitar caídas
-    ports:
-      - "51820:51820/udp"
-    volumes:
-      - ./wireguard_config:/config
-      - /lib/modules:/lib/modules            # Enlace con los módulos de red del Kernel del host
-    networks:
-      - agnux_net
-    restart: unless-stopped
+
 
   # 💻 INTERFAZ GRAFICA FRONTEND: CONSOLA CYBERPUNK INMERSIVA (ANGULAR)
   frontend:
@@ -76,6 +52,21 @@ services:
     networks:
       - agnux_net
     restart: unless-stopped
+
+  # 🌐 REVERSE PROXY: NGINX (ENRUTADOR HACIA FRONTEND Y BACKEND)
+  agnux_proxy:
+    image: nginx:alpine
+    container_name: agnux_proxy
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    networks:
+      - agnux_net
+    depends_on:
+      - backend
+      - frontend
+    restart: always
 
 networks:
   agnux_net:
