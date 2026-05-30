@@ -52,20 +52,20 @@ async def procesar_generador_eventos(payload: TaskbarPrompt, is_google_connected
                 if score > 0.42:
                     filtered_tools.append(data["schema"])
 
-            if not filtered_tools:
-                filtered_tools.append({
-                    "name": "autogenerar_nueva_tool",
-                    "description": "Se activa para programar una nueva herramienta",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "nombre_funcion": {"type": "string"},
-                            "codigo_python": {"type": "string"},
-                            "descripcion_docstring": {"type": "string"}
-                        },
-                        "required": ["nombre_funcion", "codigo_python", "descripcion_docstring"]
-                    }
-                })
+            # 💡 HACK: La autogénesis SIEMPRE debe estar disponible como última línea de defensa
+            filtered_tools.append({
+                "name": "autogenerar_nueva_tool",
+                "description": "Se activa para programar una nueva herramienta (código python) cuando ninguna de las herramientas actuales puede satisfacer la petición del usuario. Utiliza esto para crear nuevas integraciones o comportamientos.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "nombre_funcion": {"type": "string"},
+                        "codigo_python": {"type": "string", "description": "El código fuente en Python de la herramienta."},
+                        "descripcion_docstring": {"type": "string"}
+                    },
+                    "required": ["nombre_funcion", "codigo_python", "descripcion_docstring"]
+                }
+            })
 
             # RECUPERACIÓN DE MEMORIA EPISÓDICA (OMNISCIENCIA)
             try:
@@ -107,6 +107,9 @@ Para ejecutar una herramienta existente, DEBES responder ÚNICAMENTE con un bloq
 - Está TAXATIVAMENTE PROHIBIDO el uso de guiones bajos ('_') en cualquier identificador de usuario, nombre de terminal, o nombre de herramienta dinámica que interactúe con el host. El guión bajo rompe la sintaxis de interfaces de WireGuard y las especificaciones de Hostnames de internet (RFC 1035).
 - Todo identificador debe normalizarse utilizando única y exclusivamente guiones medios ('-') o formato alfanumérico plano en minúsculas (ejemplo correcto: 'user-cristian', 'global-calculadora', 'term-desktop-101').
 - Si vas a autogenerar código en caliente para una nueva herramienta, el archivo físico en disco y su registro semántico deben usar guiones medios (ej. 'global-control-bomba.py').
+
+## REGLA DE AUTOGÉNESIS (CONSENTIMIENTO EXPLÍCITO)
+Si el usuario te pide una tarea para la cual NO existe una herramienta, **NO uses `autogenerar_nueva_tool` directamente**. Primero debes responderle (sin usar formato JSON de herramienta) explicándole que no tienes la herramienta y preguntándole si desea que la programes. Sólo si el usuario responde afirmativamente, entonces en tu siguiente respuesta ejecutarás `autogenerar_nueva_tool`.
 
 ## NOTIFICACIONES PUSH (HYPERISLAND)
 Si estás autogenerando una herramienta y necesitas notificar al usuario, puedes usar WebSockets puros.
