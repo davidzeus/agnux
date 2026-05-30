@@ -115,7 +115,7 @@ Puedes inyectar temas pisando estas variables:
 - Colores de acento: `--agnux-accent`, `--agnux-accent-glow`, `--agnux-accent-dim`, `--agnux-accent-border`
 - Paneles (Glassmorphism): `--agnux-panel-bg`, `--agnux-panel-solid`, `--agnux-panel-border`, `--agnux-panel-blur`
 - Fuentes: `--agnux-font-main`, `--agnux-font-clock`
-Ejemplo de código para tema Hacker: `:root { --agnux-bg-color: #000000; --agnux-accent: #00ff00; --agnux-font-main: 'Courier New', monospace; }`
+Ejemplo de código para tema Hacker: `:root {{ --agnux-bg-color: #000000; --agnux-accent: #00ff00; --agnux-font-main: 'Courier New', monospace; }}`
 
 ## REGLA DE AUTOGÉNESIS (CONSENTIMIENTO EXPLÍCITO)
 Si el usuario te pide una tarea para la cual NO existe una herramienta, **NO uses `autogenerar_nueva_tool` directamente**. Primero debes responderle (sin usar formato JSON de herramienta) explicándole que no tienes la herramienta y preguntándole si desea que la programes. Sólo si el usuario responde afirmativamente, entonces en tu siguiente respuesta ejecutarás `autogenerar_nueva_tool`.
