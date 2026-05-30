@@ -149,6 +149,9 @@ export class EscritorioComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
+    // 🛡️ [NUEVO FLUJO DE SEGURIDAD] Intentamos validación silenciosa por Cloudflare Access
+    this.authService.verifyCloudflareAuth();
+
     this.authSub = this.authService.currentUser$.subscribe(user => {
       console.log('🔄 [UI KERNEL] Cambio de estado de usuario detectado:', user);
       

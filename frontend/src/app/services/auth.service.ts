@@ -23,8 +23,29 @@ export class AuthService {
     return this.currentUserSubject.value;
   }
 
+  verifyCloudflareAuth(): Observable<any> {
+    console.log('🛡️ [AGNUX KERNEL] Verificando cabeceras de Cloudflare Access...');
+    // Usamos ruta relativa para que funcione tanto en local como a través de agnux.net.ar
+    const req = this.http.get('/api/auth/cloudflare/verify');
+    
+    req.subscribe({
+      next: (res: any) => {
+        if (res.status === 'authenticated' && res.user_id) {
+          console.log(`✅ [AGNUX KERNEL] Identidad Cloudflare confirmada: ${res.user_id} (${res.email})`);
+          if (typeof localStorage !== 'undefined') {
+            localStorage.setItem('agnux_user_id', res.user_id);
+          }
+          this.currentUserSubject.next(res.user_id);
+        }
+      },
+      error: (err) => console.log('⚠️ Sin cabeceras de Cloudflare (Modo Local/Fallback)', err)
+    });
+    
+    return req;
+  }
+
   checkGoogleAuthStatus(userId: string): Observable<{connected: boolean, userId: string}> {
-    return this.http.get<{connected: boolean, userId: string}>(`http://10.10.0.66:8000/api/auth/google/status?user_id=${userId}`);
+    return this.http.get<{connected: boolean, userId: string}>(`/api/auth/google/status?user_id=${userId}`);
   }
 
   listenTerminal(terminalId: string): Observable<string> {

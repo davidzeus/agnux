@@ -3,7 +3,7 @@ import json
 import uuid
 import asyncio
 from datetime import datetime
-from fastapi import APIRouter, HTTPException, UploadFile, File, Query
+from fastapi import APIRouter, HTTPException, UploadFile, File, Query, Request
 from fastapi.responses import FileResponse, StreamingResponse
 from qdrant_client.models import PointStruct
 
@@ -46,37 +46,36 @@ async def terminal_stream(terminal_id: str):
             
     return StreamingResponse(sse_bypass(), media_type="text/event-stream")
 
-@router.post("/auth/terminal-authorize")
-@router.post("/auth/terminal-authorize/")
-async def terminal_authorize(payload: LinkTerminalPayload):
-    id_red = payload.user_id.replace("_", "-")
+@router.get("/auth/cloudflare/verify")
+async def verify_cloudflare_auth(request: Request):
+    # Cloudflare Access inyecta esta cabecera si el usuario pasó la barrera
+    cf_email = request.headers.get("Cf-Access-Authenticated-User-Email")
     
-    if payload.terminal_id in TERMINAL_SESSIONS:
-        try:
-            logger.info(f"🔎 [KERNEL QDRANT] Buscando perfil para operador: {id_red}")
-            await qdrant_client.scroll(
-                collection_name=COLECCION_FACIAL,
-                limit=1
-            )
-            rol_operador = "admin"
-        except Exception as db_error:
-            logger.warn(f"⚠️ [KERNEL] Operador '{id_red}' no encontrado en Qdrant o DB vacía. Activando perfil de contingencia local.")
-            rol_operador = "admin-provisional"
-            
-        TERMINAL_SESSIONS[payload.terminal_id] = {
-            "status": "approved",
-            "user_id": id_red,
-            "role": rol_operador
-        }
+    # [MODO DEV] Si estás desarrollando en local sin túnel, simular al admin
+    if not cf_email and request.client.host in ("127.0.0.1", "::1", "localhost"):
+        cf_email = "dev.local@agnux.net.ar"
         
-        if id_red not in CACHE_VECTORS["usuarios"]:
-            CACHE_VECTORS["usuarios"][id_red] = {}
-            logger.info(f"🗂️ [RAM KERNEL] Slot privado creado al vuelo para: {id_red}")
-            
-        logger.info(f"🔓 [BYPASS VPN] Terminal {payload.terminal_id} desbloqueada por el celular de: {id_red}")
-        return {"status": "success"}
-    else:
-        raise HTTPException(status_code=404, detail="Terminal remota inactiva o ID inválido")
+    if not cf_email:
+        return {"status": "unauthenticated"}
+        
+    # Limpiamos el correo: 
+    prefijo = cf_email.split("@")[0].lower()
+    prefijo_limpio = prefijo.replace("_", "-").replace(".", "-")
+    id_red = f"user-{prefijo_limpio}"
+    
+    # Aprovisionamiento en RAM al vuelo
+    if id_red not in CACHE_VECTORS["usuarios"]:
+        CACHE_VECTORS["usuarios"][id_red] = {}
+        logger.info(f"🗂️ [RAM KERNEL] Slot privado creado al vuelo para: {id_red}")
+        
+    logger.info(f"✅ [CLOUDFLARE AUTH] Sesión inyectada con éxito para: {id_red} ({cf_email})")
+    
+    return {
+        "status": "authenticated", 
+        "user_id": id_red,
+        "email": cf_email,
+        "role": "admin"
+    }
 
 @router.post("/auth/facial-login")
 @router.post("/auth/facial-login/")
