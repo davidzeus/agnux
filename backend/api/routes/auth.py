@@ -50,12 +50,14 @@ async def terminal_stream(terminal_id: str):
 async def verify_cloudflare_auth(request: Request):
     # Cloudflare Access inyecta esta cabecera si el usuario pasó la barrera
     cf_email = request.headers.get("Cf-Access-Authenticated-User-Email")
+    logger.info(f"DEBUG: Headers recibidos: {dict(request.headers)}")
     
     # [MODO DEV] Si estás desarrollando en local sin túnel, simular al admin
     if not cf_email and request.client.host in ("127.0.0.1", "::1", "localhost"):
         cf_email = "dev.local@agnux.net.ar"
         
     if not cf_email:
+        logger.warn(f"⚠️ [CLOUDFLARE] Intento de acceso sin cabeceras. Cabeceras recibidas: {request.headers}")
         return {"status": "unauthenticated"}
         
     # Limpiamos el correo: 
