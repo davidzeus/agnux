@@ -25,6 +25,21 @@ export class AuthService {
 
   verifyCloudflareAuth(): Observable<any> {
     console.log('🛡️ [AGNUX KERNEL] Verificando cabeceras de Cloudflare Access...');
+
+    // Bypass para entorno de desarrollo local
+    if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
+      console.log('⚠️ [MODO DEV] Ejecutando en localhost. Simulando acceso Cloudflare...');
+      const devUser = 'dev-local-admin';
+      this.currentUserSubject.next(devUser);
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('agnux_user', devUser);
+      }
+      return new Observable(obs => {
+        obs.next({ status: 'authenticated', user_id: devUser });
+        obs.complete();
+      });
+    }
+
     // Usamos ruta relativa para que funcione tanto en local como a través de agnux.net.ar
     const req = this.http.get('/api/auth/cloudflare/verify');
     
