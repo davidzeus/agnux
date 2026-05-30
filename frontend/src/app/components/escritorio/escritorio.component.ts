@@ -128,9 +128,14 @@ export class EscritorioComponent implements OnInit, OnDestroy {
         } else if (status.type === 'OPEN_IFRAME_APP') {
           this.cargando = false;
           const { appService, appAction, appParams } = status.payload;
-          const targetUrl = appService.toLowerCase() === 'gmail' ? 'https://mail.google.com/' : 
-                            appService.toLowerCase() === 'calendar' ? 'https://calendar.google.com/' : 
-                            'https://workspace.google.com/';
+          const service = appService.toLowerCase();
+          let targetUrl = 'https://workspace.google.com/';
+          if (service === 'gmail') targetUrl = 'https://mail.google.com/';
+          else if (service === 'calendar') targetUrl = 'https://calendar.google.com/';
+          else if (service === 'docs') targetUrl = 'https://docs.google.com/';
+          else if (service === 'sheets') targetUrl = 'https://docs.google.com/spreadsheets/';
+          else if (service === 'slides') targetUrl = 'https://docs.google.com/presentation/';
+          
           window.open(targetUrl, '_blank');
         } else if (status.type === 'SET_WALLPAPER') {
           this.cargando = false;
@@ -148,7 +153,7 @@ export class EscritorioComponent implements OnInit, OnDestroy {
           this.cargando = false;
           let output = status.data || status.payload;
           if (typeof output === 'object') {
-            output = `<pre style="color: #00e5ff; white-space: pre-wrap; font-size: 14px; margin: 0;">${JSON.stringify(output, null, 2)}</pre>`;
+            output = `<pre style="color: var(--agnux-text-primary); white-space: pre-wrap; font-size: 14px; margin: 0;">${JSON.stringify(output, null, 2)}</pre>`;
           }
           this.spawnVentana('html', '🛠️ AGNUX Tool Output', output);
         } else if (status.type === 'ERROR') {
@@ -397,20 +402,20 @@ ${userText}`;
 
     // Si detectamos un JSON literal colado, le aplicamos sintaxis cyberpunk
     // Colorea claves de JSON: "clave":
-    clean = clean.replace(/"([a-zA-Z0-9_]+)":/g, '<span style="color: #00e5ff;">"$1"</span>:');
+    clean = clean.replace(/"([a-zA-Z0-9_]+)":/g, '<span style="color: var(--agnux-accent);">"$1"</span>:');
 
     // Colorea valores string: : "valor"
-    clean = clean.replace(/: \s*"([^"]*)"/g, ': <span style="color: #ffaa00;">"$1"</span>');
+    clean = clean.replace(/: \s*"([^"]*)"/g, ': <span style="color: var(--agnux-text-primary);">"$1"</span>');
 
     // Colorea palabras reservadas
-    clean = clean.replace(/: \s*(true|false|null)/g, ': <span style="color: #ff3366;">$1</span>');
+    clean = clean.replace(/: \s*(true|false|null)/g, ': <span style="color: var(--agnux-text-secondary); font-weight: bold;">$1</span>');
 
     // Colorea llaves y corchetes (Solo si están sueltos en el formato de JSON)
-    clean = clean.replace(/(\{|\}|\[|\])/g, '<span style="color: #ff3366; font-weight: bold;">$1</span>');
+    clean = clean.replace(/(\{|\}|\[|\])/g, '<span style="color: var(--agnux-text-secondary); font-weight: bold;">$1</span>');
 
     // Limpieza de span corruptos (por si reemplazó corchetes de CSS)
-    clean = clean.replace(/<span style="color: #ff3366; font-weight: bold;">\{<\/span>/g, '{');
-    clean = clean.replace(/<span style="color: #ff3366; font-weight: bold;">\}<\/span>/g, '}');
+    clean = clean.replace(/<span style="color: var(--agnux-text-secondary); font-weight: bold;">\{<\/span>/g, '{');
+    clean = clean.replace(/<span style="color: var(--agnux-text-secondary); font-weight: bold;">\}<\/span>/g, '}');
 
     // Ocultar palabra inicial json {
     clean = clean.replace(/^json\s*\{/gmi, '{');
