@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AGNUX OS | Advanced AI Kernel</title>
+    <meta name="description"
+        content="Sistema operativo inmersivo propulsado por Inteligencia Artificial y Cloudflare Zero Trust.">
+
+    <!-- Google Fonts -->
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap"
+        rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-color: #050505;
+            --text-main: #f0f0f0;
+            --text-muted: #888;
+            --accent-glow: rgba(0, 255, 102, 0.4);
+            --accent-border: rgba(0, 255, 102, 0.2);
+            --accent-color: #00ff66;
+            --glass-bg: rgba(20, 20, 20, 0.4);
+            --glass-border: rgba(255, 255, 255, 0.05);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
+            overflow-x: hidden;
+            line-height: 1.6;
+            background-image:
+                radial-gradient(circle at 15% 50%, rgba(0, 255, 102, 0.03), transparent 25%),
+                radial-gradient(circle at 85% 30%, rgba(0, 255, 102, 0.02), transparent 25%);
+        }
+
+        /* Video Background Wrapper */
+        .video-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: -1;
+            overflow: hidden;
+            opacity: 0.15;
+            pointer-events: none;
+        }
+
+        .video-container video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            filter: grayscale(100%) contrast(1.2);
+        }
+
+        /* Grid Overlay */
+        .grid-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-image:
+                linear-gradient(var(--glass-border) 1px, transparent 1px),
+                linear-gradient(90deg, var(--glass-border) 1px, transparent 1px);
+            background-size: 50px 50px;
+            z-index: -1;
+            pointer-events: none;
+            mask-image: radial-gradient(ellipse at center, transparent 20%, black 80%);
+            -webkit-mask-image: radial-gradient(ellipse at center, transparent 20%, black 80%);
+        }
+
+        /* Main Container */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 4rem 2rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            justify-content: center;
+        }
+
+        /* Hero Section */
+        .hero {
+            text-align: center;
+            margin-bottom: 4rem;
+            animation: fadeIn 1.5s ease-out;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.4rem 1rem;
+            background: rgba(0, 255, 102, 0.05);
+            border: 1px solid var(--accent-border);
+            color: var(--accent-color);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            border-radius: 100px;
+            margin-bottom: 1.5rem;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        h1 {
+            font-size: clamp(3rem, 6vw, 5.5rem);
+            font-weight: 800;
+            letter-spacing: -2px;
+            line-height: 1.1;
+            margin-bottom: 1.5rem;
+            background: linear-gradient(180deg, #fff 0%, #aaa 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        p.subtitle {
+            color: var(--text-muted);
+            font-size: 1.2rem;
+            max-width: 600px;
+            margin: 0 auto 2.5rem auto;
+            font-weight: 300;
+        }
+
+        /* Buttons */
+        .actions {
+            display: flex;
+            gap: 1.5rem;
+            justify-content: center;
+        }
+
+        .btn {
+            padding: 1rem 2.5rem;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: rgba(0, 255, 102, 0.1);
+            color: var(--accent-color);
+            border: 1px solid var(--accent-color);
+            box-shadow: 0 0 15px rgba(0, 255, 102, 0.1);
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-color);
+            color: #000;
+            box-shadow: 0 0 30px rgba(0, 255, 102, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: var(--glass-bg);
+            color: var(--text-main);
+            border: 1px solid var(--glass-border);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+
+        /* Media Layout */
+        .media-stack {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4rem;
+            width: 100%;
+            margin-top: 2rem;
+            animation: slideUp 1s ease-out 0.5s both;
+        }
+
+        .showcase {
+            width: 100%;
+            max-width: 1000px;
+            border-radius: 16px;
+            overflow: hidden;
+            border: 1px solid var(--glass-border);
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            padding: 1rem;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            position: relative;
+        }
+
+        .showcase-header {
+            display: flex;
+            gap: 0.5rem;
+            padding: 0.5rem 0.5rem 1rem 0.5rem;
+        }
+
+        .dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #333;
+        }
+
+        .dot:nth-child(1) {
+            background: #ff5f56;
+        }
+
+        .dot:nth-child(2) {
+            background: #ffbd2e;
+        }
+
+        .dot:nth-child(3) {
+            background: #27c93f;
+        }
+
+        .showcase video {
+            width: 100%;
+            border-radius: 8px;
+            display: block;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            outline: none;
+        }
+
+        /* Section Titles */
+        .section-title {
+            font-size: 2rem;
+            margin-top: 6rem;
+            margin-bottom: 2rem;
+            text-align: center;
+            font-weight: 800;
+            letter-spacing: -1px;
+            color: #fff;
+            animation: slideUp 1s ease-out 0.8s both;
+        }
+
+        /* Technical Features Section */
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            width: 100%;
+            max-width: 1200px;
+            animation: slideUp 1s ease-out 0.8s both;
+        }
+
+        .feature-card {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 2rem;
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            transition: transform 0.3s ease, border-color 0.3s ease;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+            border-color: rgba(0, 255, 102, 0.4);
+            box-shadow: 0 10px 30px rgba(0, 255, 102, 0.05);
+        }
+
+        .feature-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 50px;
+            height: 50px;
+            background: rgba(0, 255, 102, 0.1);
+            color: var(--accent-color);
+            border-radius: 12px;
+            margin-bottom: 1.5rem;
+        }
+
+        .feature-icon svg {
+            width: 24px;
+            height: 24px;
+            fill: currentColor;
+        }
+
+        .feature-card h3 {
+            font-size: 1.25rem;
+            margin-bottom: 1rem;
+            color: #fff;
+        }
+
+        .feature-card p {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+
+        .footer {
+            margin-top: 4rem;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            border-top: 1px solid var(--glass-border);
+            padding-top: 2rem;
+            width: 100%;
+        }
+
+        .footer a {
+            color: var(--accent-color);
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(40px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Terminal Icon SVG */
+        .icon {
+            width: 20px;
+            height: 20px;
+            fill: currentColor;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Cyberpunk Grid -->
+    <div class="grid-overlay"></div>
+
+    <div class="container">
+        <div class="hero">
+            <div class="badge">v2.0 // Linux Native Core</div>
+            <h1>AGNUX OS</h1>
+            <p class="subtitle">
+                Sistema Operativo diseñado para integrarse nativamente sobre un Kernel de Linux,
+                propulsado por Inteligencia Artificial y blindado por Cloudflare Zero Trust.
+            </p>
+
+            <div class="actions">
+                <a href="https://demo.agnux.net.ar" class="btn btn-primary">
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <path d="M4 6h16v12H4zm2 2v8h12V8H6zm2 3h2v2H8v-2zm4 0h4v2h-4v-2z" />
+                    </svg>
+                    Ingresar al Kernel
+                </a>
+                <a href="https://github.com/davidzeus/agnux" target="_blank" class="btn btn-secondary">
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <path
+                            d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.831.092-.646.35-1.086.636-1.336-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836c.85.004 1.705.114 2.504.336 1.909-1.294 2.747-1.025 2.747-1.025.546 1.379.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.161 22 16.416 22 12c0-5.523-4.477-10-10-10z" />
+                    </svg>
+                    Ver en GitHub
+                </a>
+            </div>
+        </div>
+
+        <!-- Media Stack (Screenshot & Video) -->
+        <div class="media-stack">
+            <!-- Interfaz Principal -->
+            <div class="showcase">
+                <div class="showcase-header">
+                    <div class="dot"></div>
+                    <div class="dot"></div>
+                    <div class="dot"></div>
+                </div>
+                <img src="src/Captura de pantalla 2026-05-29 175442.png" alt="AGNUX OS Interface">
+            </div>
+
+            <!-- Video Demostrativo -->
+            <div class="showcase">
+                <div class="showcase-header">
+                    <div class="dot"></div>
+                    <div class="dot"></div>
+                    <div class="dot"></div>
+                </div>
+                <video autoplay loop muted playsinline controls>
+                    <source src="src/agnuxEstilos.mp4" type="video/mp4">
+                </video>
+            </div>
+        </div>
+
+        <h2 class="section-title">Ingeniería del Núcleo</h2>
+        <!-- Technical Features Grid -->
+        <div class="features">
+            <!-- Feature 1: Autogénesis -->
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <svg viewBox="0 0 24 24">
+                        <path
+                            d="M19.333 14.667L24 12l-4.667-2.667L16.667 4.667l-2.667 4.666L9.333 12l4.667 2.667 2.667 4.666 2.666-4.666zm-9.52-2.35l-2.146-3.753L4.333 6.667l3.334-1.897L9.813 1l2.146 3.753L15.333 6.667l-3.334 1.897-2.186 3.753zM5.333 15.333L2 17.333l3.333 1.897L7.48 23l2.146-3.753L13.333 17.333l-3.334-1.897-2.146-3.753-2.52 3.65z" />
+                    </svg>
+                </div>
+                <h3>Autogénesis de Código</h3>
+                <p>El Kernel posee la asombrosa capacidad de escribir, compilar e inyectar código Python dinámicamente
+                    en tiempo de ejecución. AGNUX programa sus propias *Tools* evolucionando sobre la marcha sin
+                    reinicios.</p>
+            </div>
+
+            <!-- Feature 2: Memoria Vectorial -->
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <svg viewBox="0 0 24 24">
+                        <path
+                            d="M21 16.5c0 .38-.21.71-.53.88l-7.9 4.44c-.16.12-.36.18-.57.18s-.41-.06-.57-.18l-7.9-4.44A.991.991 0 013 16.5v-9c0-.38.21-.71.53-.88l7.9-4.44c.16-.12.36-.18.57-.18s.41.06.57.18l7.9 4.44c.32.17.53.5.53.88v9zM12 4.15L6.04 7.5 12 10.85l5.96-3.35L12 4.15zm-6.96 5.1v5.6L11 18.2v-5.6l-5.96-3.35zm13.92 0L13 12.6v5.6l5.96-3.35v-5.6z" />
+                    </svg>
+                </div>
+                <h3>Recuerdos Criptográficos</h3>
+                <p>Conectado a Qdrant, AGNUX almacena memorias semánticas vectoriales a largo plazo. Aprende de tu
+                    estilo, recuerda tus preferencias pasadas y cruza información antigua para deducir contextos
+                    complejos de forma persistente.</p>
+            </div>
+
+            <!-- Feature 3: Seguridad Cloudflare -->
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <svg viewBox="0 0 24 24">
+                        <path
+                            d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z" />
+                    </svg>
+                </div>
+                <h3>Seguridad Zero Trust</h3>
+                <p>La infraestructura está blindada detrás de túneles oscuros de Cloudflare. Se han eliminado las
+                    vulnerables VPNs; el acceso se rige por aserción criptográfica directa al Kernel.</p>
+            </div>
+
+            <!-- Feature 4: Hardware Nativo -->
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <svg viewBox="0 0 24 24">
+                        <path
+                            d="M21 2H3c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8 15h-2v-2h2v2zm0-4h-2V7h2v6zm4 4h-2v-2h2v2zm0-4h-2V7h2v6zm4 4h-2v-2h2v2zm0-4h-2V7h2v6z" />
+                    </svg>
+                </div>
+                <h3>Hardware Recomendado</h3>
+                <p>Inferencia pura en local. Requiere CPU Multi-Core Moderno, mínimo 16GB de RAM (32GB recomendados) y
+                    GPU dedicada (NVIDIA RTX 3060+ de 8GB+ VRAM) para operar las bases de datos vectoriales en tiempo
+                    real.</p>
+            </div>
+        </div>
+
+        <h2 class="section-title">Ecosistema de Herramientas</h2>
+        <p class="subtitle" style="text-align: center; margin-bottom: 2rem;">El Kernel no solo responde texto, ejecuta
+            acciones sobre sistemas reales interactuando mediante su suite de utilidades auto-escritas.</p>
+
+        <div class="features">
+            <!-- Tool: Google Workspace -->
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <svg viewBox="0 0 24 24">
+                        <path
+                            d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z" />
+                    </svg>
+                </div>
+                <h3>Integración Google Workspace</h3>
+                <p>Acceso bidireccional a los servicios de Google Cloud. AGNUX es capaz de leer correos de Gmail,
+                    redactar borradores, y manipular documentos en Google Docs directamente desde la terminal principal.
+                </p>
+            </div>
+
+            <!-- Tool: Media Player -->
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <svg viewBox="0 0 24 24">
+                        <path
+                            d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z" />
+                    </svg>
+                </div>
+                <h3>Media Core Integrado</h3>
+                <p>AGNUX controla de forma inmersiva un reproductor multimedia en ventana flotante, siendo capaz de
+                    buscar videos o audios y proyectarlos en el escritorio de forma nativa a pedido del usuario.</p>
+            </div>
+
+            <!-- Tool: Calculadora Científica -->
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <svg viewBox="0 0 24 24">
+                        <path
+                            d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-6 14H7v-2h6v2zm4-4H7v-2h10v2zm0-4H7V7h10v2z" />
+                    </svg>
+                </div>
+                <h3>Matemáticas Computacionales</h3>
+                <p>Para no alucinar números, la IA cuenta con una herramienta exacta capaz de delegar ecuaciones,
+                    aritmética compleja o cálculos de servidor directamente al procesador local para obtener 100% de
+                    precisión.</p>
+            </div>
+
+            <!-- Tool: Clima y Noticias -->
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <svg viewBox="0 0 24 24">
+                        <path
+                            d="M19.36 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04A5.994 5.994 0 000 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.64-4.96z" />
+                    </svg>
+                </div>
+                <h3>Scraper de Tiempo Real</h3>
+                <p>El sistema obtiene datos en vivo de la red, como consultar reportes del clima, extraer el precio de
+                    criptomonedas o raspar sitios web para inyectar la realidad externa dentro del razonamiento interno
+                    del LLM.</p>
+            </div>
+        </div>
+
+        <h2 class="section-title">Filosofía de Desarrollo</h2>
+        <div class="features" style="grid-template-columns: 1fr; max-width: 900px; margin: 0 auto;">
+            <div class="feature-card" style="text-align: left;">
+                <h3 style="color: var(--accent-color); font-size: 1.5rem; margin-bottom: 1.5rem;">El Stack Tecnológico:
+                    ¿Por qué Python, Angular y Agno?</h3>
+                <p style="margin-bottom: 1.5rem;">
+                    AGNUX OS está diseñado con un objetivo claro: <strong>la democratización del desarrollo de
+                        IA</strong>. Podríamos haber construido el Kernel en lenguajes de bajo nivel y altísimo
+                    rendimiento como <em>Rust</em> o <em>C++</em>. Sin embargo, su extrema curva de aprendizaje, el
+                    estricto manejo de memoria y los lentos tiempos de compilación levantan un muro impenetrable para el
+                    90% de los creadores. AGNUX no busca ser una caja negra incomprensible, sino un terreno de juego
+                    abierto.
+                </p>
+                <p style="margin-bottom: 1.5rem;">
+                    Elegimos <strong>Python</strong> junto al marco de agentes <strong>Agno</strong> porque Python es el
+                    lenguaje nativo de la inteligencia artificial. Esto permite la verdadera magia de AGNUX: la
+                    <em>Autogénesis</em>. El sistema puede escribir, inyectar y ejecutar sus propias herramientas de
+                    forma instantánea. Si un usuario quiere alterar el núcleo, solo necesita leer código humano, sin
+                    lidiar con punteros ni compiladores estrictos.
+                </p>
+                <p>
+                    Para la interfaz gráfica, <strong>Angular (TypeScript)</strong> nos otorga el equilibrio perfecto.
+                    Permite iterar interfaces reactivas, fluidas y profundamente inmersivas a la velocidad frenética de
+                    la web, pero manteniendo la estructura rígida y robusta necesaria para simular un Sistema Operativo
+                    completo en cualquier pantalla.
+                </p>
+            </div>
+        </div>
+
+        <h2 class="section-title">Agradecimientos Especiales</h2>
+        <div class="features" style="grid-template-columns: 1fr; max-width: 900px; margin: 0 auto; margin-bottom: 2rem;">
+            <div class="feature-card" style="text-align: left; background: rgba(10,10,10,0.5); border-color: rgba(255,255,255,0.05);">
+                <p style="margin-bottom: 1rem; color: #ccc;">AGNUX OS descansa sobre los hombros de gigantes. Nuestro más sincero respeto y agradecimiento a los creadores de las herramientas que hicieron esto posible:</p>
+                <ul style="list-style-type: none; padding: 0; color: var(--text-muted); font-size: 0.95rem; line-height: 1.8;">
+                    <li>🐧 <strong>Linus Torvalds y la comunidad de Linux:</strong> Por construir el núcleo más estable e indomable del mundo informático.</li>
+                    <li>🤖 <strong>El equipo de Agno (Phidata):</strong> Por desarrollar la arquitectura fundacional de agentes de IA que le da "cerebro" al sistema.</li>
+                    <li>🅰️ <strong>Google y la comunidad de Angular:</strong> Por el framework que permite escalar interfaces web inmersivas con precisión milimétrica.</li>
+                    <li>☁️ <strong>Cloudflare:</strong> Por democratizar la seguridad cibernética global y los túneles Zero Trust.</li>
+                    <li>⚡ <strong>Sebastián Ramírez (FastAPI), Qdrant y Python:</strong> Por construir los pilares silenciosos, ultra-rápidos y vectoriales del backend moderno.</li>
+                </ul>
+            </div>
+        </div>
+
+        <footer class="footer">
+            <p>Arquitectura y Desarrollo por <strong>David Gonzalez</strong>. © 2026</p>
+            <p>Construido sobre <a href="https://github.com/davidzeus/agnux" target="_blank">Código Abierto</a>.</p>
+            <p style="font-size: 0.75rem; margin-top: 1rem; opacity: 0.6; letter-spacing: 1px; text-transform: uppercase;">Ingenio argentino, para el mundo 🇦🇷</p>
+        </footer>
+
+    </div>
+
+</body>
+
+</html>

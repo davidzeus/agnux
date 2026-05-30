@@ -60,6 +60,7 @@ services:
       - "80:80"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./site:/usr/share/nginx/html:ro
     networks:
       - agnux_net
     depends_on:
