@@ -531,50 +531,174 @@ async def procesar_generador_eventos(payload: TaskbarPrompt, is_google_connected
                 is_theme_request = any(kw in prompt_lower for kw in THEME_KEYWORDS)
 
                 if not interceptado and is_theme_request:
-                    logger.info("🎨 [FALLBACK-CODER] El modelo principal no aplicó el tema. Delegando a deepseek-coder...")
-                    yield json.dumps({"event": "TOOL-EXECUTE", "message": "🎨 Generando CSS con motor de código especializado...", "tool-name": "css-coder"}) + "\n"
-                    try:
-                        from agno.agent import Agent
-                        from agno.models.ollama import Ollama
-                        coder_model = os.environ.get("AGNUX_CODER_MODEL", "deepseek-coder:1.5b")
-                        ollama_host = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
-                        css_agent = Agent(
-                            model=Ollama(id=coder_model, host=ollama_host),
-                            system_message=(
-                                "Sos un experto en CSS. Tu ÚNICA tarea es devolver código CSS puro "
-                                "que modifique variables CSS de :root para un tema visual. "
-                                "SOLO devuelves el bloque :root { ... } sin explicaciones, sin markdown, sin comentarios. "
-                                "Las variables disponibles son: --agnux-bg-color, --agnux-text-primary, --agnux-text-secondary, "
-                                "--agnux-accent, --agnux-accent-glow, --agnux-accent-dim, --agnux-accent-border, "
-                                "--agnux-panel-bg, --agnux-panel-solid, --agnux-panel-border, --agnux-panel-blur, "
-                                "--agnux-font-main, --agnux-font-clock."
-                            ),
-                            markdown=False
-                        )
-                        css_prompt = f"Genera el bloque :root con variables CSS para un tema '{payload.prompt}'. Solo el bloque CSS, nada más."
-                        css_resp = css_agent.run(css_prompt)
-                        css_raw = css_resp.content if hasattr(css_resp, "content") else str(css_resp)
-                        # Limpiar posibles fences de markdown
-                        css_clean = css_raw.strip()
-                        for fence in ["```css", "```", "`"]:
-                            css_clean = css_clean.replace(fence, "")
-                        css_clean = css_clean.strip()
-                        if css_clean and ":root" in css_clean:
-                            logger.info(f"✅ [FALLBACK-CODER] CSS generado ({len(css_clean)} chars). Despachando SET-THEME.")
-                            payload_tema = {"event": "SET-THEME", "css-code": css_clean}
-                            yield f"event: SET-THEME\ndata: {json.dumps(payload_tema, ensure_ascii=False)}\n\n"
-                            try:
-                                themes_dir = os.path.join(BASE_DIR, "theme-profiles")
-                                os.makedirs(themes_dir, exist_ok=True)
-                                with open(os.path.join(themes_dir, f"{user_id_norm}.css"), "w", encoding="utf-8") as f:
-                                    f.write(css_clean)
-                            except Exception:
-                                pass
-                            interceptado = True
-                        else:
-                            logger.warning(f"⚠️ [FALLBACK-CODER] CSS inválido: {css_clean[:200]}")
-                    except Exception as e_css:
-                        logger.error(f"❌ [FALLBACK-CODER] Error generando CSS con {coder_model}: {e_css}")
+                    logger.info("🎨 [THEME-ENGINE] Generando tema CSS con motor especializado...")
+                    yield json.dumps({"event": "TOOL-EXECUTE", "message": "🎨 Aplicando tema visual...", "tool-name": "css-coder"}) + "\n"
+
+                    # ── Biblioteca de temas predefinidos (garantizan CSS válido) ──────
+                    TEMA_MAP = {
+                        "windows xp": """:root {
+  --agnux-bg-color: #3a6ea5;
+  --agnux-text-primary: #000000;
+  --agnux-text-secondary: #333333;
+  --agnux-accent: #245edb;
+  --agnux-accent-glow: rgba(36,94,219,0.5);
+  --agnux-accent-dim: rgba(36,94,219,0.2);
+  --agnux-accent-border: rgba(36,94,219,0.6);
+  --agnux-panel-bg: rgba(236,233,216,0.95);
+  --agnux-panel-solid: #ece9d8;
+  --agnux-panel-border: rgba(0,0,0,0.2);
+  --agnux-panel-blur: blur(0px);
+  --agnux-font-main: 'Tahoma', sans-serif;
+  --agnux-font-clock: 'Tahoma', sans-serif;
+}""",
+                        "matrix": """:root {
+  --agnux-bg-color: #000000;
+  --agnux-text-primary: #00ff41;
+  --agnux-text-secondary: #008f11;
+  --agnux-accent: #00ff41;
+  --agnux-accent-glow: rgba(0,255,65,0.6);
+  --agnux-accent-dim: rgba(0,255,65,0.15);
+  --agnux-accent-border: rgba(0,255,65,0.4);
+  --agnux-panel-bg: rgba(0,20,0,0.85);
+  --agnux-panel-solid: #001400;
+  --agnux-panel-border: rgba(0,255,65,0.25);
+  --agnux-panel-blur: blur(8px);
+  --agnux-font-main: 'Courier New', monospace;
+  --agnux-font-clock: 'Courier New', monospace;
+}""",
+                        "cyberpunk": """:root {
+  --agnux-bg-color: #0d0221;
+  --agnux-text-primary: #f8f8ff;
+  --agnux-text-secondary: #b967ff;
+  --agnux-accent: #ff2079;
+  --agnux-accent-glow: rgba(255,32,121,0.6);
+  --agnux-accent-dim: rgba(255,32,121,0.15);
+  --agnux-accent-border: rgba(255,32,121,0.4);
+  --agnux-panel-bg: rgba(13,2,33,0.85);
+  --agnux-panel-solid: #0d0221;
+  --agnux-panel-border: rgba(255,32,121,0.3);
+  --agnux-panel-blur: blur(12px);
+  --agnux-font-main: 'Rajdhani', sans-serif;
+  --agnux-font-clock: 'Orbitron', monospace;
+}""",
+                        "claro": """:root {
+  --agnux-bg-color: #f0f2f5;
+  --agnux-text-primary: #111111;
+  --agnux-text-secondary: #444444;
+  --agnux-accent: #0071e3;
+  --agnux-accent-glow: rgba(0,113,227,0.4);
+  --agnux-accent-dim: rgba(0,113,227,0.1);
+  --agnux-accent-border: rgba(0,113,227,0.3);
+  --agnux-panel-bg: rgba(255,255,255,0.85);
+  --agnux-panel-solid: #ffffff;
+  --agnux-panel-border: rgba(0,0,0,0.1);
+  --agnux-panel-blur: blur(16px);
+  --agnux-font-main: 'Inter', 'Helvetica Neue', sans-serif;
+  --agnux-font-clock: 'Inter', sans-serif;
+}""",
+                        "oscuro": """:root {
+  --agnux-bg-color: #0a0a0f;
+  --agnux-text-primary: #e8e8f0;
+  --agnux-text-secondary: #888899;
+  --agnux-accent: #00e5ff;
+  --agnux-accent-glow: rgba(0,229,255,0.5);
+  --agnux-accent-dim: rgba(0,229,255,0.12);
+  --agnux-accent-border: rgba(0,229,255,0.3);
+  --agnux-panel-bg: rgba(10,10,20,0.8);
+  --agnux-panel-solid: #0d0d1a;
+  --agnux-panel-border: rgba(0,229,255,0.15);
+  --agnux-panel-blur: blur(20px);
+  --agnux-font-main: 'Inter', sans-serif;
+  --agnux-font-clock: 'Roboto Mono', monospace;
+}""",
+                        "hacker": """:root {
+  --agnux-bg-color: #000000;
+  --agnux-text-primary: #33ff33;
+  --agnux-text-secondary: #00aa00;
+  --agnux-accent: #33ff33;
+  --agnux-accent-glow: rgba(51,255,51,0.5);
+  --agnux-accent-dim: rgba(51,255,51,0.1);
+  --agnux-accent-border: rgba(51,255,51,0.3);
+  --agnux-panel-bg: rgba(0,10,0,0.9);
+  --agnux-panel-solid: #000a00;
+  --agnux-panel-border: rgba(51,255,51,0.2);
+  --agnux-panel-blur: blur(4px);
+  --agnux-font-main: 'Courier New', monospace;
+  --agnux-font-clock: 'Courier New', monospace;
+}""",
+                        "neon": """:root {
+  --agnux-bg-color: #050510;
+  --agnux-text-primary: #ffffff;
+  --agnux-text-secondary: #cc99ff;
+  --agnux-accent: #ff00ff;
+  --agnux-accent-glow: rgba(255,0,255,0.6);
+  --agnux-accent-dim: rgba(255,0,255,0.15);
+  --agnux-accent-border: rgba(255,0,255,0.4);
+  --agnux-panel-bg: rgba(5,5,20,0.85);
+  --agnux-panel-solid: #080818;
+  --agnux-panel-border: rgba(255,0,255,0.3);
+  --agnux-panel-blur: blur(10px);
+  --agnux-font-main: 'Orbitron', monospace;
+  --agnux-font-clock: 'Orbitron', monospace;
+}""",
+                    }
+
+                    # Buscar coincidencia en el mapa de temas
+                    css_final = None
+                    for kw, css_predefinido in TEMA_MAP.items():
+                        if kw in prompt_lower:
+                            css_final = css_predefinido
+                            logger.info(f"✅ [THEME-ENGINE] Tema predefinido encontrado: '{kw}'")
+                            break
+
+                    if not css_final:
+                        # Fallback: deepseek-coder con prompt muy estricto
+                        try:
+                            from agno.agent import Agent
+                            from agno.models.ollama import Ollama
+                            coder_model = os.environ.get("AGNUX_CODER_MODEL", "deepseek-coder:1.5b")
+                            ollama_host = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
+                            css_agent = Agent(
+                                model=Ollama(id=coder_model, host=ollama_host),
+                                system_message="Output ONLY a valid CSS :root { } block with color variables. No explanations. No markdown. Just CSS.",
+                                markdown=False
+                            )
+                            tema_desc = payload.prompt
+                            css_prompt = (
+                                f":root {{\n  --agnux-bg-color: /* color de fondo para tema {tema_desc} */;\n"
+                                f"  --agnux-text-primary: /* color de texto */;\n"
+                                f"  --agnux-accent: /* color de acento */;\n"
+                                f"  --agnux-panel-bg: /* fondo de paneles */;\n}}\n\n"
+                                f"Complete ONLY the values above for a '{tema_desc}' theme. Output just the completed :root block."
+                            )
+                            css_resp = css_agent.run(css_prompt)
+                            css_raw = css_resp.content if hasattr(css_resp, "content") else str(css_resp)
+                            css_clean = css_raw.strip()
+                            for fence in ["```css", "```", "`"]:
+                                css_clean = css_clean.replace(fence, "")
+                            css_clean = css_clean.strip()
+                            # Reparar llave de cierre faltante
+                            if ":root" in css_clean and not css_clean.rstrip().endswith("}"):
+                                css_clean = css_clean.rstrip() + "\n}"
+                            if ":root" in css_clean and css_clean.count("{") == css_clean.count("}"):
+                                css_final = css_clean
+                                logger.info(f"✅ [CODER-FALLBACK] CSS generado con deepseek ({len(css_final)} chars)")
+                        except Exception as e_css:
+                            logger.error(f"❌ [CODER-FALLBACK] Error: {e_css}")
+
+                    if css_final:
+                        payload_tema = {"event": "SET-THEME", "css-code": css_final}
+                        yield f"event: SET-THEME\ndata: {json.dumps(payload_tema, ensure_ascii=False)}\n\n"
+                        try:
+                            themes_dir = os.path.join(BASE_DIR, "theme-profiles")
+                            os.makedirs(themes_dir, exist_ok=True)
+                            with open(os.path.join(themes_dir, f"{user_id_norm}.css"), "w", encoding="utf-8") as f:
+                                f.write(css_final)
+                        except Exception:
+                            pass
+                        interceptado = True
+                    else:
+                        logger.warning("⚠️ [THEME-ENGINE] No se pudo generar CSS para el tema solicitado.")
 
                 if not interceptado:
                     payload_ventana = {
