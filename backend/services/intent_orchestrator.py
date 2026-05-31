@@ -154,6 +154,8 @@ Tu identificador de sesión activo es terminal-id='{terminal_id_norm}', user-id=
 ## HERRAMIENTAS DISPONIBLES
 {herramientas_str}
 
+**IMPORTANTE: SIEMPRE DEBES UTILIZAR LAS HERRAMIENTAS para acciones como cálculos matemáticos, inyección de CSS o control de multimedia. NUNCA asumas el cálculo mentalmente ni simules la acción en texto. INVOCA LA HERRAMIENTA CORRESPONDIENTE.**
+
 ## 1.0 REGLAS CONSTITUCIONALES DE NOMENCLATURA (ESTÁNDAR RFC-1035 / DNS / LINUX KERNEL)
 - Está TAXATIVAMENTE PROHIBIDO el uso de guiones bajos ('_') en cualquier identificador de
   usuario, nombre de terminal, variable de contexto del host o nombre de herramienta dinámica.

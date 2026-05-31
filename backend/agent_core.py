@@ -456,6 +456,8 @@ TOOLS_BASE.extend([
 # orquestador en cada llamada (via additional_messages), para poder
 # personalizar el contexto de memoria episódica por sesión.
 # =====================================================================
+from agno.storage.agent.sqlite import SqliteAgentStorage
+
 agnux_agent = Agent(
     model=objeto_modelo,
     # description e instructions se pasan en tiempo de ejecución desde
@@ -464,6 +466,8 @@ agnux_agent = Agent(
     instructions=None,
     system_message=None,
     tools=TOOLS_BASE,
+    storage=SqliteAgentStorage(table_name="agnux_sessions", db_file=os.path.join(base_dir, "sessions.db")),
+    add_history_to_messages=True,
     # stream_intermediate_steps debe ser True para que arun() emita
     # ToolCallStartedEvent y ToolCallCompletedEvent al orquestador.
     markdown=False,
