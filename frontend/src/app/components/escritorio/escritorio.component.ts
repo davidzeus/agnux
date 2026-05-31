@@ -547,17 +547,49 @@ export class EscritorioComponent implements OnInit, OnDestroy {
     if (!this.promptInput.trim()) return;
     this.cargando = true;
 
-    // Forzamos a abrir una ventana nueva por cada comando, desligando la actual
-    this.currentHtmlWindowId = null;
+    const userText = this.promptInput;
+    this.promptInput = ''; // Limpiar input
+
+    // Reutilizar la ventana actual si existe, o crear una nueva
+    if (!this.currentHtmlWindowId) {
+      this.currentHtmlWindowId = `agnux-ai-window-${Date.now()}`;
+    }
+
+    let ventanaIA = this.ventanas.find(v => v.id === this.currentHtmlWindowId);
+    
+    if (!ventanaIA) {
+      ventanaIA = {
+        id: this.currentHtmlWindowId,
+        titulo: '🧠 AGNUX OS Core - IA',
+        tipo: 'html',
+        htmlDinamico: '',
+        x: 150 + (this.ventanas.length * 20),
+        y: 100 + (this.ventanas.length * 20),
+        width: 550,
+        height: 420,
+        maximizada: false,
+        zIndex: ++this.maxZIndex
+      };
+      this.ventanas = [...this.ventanas, ventanaIA];
+    } else {
+      this.enfocarVentana(ventanaIA);
+    }
+
+    // Inyectar visualmente el comando del usuario en el historial
+    const separador = ventanaIA.htmlDinamico ? '<br><br>' : '';
+    ventanaIA.htmlDinamico = (ventanaIA.htmlDinamico || '') + 
+      separador + 
+      `<span style="color: var(--agnux-accent); font-weight: bold; font-family: monospace;">> ${this.escapeHtml(userText)}</span><br><br>`;
+      
+    this.cdr.detectChanges();
 
     try {
-      await this.agnuxService.enviarPromptStream(this.promptInput, this.terminalId);
+      await this.agnuxService.enviarPromptStream(userText, this.terminalId);
     } catch (err) {
       console.error(err);
       this.spawnVentana('texto', '❌ Error Local', { error: 'No se pudo conectar con AGNUX' });
     } finally {
       this.cargando = false;
-      this.promptInput = ''; // Limpiar input
     }
   }
 

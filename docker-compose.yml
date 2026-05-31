@@ -8,10 +8,11 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - AGNUX_IA_PROVIDER=local
-      - AGNUX_ACTIVE_MODEL=ministral-es:latest  # 🔥 El orquestador principal del SO
-      - OLLAMA_HOST=http://10.10.0.48:11434
-      - QDRANT_HOST=http://qdrant_db:6333     # 🔌 Enlace interno al bus de Rust de Qdrant
+      - AGNUX_IA_PROVIDER=${AGNUX_IA_PROVIDER:-local}
+      - AGNUX_ACTIVE_MODEL=${AGNUX_ACTIVE_MODEL:-llama3.1:8b}
+      - AGNUX_CODER_MODEL=${AGNUX_CODER_MODEL:-deepseek-coder:1.5b}
+      - OLLAMA_HOST=${OLLAMA_HOST:-http://10.10.0.48:11434}
+      - QDRANT_HOST=${QDRANT_HOST:-http://qdrant_db:6333}
       - PYTHONUNBUFFERED=1
     volumes:
       - ./backend:/app
