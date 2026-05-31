@@ -488,21 +488,22 @@ async def procesar_generador_eventos(payload: TaskbarPrompt, is_google_connected
                 SESSION_HISTORY[session_id].append(f"AGNUX: {respuesta_completa.strip()}")
             
             if respuesta_completa.strip() and not ultima_tool_name:
-                # ── Sniff: ¿el modelo escribió un JSON de herramienta como texto? ──
                 texto_norm = respuesta_completa.strip()
                 interceptado = False
-                # Puede venir envuelto en ```json ... ``` o solo como JSON plano
+
                 import re as _re
+
+                # ── Sniff 1: ¿La respuesta contiene JSON con cssCode? ──────────
                 json_match = _re.search(r'\{.*\}', texto_norm, _re.DOTALL)
                 if json_match:
                     try:
                         candidato = json.loads(json_match.group(0))
-                        css_code = candidato.get("cssCode") or candidato.get("css-code")
+                        css_code  = candidato.get("cssCode") or candidato.get("css-code")
                         image_url = candidato.get("imageUrl") or candidato.get("image-url")
-                        agnux_event = candidato.get("__agnux_event")
+                        agnux_ev  = candidato.get("__agnux_event")
 
                         if css_code:
-                            logger.info("🎨 [INTERCEPT] Respuesta de texto contiene cssCode — despachando SET-THEME")
+                            logger.info("🎨 [INTERCEPT-JSON] cssCode en texto — despachando SET-THEME")
                             payload_tema = {"event": "SET-THEME", "css-code": css_code}
                             yield f"event: SET-THEME\ndata: {json.dumps(payload_tema, ensure_ascii=False)}\n\n"
                             try:
@@ -513,19 +514,67 @@ async def procesar_generador_eventos(payload: TaskbarPrompt, is_google_connected
                             except Exception:
                                 pass
                             interceptado = True
-
                         elif image_url:
-                            logger.info("🖼️ [INTERCEPT] Respuesta de texto contiene imageUrl — despachando SET-WALLPAPER")
                             yield f"event: SET-WALLPAPER\ndata: {json.dumps({'event': 'SET-WALLPAPER', 'image-url': image_url}, ensure_ascii=False)}\n\n"
                             interceptado = True
-
-                        elif agnux_event:
-                            logger.info(f"⚡ [INTERCEPT] Respuesta de texto contiene __agnux_event='{agnux_event}' — re-despachando")
-                            yield f"event: {agnux_event}\ndata: {json.dumps(candidato, ensure_ascii=False)}\n\n"
+                        elif agnux_ev:
+                            yield f"event: {agnux_ev}\ndata: {json.dumps(candidato, ensure_ascii=False)}\n\n"
                             interceptado = True
-
                     except (json.JSONDecodeError, TypeError):
                         pass
+
+                # ── Sniff 2: ¿El prompt del usuario pedía un tema CSS y el modelo NO llamó la tool? ──
+                THEME_KEYWORDS = ["tema", "estilo", "css", "color", "fondo", "modo oscuro", "modo claro",
+                                  "theme", "style", "dark", "light", "matrix", "windows xp", "cyberpunk",
+                                  "neon", "hacker", "minimalista"]
+                prompt_lower = payload.prompt.lower()
+                is_theme_request = any(kw in prompt_lower for kw in THEME_KEYWORDS)
+
+                if not interceptado and is_theme_request:
+                    logger.info("🎨 [FALLBACK-CODER] El modelo principal no aplicó el tema. Delegando a deepseek-coder...")
+                    yield json.dumps({"event": "TOOL-EXECUTE", "message": "🎨 Generando CSS con motor de código especializado...", "tool-name": "css-coder"}) + "\n"
+                    try:
+                        from agno.agent import Agent
+                        from agno.models.ollama import Ollama
+                        coder_model = os.environ.get("AGNUX_CODER_MODEL", "deepseek-coder:1.5b")
+                        ollama_host = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
+                        css_agent = Agent(
+                            model=Ollama(id=coder_model, host=ollama_host),
+                            system_message=(
+                                "Sos un experto en CSS. Tu ÚNICA tarea es devolver código CSS puro "
+                                "que modifique variables CSS de :root para un tema visual. "
+                                "SOLO devuelves el bloque :root { ... } sin explicaciones, sin markdown, sin comentarios. "
+                                "Las variables disponibles son: --agnux-bg-color, --agnux-text-primary, --agnux-text-secondary, "
+                                "--agnux-accent, --agnux-accent-glow, --agnux-accent-dim, --agnux-accent-border, "
+                                "--agnux-panel-bg, --agnux-panel-solid, --agnux-panel-border, --agnux-panel-blur, "
+                                "--agnux-font-main, --agnux-font-clock."
+                            ),
+                            markdown=False
+                        )
+                        css_prompt = f"Genera el bloque :root con variables CSS para un tema '{payload.prompt}'. Solo el bloque CSS, nada más."
+                        css_resp = css_agent.run(css_prompt)
+                        css_raw = css_resp.content if hasattr(css_resp, "content") else str(css_resp)
+                        # Limpiar posibles fences de markdown
+                        css_clean = css_raw.strip()
+                        for fence in ["```css", "```", "`"]:
+                            css_clean = css_clean.replace(fence, "")
+                        css_clean = css_clean.strip()
+                        if css_clean and ":root" in css_clean:
+                            logger.info(f"✅ [FALLBACK-CODER] CSS generado ({len(css_clean)} chars). Despachando SET-THEME.")
+                            payload_tema = {"event": "SET-THEME", "css-code": css_clean}
+                            yield f"event: SET-THEME\ndata: {json.dumps(payload_tema, ensure_ascii=False)}\n\n"
+                            try:
+                                themes_dir = os.path.join(BASE_DIR, "theme-profiles")
+                                os.makedirs(themes_dir, exist_ok=True)
+                                with open(os.path.join(themes_dir, f"{user_id_norm}.css"), "w", encoding="utf-8") as f:
+                                    f.write(css_clean)
+                            except Exception:
+                                pass
+                            interceptado = True
+                        else:
+                            logger.warning(f"⚠️ [FALLBACK-CODER] CSS inválido: {css_clean[:200]}")
+                    except Exception as e_css:
+                        logger.error(f"❌ [FALLBACK-CODER] Error generando CSS con {coder_model}: {e_css}")
 
                 if not interceptado:
                     payload_ventana = {
