@@ -4,6 +4,12 @@
        (click)="toggleWidget()">
     
     <div *ngIf="currentState === 'compact'" class="content-compact">
+      <div class="status-monitors">
+        <span class="monitor-icon" (mouseenter)="onMonitorHover('hardware')" (mouseleave)="onMonitorLeave()">💻</span>
+        <span class="monitor-icon" (mouseenter)="onMonitorHover('wifi')" (mouseleave)="onMonitorLeave()">🛜</span>
+        <span class="monitor-icon" (mouseenter)="onMonitorHover('battery')" (mouseleave)="onMonitorLeave()">🔋</span>
+      </div>
+      <div class="divider"></div>
       <span class="pulse-dot"></span>
       <span class="task-icon">{{ activeTasks.length > 0 ? activeTasks[0].icon : '🛡️' }}</span>
     </div>
@@ -37,5 +43,38 @@
       </div>
     </div>
 
+  </div>
+
+  <!-- TOOLTIP FLOTANTE DE MONITORES -->
+  <div class="monitor-tooltip" *ngIf="hoveredMonitor" (mouseenter)="onMonitorHover(hoveredMonitor)" (mouseleave)="onMonitorLeave()">
+    <div *ngIf="!monitorData" class="loading-data">
+      <span class="spin">⚙️</span> Escaneando...
+    </div>
+    
+    <div *ngIf="monitorData">
+      <!-- HARDWARE -->
+      <div *ngIf="hoveredMonitor === 'hardware'">
+        <div class="tooltip-title">💻 SISTEMA</div>
+        <div class="stat-row"><span>CPU:</span> <strong>{{ monitorData.hardware?.cpu?.uso_porcentaje }}%</strong> ({{ monitorData.hardware?.cpu?.cantidad_nucleos }} Cores)</div>
+        <div class="stat-row"><span>RAM:</span> <strong>{{ monitorData.hardware?.memoria?.porcentaje_uso }}%</strong> ({{ monitorData.hardware?.memoria?.usado_gb }} / {{ monitorData.hardware?.memoria?.total_gb }} GB)</div>
+        <div class="stat-row"><span>Temp:</span> <strong style="color:var(--agnux-accent)">Normal</strong></div>
+      </div>
+      
+      <!-- WIFI -->
+      <div *ngIf="hoveredMonitor === 'wifi'">
+        <div class="tooltip-title">🛜 RED SEGURA</div>
+        <div class="stat-row"><span>Estado:</span> <strong style="color:var(--agnux-accent)">Conectado (Zero Trust)</strong></div>
+        <div class="stat-row"><span>Tunnel:</span> <strong>Cloudflare Access</strong></div>
+        <div class="stat-row"><span>Latencia:</span> <strong>~12ms</strong></div>
+      </div>
+      
+      <!-- BATTERY -->
+      <div *ngIf="hoveredMonitor === 'battery'">
+        <div class="tooltip-title">🔋 ENERGÍA</div>
+        <div class="stat-row"><span>Nivel:</span> <strong>{{ monitorData.power?.porcentaje || '100%' }}</strong></div>
+        <div class="stat-row"><span>Estado:</span> <strong [style.color]="monitorData.power?.estado === 'AC_CONECTADO' || monitorData.power?.estado === 'CONECTADO' ? 'var(--agnux-accent)' : '#ffaa44'">{{ monitorData.power?.estado }}</strong></div>
+        <div class="stat-row" *ngIf="monitorData.power?.tiempo_restante"><span>Restante:</span> <strong>{{ monitorData.power?.tiempo_restante }}</strong></div>
+      </div>
+    </div>
   </div>
 </div>

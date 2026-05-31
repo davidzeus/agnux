@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from core.config import logger
 from core.memory import inicializar_qdrant_colecciones
 
-from api.routes import auth, intent
+from api.routes import auth, intent, system
 
 app = FastAPI(title="AGNUX OS Core API", version="2.0.0", redirect_slashes=True)
 
@@ -23,3 +23,4 @@ async def inicializar_sistema():
 # Registrar Rutas
 app.include_router(auth.router, prefix="/api", tags=["Auth"])
 app.include_router(intent.router, prefix="/api", tags=["System Intents"])
+app.include_router(system.router, prefix="/api/system", tags=["System Status"])

@@ -10,11 +10,7 @@ import os
 import json
 import asyncio
 
-from agno.agent import (
-    RunContentEvent,
-    ToolCallStartedEvent,
-    ToolCallCompletedEvent,
-)
+from agno.agent import Agent
 from qdrant_client.models import Filter, FieldCondition, MatchValue
 
 from core.config import logger, BASE_DIR
@@ -321,112 +317,105 @@ async def procesar_generador_eventos(payload: TaskbarPrompt, is_google_connected
                         "user-id":     user_id_norm,
                     },
                 ):
-                    # ── TOKEN de respuesta textual ─────────────────────
-                    if isinstance(evento, RunContentEvent):
-                        token = evento.content or ""
-                        if token:
-                            respuesta_completa += token
-                            yield f"event: TOKEN\ndata: {json.dumps(token, ensure_ascii=False)}\n\n"
-
+                    # En Agno 1.6+, arun(stream=True) devuelve objetos RunResponse.
+                    # El tipo de evento puede estar en evento.event (RunEvent enum) 
+                    # y los datos en evento.content o evento.tools.
+                    event_type = str(getattr(evento, "event", getattr(evento, "type", "")))
+                    
                     # ── INICIO de llamada a herramienta ───────────────
-                    elif isinstance(evento, ToolCallStartedEvent):
-                        # Normalizamos el nombre a guiones medios para el frontend
-                        ultima_tool_name = evento.tool.tool_name.replace("_", "-")
-                        ultima_tool_args = evento.tool.tool_args or {}
+                    if "tool_call_started" in event_type.lower():
+                        # Extraer info de la herramienta desde evento.tools (lista de diccionarios o objetos)
+                        tools = getattr(evento, "tools", [])
+                        if tools and len(tools) > 0:
+                            tool_data = tools[0]
+                            t_name = getattr(tool_data, "tool_name", getattr(tool_data, "name", "unknown_tool"))
+                            t_args = getattr(tool_data, "tool_args", getattr(tool_data, "arguments", {}))
+                            
+                            ultima_tool_name = t_name.replace("_", "-")
+                            ultima_tool_args = t_args
 
-                        # Evento especial de UI para el sandbox
-                        if ultima_tool_name == "evaluar-codigo-sandbox":
-                            yield json.dumps({
-                                "event":    "SANDBOX-RUNNING",
-                                "message":  f"🐳 Evaluando código en contenedor Docker aislado...",
-                                "language": ultima_tool_args.get("lenguaje", "?"),
-                            }) + "\n"
-                        else:
-                            yield json.dumps({
-                                "event":    "TOOL-EXECUTE",
-                                "message":  f"Ejecutando herramienta: {ultima_tool_name}",
-                                "tool-name": ultima_tool_name,
-                            }) + "\n"
+                            # Evento especial de UI para el sandbox
+                            if ultima_tool_name == "evaluar-codigo-sandbox":
+                                yield json.dumps({
+                                    "event":    "SANDBOX-RUNNING",
+                                    "message":  f"🐳 Evaluando código en contenedor Docker aislado...",
+                                    "language": ultima_tool_args.get("lenguaje", "?") if isinstance(ultima_tool_args, dict) else "?",
+                                }) + "\n"
+                            else:
+                                yield json.dumps({
+                                    "event":    "TOOL-EXECUTE",
+                                    "message":  f"Ejecutando herramienta: {ultima_tool_name}",
+                                    "tool-name": ultima_tool_name,
+                                }) + "\n"
 
-                        logger.info(f"⚙️ [AGNO] ToolCallStarted: '{ultima_tool_name}' args={ultima_tool_args}")
+                            logger.info(f"⚙️ [AGNO] ToolCallStarted: '{ultima_tool_name}' args={ultima_tool_args}")
 
                     # ── RESULTADO de llamada a herramienta ────────────
-                    elif isinstance(evento, ToolCallCompletedEvent):
-                        tool_name_result = evento.tool.tool_name.replace("_", "-")
-                        resultado_bruto  = str(evento.tool.result or "")
-                        logger.info(f"✅ [AGNO] ToolCallCompleted: '{tool_name_result}' → {resultado_bruto[:120]}")
+                    elif "tool_call_completed" in event_type.lower():
+                        tools = getattr(evento, "tools", [])
+                        if tools and len(tools) > 0:
+                            tool_data = tools[0]
+                            t_name = getattr(tool_data, "tool_name", getattr(tool_data, "name", "unknown_tool"))
+                            t_result = getattr(tool_data, "content", getattr(tool_data, "result", ""))
+                            
+                            tool_name_result = t_name.replace("_", "-")
+                            resultado_bruto  = str(t_result or "")
+                            logger.info(f"✅ [AGNO] ToolCallCompleted: '{tool_name_result}' → {resultado_bruto[:120]}")
 
-                        # ── 🐳 INTERCEPCIÓN DEL RESULTADO DE SANDBOX ────────
-                        # Se evalúa ANTES de cualquier otro dispatch para poder
-                        # emitir SANDBOX-OK o dejar que Agno reintente.
-                        try:
-                            sandbox_data = json.loads(resultado_bruto)
-                            if sandbox_data.get("__sandbox_result"):
-                                lang        = sandbox_data.get("language", "")
-                                ok          = sandbox_data.get("ok", False)
-                                output      = sandbox_data.get("output", "")
-                                codigo      = sandbox_data.get("codigo", "")
-                                descripcion = sandbox_data.get("descripcion", "")
-                                exec_ms     = sandbox_data.get("execution-ms", 0)
-                                exit_code   = sandbox_data.get("exit-code", -1)
+                            # ── 🐳 INTERCEPCIÓN DEL RESULTADO DE SANDBOX ────────
+                            try:
+                                sandbox_data = json.loads(resultado_bruto)
+                                if sandbox_data.get("__sandbox_result"):
+                                    lang        = sandbox_data.get("language", "")
+                                    ok          = sandbox_data.get("ok", False)
+                                    output      = sandbox_data.get("output", "")
+                                    codigo      = sandbox_data.get("codigo", "")
+                                    descripcion = sandbox_data.get("descripcion", "")
+                                    exec_ms     = sandbox_data.get("execution-ms", 0)
+                                    exit_code   = sandbox_data.get("exit-code", -1)
 
-                                if ok:
-                                    # ✅ Código validado → emitir ventana al escritorio
-                                    logger.info(f"✅ [SANDBOX] Código aprobado en {exec_ms}ms. Enviando al escritorio.")
-                                    sandbox_ok_payload = {
-                                        "window-id":    "sandbox-output",
-                                        "title":        f"🐳 Sandbox [{lang}] — {descripcion or 'Código Evaluado'}",
-                                        "type":         "sandbox-result",
-                                        "language":     lang,
-                                        "codigo":       codigo,
-                                        "output":       output,
-                                        "execution-ms": exec_ms,
-                                        "validated":    True,
-                                    }
-                                    yield (
-                                        f"event: SANDBOX-OK\n"
-                                        f"data: {json.dumps(sandbox_ok_payload, ensure_ascii=False)}\n\n"
-                                    )
-                                    resultado_tool = f"Código validado en sandbox ({exec_ms}ms). Enviado al escritorio."
+                                    if ok:
+                                        logger.info(f"✅ [SANDBOX] Código aprobado en {exec_ms}ms. Enviando al escritorio.")
+                                        sandbox_ok_payload = {
+                                            "window-id":    "sandbox-output",
+                                            "title":        f"🐳 Sandbox [{lang}] — {descripcion or 'Código Evaluado'}",
+                                            "type":         "sandbox-result",
+                                            "language":     lang,
+                                            "codigo":       codigo,
+                                            "output":       output,
+                                            "execution-ms": exec_ms,
+                                            "validated":    True,
+                                        }
+                                        yield f"event: SANDBOX-OK\ndata: {json.dumps(sandbox_ok_payload, ensure_ascii=False)}\n\n"
+                                        resultado_tool = f"Código validado en sandbox ({exec_ms}ms). Enviado al escritorio."
+                                    else:
+                                        error_msg = sandbox_data.get("error-detail", "Error desconocido")
+                                        logger.warning(f"⚠️ [SANDBOX] Código fallido (exit={exit_code}). Error: {output[:200]}")
+                                        yield json.dumps({
+                                            "event":      "SANDBOX-RETRY",
+                                            "message":    f"🔄 El código falló. Corrigiendo automáticamente...",
+                                            "exit-code":  exit_code,
+                                            "error":      output[:500]
+                                        }) + "\n"
+                                        resultado_tool = f"SANDBOX FAIL: {error_msg}. Por favor corregí el código."
+
+                                    yield json.dumps({"event": "TOOL-RESULT", "data": resultado_tool}) + "\n"
+                                    continue
+                            except (json.JSONDecodeError, TypeError, KeyError):
+                                pass
+
+                            # ── Interceptar si el resultado es un evento client-side ─
+                            try:
+                                resultado_json = json.loads(resultado_bruto)
+                                if "__agnux_event" in resultado_json:
+                                    evento_tipo    = resultado_json["__agnux_event"]
+                                    sse_frame      = f"event: {evento_tipo}\ndata: {json.dumps(resultado_json, ensure_ascii=False)}\n\n"
+                                    yield sse_frame
+                                    resultado_tool = f"Evento '{evento_tipo}' despachado al frontend."
                                 else:
-                                    # ❌ Código falló → notificar al usuario y dejar que Agno corrija
-                                    error_msg = sandbox_data.get("error-detail", "Error desconocido")
-                                    logger.warning(
-                                        f"⚠️ [SANDBOX] Código fallido (exit={exit_code}). "
-                                        f"El agente debe corregir y reintentar. Error: {output[:200]}"
-                                    )
-                                    yield json.dumps({
-                                        "event":      "SANDBOX-RETRY",
-                                        "message":    f"🔄 El código falló. Corrigiendo automáticamente...",
-                                        "exit-code":  exit_code,
-                                        "error":      output[:500],
-                                    }) + "\n"
-                                    resultado_tool = (
-                                        f"SANDBOX FAIL (exit={exit_code}). "
-                                        f"Error: {output[:300]}. "
-                                        f"Corrigé el código y volvé a llamar evaluar_codigo_sandbox."
-                                    )
-                                # En ambos casos ya manejamos el resultado; saltamos el dispatch normal
-                                yield json.dumps({"event": "TOOL-RESULT", "data": resultado_tool}) + "\n"
-                                continue  # Saltamos el bloque de dispatch genérico de abajo
-
-                        except (json.JSONDecodeError, TypeError, KeyError):
-                            pass  # No es JSON de sandbox → seguir con el flujo normal
-
-                        # ── Interceptar si el resultado es un evento client-side ─
-                        # Las tools open-system-app y open-local-media devuelven JSON
-                        # con __agnux_event para ser despachado como SSE al frontend.
-                        try:
-                            resultado_json = json.loads(resultado_bruto)
-                            if "__agnux_event" in resultado_json:
-                                evento_tipo    = resultado_json["__agnux_event"]
-                                sse_frame      = f"event: {evento_tipo}\ndata: {json.dumps(resultado_json, ensure_ascii=False)}\n\n"
-                                yield sse_frame
-                                resultado_tool = f"Evento '{evento_tipo}' despachado al frontend."
-                            else:
+                                    resultado_tool = resultado_bruto
+                            except (json.JSONDecodeError, TypeError):
                                 resultado_tool = resultado_bruto
-                        except (json.JSONDecodeError, TypeError):
-                            resultado_tool = resultado_bruto
 
                         # ── Dispatch de SYSTEM_TOOLS (wallpaper, CSS, media) ──
                         sse_frame_sys, resultado_sys = await _despachar_system_tool(

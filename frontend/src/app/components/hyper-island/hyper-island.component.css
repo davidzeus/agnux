@@ -123,3 +123,103 @@
 .widget-header { display: flex; justify-content: space-between; width: 100%; font-size: 11px; color: var(--agnux-text-secondary); font-family: var(--agnux-font-main); letter-spacing: 1px; }
 .close-btn { background: none; border: none; color: var(--agnux-text-secondary); cursor: pointer; transition: 0.2s; }
 .close-btn:hover { color: var(--agnux-text-primary); }
+
+/* =====================================================================
+   📌 MONITORES DE SISTEMA Y TOOLTIP (Hover stats)
+   ===================================================================== */
+.status-monitors {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding-right: 2px;
+}
+
+.monitor-icon {
+  font-size: 14px;
+  cursor: pointer;
+  opacity: 0.5;
+  transition: opacity 0.2s, transform 0.2s, text-shadow 0.2s;
+}
+
+.monitor-icon:hover {
+  opacity: 1;
+  transform: scale(1.15);
+  text-shadow: 0 0 8px var(--agnux-accent-glow);
+}
+
+.divider {
+  width: 1px;
+  height: 16px;
+  background-color: var(--agnux-accent-border);
+  opacity: 0.3;
+  margin: 0 4px;
+}
+
+.monitor-tooltip {
+  position: absolute;
+  top: calc(100% + 12px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--agnux-panel-bg);
+  backdrop-filter: var(--agnux-panel-blur);
+  -webkit-backdrop-filter: var(--agnux-panel-blur);
+  border: 1px solid var(--agnux-accent-border);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5), inset 0 0 0 1px var(--agnux-panel-border);
+  border-radius: 12px;
+  padding: 12px 16px;
+  min-width: 180px;
+  z-index: 10000;
+  color: var(--agnux-text-primary);
+  font-family: var(--agnux-font-main);
+  animation: fadeInDown 0.2s ease-out;
+  pointer-events: auto; /* Para permitir que el mouse siga encima */
+}
+
+/* Triangulito hacia arriba */
+.monitor-tooltip::before {
+  content: '';
+  position: absolute;
+  top: -6px;
+  left: 50%;
+  transform: translateX(-50%) rotate(45deg);
+  width: 10px;
+  height: 10px;
+  background: var(--agnux-panel-bg);
+  border-left: 1px solid var(--agnux-accent-border);
+  border-top: 1px solid var(--agnux-accent-border);
+}
+
+.tooltip-title {
+  font-size: 11px;
+  font-weight: bold;
+  color: var(--agnux-accent);
+  margin-bottom: 8px;
+  letter-spacing: 1px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 4px;
+}
+
+.stat-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  margin-bottom: 4px;
+  gap: 16px;
+}
+
+.stat-row span {
+  color: var(--agnux-text-secondary);
+}
+
+.loading-data {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--agnux-text-secondary);
+}
+
+@keyframes fadeInDown {
+  from { opacity: 0; transform: translate(-50%, -10px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}

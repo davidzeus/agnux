@@ -27,6 +27,11 @@ export class HyperIslandComponent implements OnInit, OnDestroy {
   private notifSub!: Subscription;
   private agnuxSub!: Subscription;
   
+  // Estado para monitores del sistema
+  hoveredMonitor: 'wifi' | 'battery' | 'hardware' | null = null;
+  monitorData: any = null;
+  private hoverTimeout: any = null;
+  
   // Tarea del reproductor mockeada por defecto en el bus del sistema
   activeTasks: BackgroundTask[] = [
     { id: 'track-player', type: 'player', title: 'Cyberpunk Synth', subtitle: 'Loop Station', icon: '📻' }
@@ -95,6 +100,45 @@ export class HyperIslandComponent implements OnInit, OnDestroy {
     event.stopPropagation();
     this.currentState = 'compact';
     this.cdr.detectChanges();
+  }
+
+  // --- MONITORES DE SISTEMA ---
+  onMonitorHover(type: 'wifi' | 'battery' | 'hardware') {
+    // Evitar parpadeos o peticiones spam si ya estamos sobre el mismo
+    if (this.hoveredMonitor === type) return;
+    
+    // Limpiar timeout previo
+    if (this.hoverTimeout) {
+      clearTimeout(this.hoverTimeout);
+    }
+
+    this.hoveredMonitor = type;
+    this.monitorData = null; // Mostrar loading state (opcional)
+    this.cdr.detectChanges();
+
+    // Debounce para hacer la petición HTTP
+    this.hoverTimeout = setTimeout(async () => {
+      if (this.hoveredMonitor === type) { // doble chequeo de que seguimos acá
+        const status = await this.agnuxService.getSystemStatus();
+        if (status && this.hoveredMonitor === type) {
+          this.monitorData = status;
+          this.cdr.detectChanges();
+        }
+      }
+    }, 250);
+  }
+
+  onMonitorLeave() {
+    if (this.hoverTimeout) {
+      clearTimeout(this.hoverTimeout);
+      this.hoverTimeout = null;
+    }
+    // Pequeño retardo para no ocultar de golpe si mueve rápido el mouse
+    this.hoverTimeout = setTimeout(() => {
+      this.hoveredMonitor = null;
+      this.monitorData = null;
+      this.cdr.detectChanges();
+    }, 200);
   }
 
   @HostListener('document:click', ['$event'])

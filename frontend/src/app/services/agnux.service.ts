@@ -79,6 +79,18 @@ export class AgnuxService {
 
   constructor(private authService: AuthService) {}
 
+  async getSystemStatus(): Promise<any> {
+    try {
+      const response = await fetch('/api/system/status');
+      if (response.ok) {
+        return await response.json();
+      }
+    } catch (e) {
+      console.warn("Error obteniendo estado del sistema:", e);
+    }
+    return null;
+  }
+
   async enviarPromptStream(promptTexto: string, terminalId: string): Promise<void> {
     const userId = this.authService.getCurrentUser();
 
