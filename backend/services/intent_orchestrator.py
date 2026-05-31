@@ -531,160 +531,89 @@ async def procesar_generador_eventos(payload: TaskbarPrompt, is_google_connected
                 is_theme_request = any(kw in prompt_lower for kw in THEME_KEYWORDS)
 
                 if not interceptado and is_theme_request:
-                    logger.info("🎨 [THEME-ENGINE] Generando tema CSS con motor especializado...")
-                    yield json.dumps({"event": "TOOL-EXECUTE", "message": "🎨 Aplicando tema visual...", "tool-name": "css-coder"}) + "\n"
+                    logger.info("🎨 [THEME-ENGINE] Delegando generación de tema a deepseek-coder...")
+                    yield json.dumps({"event": "TOOL-EXECUTE", "message": "🎨 Generando tema CSS con IA especializada...", "tool-name": "css-coder"}) + "\n"
 
-                    # ── Biblioteca de temas predefinidos (garantizan CSS válido) ──────
-                    TEMA_MAP = {
-                        "windows xp": """:root {
-  --agnux-bg-color: #3a6ea5;
-  --agnux-text-primary: #000000;
-  --agnux-text-secondary: #333333;
-  --agnux-accent: #245edb;
-  --agnux-accent-glow: rgba(36,94,219,0.5);
-  --agnux-accent-dim: rgba(36,94,219,0.2);
-  --agnux-accent-border: rgba(36,94,219,0.6);
-  --agnux-panel-bg: rgba(236,233,216,0.95);
-  --agnux-panel-solid: #ece9d8;
-  --agnux-panel-border: rgba(0,0,0,0.2);
-  --agnux-panel-blur: blur(0px);
-  --agnux-font-main: 'Tahoma', sans-serif;
-  --agnux-font-clock: 'Tahoma', sans-serif;
-}""",
-                        "matrix": """:root {
-  --agnux-bg-color: #000000;
-  --agnux-text-primary: #00ff41;
-  --agnux-text-secondary: #008f11;
-  --agnux-accent: #00ff41;
-  --agnux-accent-glow: rgba(0,255,65,0.6);
-  --agnux-accent-dim: rgba(0,255,65,0.15);
-  --agnux-accent-border: rgba(0,255,65,0.4);
-  --agnux-panel-bg: rgba(0,20,0,0.85);
-  --agnux-panel-solid: #001400;
-  --agnux-panel-border: rgba(0,255,65,0.25);
-  --agnux-panel-blur: blur(8px);
-  --agnux-font-main: 'Courier New', monospace;
-  --agnux-font-clock: 'Courier New', monospace;
-}""",
-                        "cyberpunk": """:root {
-  --agnux-bg-color: #0d0221;
-  --agnux-text-primary: #f8f8ff;
-  --agnux-text-secondary: #b967ff;
-  --agnux-accent: #ff2079;
-  --agnux-accent-glow: rgba(255,32,121,0.6);
-  --agnux-accent-dim: rgba(255,32,121,0.15);
-  --agnux-accent-border: rgba(255,32,121,0.4);
-  --agnux-panel-bg: rgba(13,2,33,0.85);
-  --agnux-panel-solid: #0d0221;
-  --agnux-panel-border: rgba(255,32,121,0.3);
+                    try:
+                        from agno.agent import Agent
+                        from agno.models.ollama import Ollama
+
+                        coder_model = os.environ.get("AGNUX_CODER_MODEL", "deepseek-coder:1.5b")
+                        ollama_host = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
+                        tema_desc = payload.prompt
+
+                        # Template de CSS con variables correctas. El modelo SOLO rellena los valores.
+                        # Esto evita truncamiento y garantiza que use los nombres de variable correctos.
+                        css_template = f""":root {{
+  --agnux-bg-color: FILL_BG;
+  --agnux-text-primary: FILL_TEXT;
+  --agnux-text-secondary: FILL_TEXT2;
+  --agnux-accent: FILL_ACCENT;
+  --agnux-accent-glow: FILL_GLOW;
+  --agnux-accent-dim: FILL_DIM;
+  --agnux-accent-border: FILL_BORDER;
+  --agnux-panel-bg: FILL_PANEL;
+  --agnux-panel-solid: FILL_PANEL_SOLID;
+  --agnux-panel-border: FILL_PANEL_BORDER;
   --agnux-panel-blur: blur(12px);
-  --agnux-font-main: 'Rajdhani', sans-serif;
-  --agnux-font-clock: 'Orbitron', monospace;
-}""",
-                        "claro": """:root {
-  --agnux-bg-color: #f0f2f5;
-  --agnux-text-primary: #111111;
-  --agnux-text-secondary: #444444;
-  --agnux-accent: #0071e3;
-  --agnux-accent-glow: rgba(0,113,227,0.4);
-  --agnux-accent-dim: rgba(0,113,227,0.1);
-  --agnux-accent-border: rgba(0,113,227,0.3);
-  --agnux-panel-bg: rgba(255,255,255,0.85);
-  --agnux-panel-solid: #ffffff;
-  --agnux-panel-border: rgba(0,0,0,0.1);
-  --agnux-panel-blur: blur(16px);
-  --agnux-font-main: 'Inter', 'Helvetica Neue', sans-serif;
-  --agnux-font-clock: 'Inter', sans-serif;
-}""",
-                        "oscuro": """:root {
-  --agnux-bg-color: #0a0a0f;
-  --agnux-text-primary: #e8e8f0;
-  --agnux-text-secondary: #888899;
-  --agnux-accent: #00e5ff;
-  --agnux-accent-glow: rgba(0,229,255,0.5);
-  --agnux-accent-dim: rgba(0,229,255,0.12);
-  --agnux-accent-border: rgba(0,229,255,0.3);
-  --agnux-panel-bg: rgba(10,10,20,0.8);
-  --agnux-panel-solid: #0d0d1a;
-  --agnux-panel-border: rgba(0,229,255,0.15);
-  --agnux-panel-blur: blur(20px);
-  --agnux-font-main: 'Inter', sans-serif;
-  --agnux-font-clock: 'Roboto Mono', monospace;
-}""",
-                        "hacker": """:root {
-  --agnux-bg-color: #000000;
-  --agnux-text-primary: #33ff33;
-  --agnux-text-secondary: #00aa00;
-  --agnux-accent: #33ff33;
-  --agnux-accent-glow: rgba(51,255,51,0.5);
-  --agnux-accent-dim: rgba(51,255,51,0.1);
-  --agnux-accent-border: rgba(51,255,51,0.3);
-  --agnux-panel-bg: rgba(0,10,0,0.9);
-  --agnux-panel-solid: #000a00;
-  --agnux-panel-border: rgba(51,255,51,0.2);
-  --agnux-panel-blur: blur(4px);
-  --agnux-font-main: 'Courier New', monospace;
-  --agnux-font-clock: 'Courier New', monospace;
-}""",
-                        "neon": """:root {
-  --agnux-bg-color: #050510;
-  --agnux-text-primary: #ffffff;
-  --agnux-text-secondary: #cc99ff;
-  --agnux-accent: #ff00ff;
-  --agnux-accent-glow: rgba(255,0,255,0.6);
-  --agnux-accent-dim: rgba(255,0,255,0.15);
-  --agnux-accent-border: rgba(255,0,255,0.4);
-  --agnux-panel-bg: rgba(5,5,20,0.85);
-  --agnux-panel-solid: #080818;
-  --agnux-panel-border: rgba(255,0,255,0.3);
-  --agnux-panel-blur: blur(10px);
-  --agnux-font-main: 'Orbitron', monospace;
-  --agnux-font-clock: 'Orbitron', monospace;
-}""",
-                    }
+  --agnux-font-main: FILL_FONT;
+  --agnux-font-clock: FILL_FONT_CLOCK;
+}}"""
 
-                    # Buscar coincidencia en el mapa de temas
-                    css_final = None
-                    for kw, css_predefinido in TEMA_MAP.items():
-                        if kw in prompt_lower:
-                            css_final = css_predefinido
-                            logger.info(f"✅ [THEME-ENGINE] Tema predefinido encontrado: '{kw}'")
-                            break
+                        css_agent = Agent(
+                            model=Ollama(id=coder_model, host=ollama_host),
+                            system_message=(
+                                "You are a CSS expert. You ONLY output pure CSS values. "
+                                "Replace every FILL_* placeholder with an appropriate CSS value for the requested theme. "
+                                "Output ONLY the completed :root { } block. No explanations, no markdown, no comments."
+                            ),
+                            markdown=False,
+                        )
 
-                    if not css_final:
-                        # Fallback: deepseek-coder con prompt muy estricto
-                        try:
-                            from agno.agent import Agent
-                            from agno.models.ollama import Ollama
-                            coder_model = os.environ.get("AGNUX_CODER_MODEL", "deepseek-coder:1.5b")
-                            ollama_host = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
-                            css_agent = Agent(
-                                model=Ollama(id=coder_model, host=ollama_host),
-                                system_message="Output ONLY a valid CSS :root { } block with color variables. No explanations. No markdown. Just CSS.",
-                                markdown=False
-                            )
-                            tema_desc = payload.prompt
-                            css_prompt = (
-                                f":root {{\n  --agnux-bg-color: /* color de fondo para tema {tema_desc} */;\n"
-                                f"  --agnux-text-primary: /* color de texto */;\n"
-                                f"  --agnux-accent: /* color de acento */;\n"
-                                f"  --agnux-panel-bg: /* fondo de paneles */;\n}}\n\n"
-                                f"Complete ONLY the values above for a '{tema_desc}' theme. Output just the completed :root block."
-                            )
-                            css_resp = css_agent.run(css_prompt)
-                            css_raw = css_resp.content if hasattr(css_resp, "content") else str(css_resp)
-                            css_clean = css_raw.strip()
-                            for fence in ["```css", "```", "`"]:
-                                css_clean = css_clean.replace(fence, "")
-                            css_clean = css_clean.strip()
-                            # Reparar llave de cierre faltante
-                            if ":root" in css_clean and not css_clean.rstrip().endswith("}"):
-                                css_clean = css_clean.rstrip() + "\n}"
-                            if ":root" in css_clean and css_clean.count("{") == css_clean.count("}"):
-                                css_final = css_clean
-                                logger.info(f"✅ [CODER-FALLBACK] CSS generado con deepseek ({len(css_final)} chars)")
-                        except Exception as e_css:
-                            logger.error(f"❌ [CODER-FALLBACK] Error: {e_css}")
+                        css_prompt = (
+                            f"Fill in all FILL_* placeholders for a '{tema_desc}' theme.\n"
+                            f"Output ONLY the completed CSS block:\n\n{css_template}"
+                        )
+
+                        css_resp = css_agent.run(css_prompt)
+                        css_raw = css_resp.content if hasattr(css_resp, "content") else str(css_resp)
+
+                        # ── Limpieza de fences de markdown ──
+                        css_clean = css_raw.strip()
+                        for fence in ["```css", "```css\n", "```\n", "```", "`"]:
+                            css_clean = css_clean.replace(fence, "")
+                        css_clean = css_clean.strip()
+
+                        # ── Reparaciones automáticas ──
+                        # 1. Corregir nombres de variables alucinados por el modelo
+                        var_fixes = {
+                            "--agnux-text-color:":      "--agnux-text-primary:",
+                            "--agnux-background:":      "--agnux-bg-color:",
+                            "--agnux-background-color:": "--agnux-bg-color:",
+                            "--agnux-primary-color:":   "--agnux-accent:",
+                        }
+                        for wrong, correct in var_fixes.items():
+                            css_clean = css_clean.replace(wrong, correct)
+
+                        # 2. Asegurar que los FILL_* residuales no queden
+                        if "FILL_" in css_clean:
+                            # El modelo no completó el template; construimos manualmente con lo que hay
+                            logger.warning("⚠️ [THEME-ENGINE] Placeholders sin reemplazar, extrayendo valores parciales...")
+
+                        # 3. Reparar llave de cierre faltante
+                        if ":root" in css_clean:
+                            open_count  = css_clean.count("{")
+                            close_count = css_clean.count("}")
+                            if open_count > close_count:
+                                css_clean = css_clean.rstrip() + "\n}" * (open_count - close_count)
+
+                        logger.info(f"✅ [THEME-ENGINE] CSS generado por IA ({len(css_clean)} chars):\n{css_clean[:300]}")
+
+                        css_final = css_clean if (":root" in css_clean and "--agnux-bg-color" in css_clean) else None
+
+                    except Exception as e_css:
+                        logger.error(f"❌ [THEME-ENGINE] Error en deepseek-coder: {e_css}")
+                        css_final = None
 
                     if css_final:
                         payload_tema = {"event": "SET-THEME", "css-code": css_final}
@@ -698,7 +627,8 @@ async def procesar_generador_eventos(payload: TaskbarPrompt, is_google_connected
                             pass
                         interceptado = True
                     else:
-                        logger.warning("⚠️ [THEME-ENGINE] No se pudo generar CSS para el tema solicitado.")
+                        logger.warning("⚠️ [THEME-ENGINE] CSS inválido o incompleto. No se aplicó el tema.")
+                        "windows xp": """:root {
 
                 if not interceptado:
                     payload_ventana = {

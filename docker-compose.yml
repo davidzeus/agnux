@@ -10,7 +10,7 @@ services:
     environment:
       - AGNUX_IA_PROVIDER=${AGNUX_IA_PROVIDER:-local}
       - AGNUX_ACTIVE_MODEL=${AGNUX_ACTIVE_MODEL:-llama3.1:8b}
-      - AGNUX_CODER_MODEL=${AGNUX_CODER_MODEL:-deepseek-coder:1.5b}
+      - AGNUX_CODER_MODEL=${AGNUX_CODER_MODEL:-qwen2.5-coder:7b}
       - OLLAMA_HOST=${OLLAMA_HOST:-http://10.10.0.48:11434}
       - QDRANT_HOST=${QDRANT_HOST:-http://qdrant_db:6333}
       - PYTHONUNBUFFERED=1
