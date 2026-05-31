@@ -430,6 +430,16 @@ async def procesar_generador_eventos(payload: TaskbarPrompt, is_google_connected
                             "data":  resultado_tool
                         }) + "\n"
 
+                    # ── 3. CHUNKS DE TEXTO (RESPUESTA DE IA) ──────────
+                    else:
+                        texto = getattr(evento, "content", "")
+                        if texto and isinstance(texto, str):
+                            respuesta_completa += texto
+                            yield json.dumps({
+                                "event":   "TEXT-CHUNK",
+                                "content": texto,
+                            }) + "\n"
+
             except Exception as e:
                 logger.error(f"❌ [AGNO STREAM] Error en el stream del agente: {e}", exc_info=True)
                 yield json.dumps({
