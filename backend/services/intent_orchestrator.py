@@ -136,6 +136,21 @@ async def _despachar_system_tool(tool_name: str, args: dict, user_id_norm: str) 
             "Tema CSS inyectado y persistido globalmente."
         )
 
+    if tool_name == "crear-acceso-directo":
+        import time
+        payload = {
+            "id": f"shortcut-{args.get('nombre', 'app').lower().replace(' ', '-').replace('_', '-')}-{int(time.time())}",
+            "nombre": args.get("nombre", ""),
+            "icono": args.get("icono", "📌"),
+            "tipo": args.get("tipo", "command"),
+            "destino": args.get("destino", ""),
+            "descripcion": args.get("descripcion", ""),
+        }
+        return (
+            f"event: ADD-SHORTCUT\ndata: {json.dumps(payload, ensure_ascii=False)}\n\n",
+            "Evento 'ADD-SHORTCUT' despachado al frontend exitosamente."
+        )
+
     # La tool no es un evento de cliente: debe ejecutarse en el host
     return None, ""
 
