@@ -186,3 +186,69 @@
   font-size: 12px;
   margin-top: 20px;
 }
+
+/* =====================================================================
+   📌 DOCK DE ACCESOS DIRECTOS
+   Columna izquierda de íconos flotantes tipo launcher
+   ===================================================================== */
+.shortcuts-dock {
+  position: absolute;
+  left: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  z-index: 500;
+  padding: 12px 8px;
+  background: var(--agnux-panel-bg);
+  backdrop-filter: var(--agnux-panel-blur);
+  -webkit-backdrop-filter: var(--agnux-panel-blur);
+  border: 1px solid var(--agnux-accent-border);
+  border-radius: 16px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5), 0 0 12px var(--agnux-accent-glow);
+}
+
+.shortcut-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  padding: 8px 6px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.12s ease, box-shadow 0.15s ease;
+  min-width: 56px;
+  user-select: none;
+}
+
+.shortcut-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--agnux-accent-border);
+  transform: scale(1.08);
+  box-shadow: 0 0 10px var(--agnux-accent-glow);
+}
+
+.shortcut-item:active {
+  transform: scale(0.96);
+}
+
+.shortcut-icon {
+  font-size: 26px;
+  line-height: 1;
+  filter: drop-shadow(0 0 6px var(--agnux-accent-glow));
+}
+
+.shortcut-label {
+  font-size: 9px;
+  color: var(--agnux-text-secondary);
+  text-align: center;
+  max-width: 52px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+

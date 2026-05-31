@@ -40,6 +40,21 @@
       </app-ventana>
     </ng-container>
 
+    <!-- 📌 DOCK DE ACCESOS DIRECTOS -->
+    <div class="shortcuts-dock" *ngIf="shortcuts.length > 0">
+      <div
+        *ngFor="let s of shortcuts"
+        class="shortcut-item"
+        [title]="s.descripcion || s.nombre"
+        (click)="lanzarShortcut(s)"
+        (contextmenu)="$event.preventDefault(); borrarShortcut(s.id)">
+        <div class="shortcut-icon">{{ s.icono }}</div>
+        <div class="shortcut-label">{{ s.nombre }}</div>
+      </div>
+    </div>
+
+
+
     <!-- Barra de Comandos Inferior (Terminal Input) -->
     <div class="command-bar">
       <!-- Badge de Google Workspace -->
