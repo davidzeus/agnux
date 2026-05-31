@@ -241,6 +241,17 @@ Este proyecto está en **expansión activa** y busco colegas apasionados por los
 
 ---
 
+## ☕ Apoya el Proyecto
+
+Si este proyecto te resulta útil o te inspira, podés apoyar su desarrollo invitándome un café simbólico a través de **Mercado Pago** (Argentina).  
+Toda contribución es enorme para mantener los servidores locales, GPUs y horas de desarrollo activo.
+
+- **Alias Mercado Pago:** `gonzalez360.mp`
+
+¡Mil gracias por el apoyo!
+
+---
+
 ## 📄 Licencia
 
 Distribuido bajo la licencia **MIT**. Ve el archivo `LICENSE` para más información.
