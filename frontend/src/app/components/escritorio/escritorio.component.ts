@@ -64,6 +64,31 @@ export class EscritorioComponent implements OnInit, OnDestroy {
       }, 1000);
     });
 
+    // 🌟 SUSCRIPCIÓN AL STREAMING EN VIVO (Efecto Máquina de Escribir)
+    this.subscriptions.push(
+      this.agnuxService.token$.subscribe(token => {
+        const targetId = this.currentHtmlWindowId || `agnux-ai-window`;
+        let ventanaIA = this.ventanas.find(v => v.id === targetId);
+        
+        if (!ventanaIA) {
+          // Si la ventana aún no existe, la creamos al vuelo
+          ventanaIA = {
+            id: targetId,
+            titulo: '🧠 AGNUX OS Core — IA',
+            tipo: 'html',
+            htmlDinamico: token,
+            x: 150, y: 100, width: 550, height: 420,
+            maximizada: false, zIndex: ++this.maxZIndex
+          };
+          this.ventanas = [...this.ventanas, ventanaIA];
+        } else {
+          // Vamos anexando el token recibido en tiempo real
+          ventanaIA.htmlDinamico += token;
+        }
+        this.cdr.detectChanges();
+      })
+    );
+
     this.subscriptions.push(
       this.agnuxService.eventStatus$.subscribe(status => {
         const event = status;
@@ -100,8 +125,10 @@ export class EscritorioComponent implements OnInit, OnDestroy {
               // Forzamos la mutación inmutable para que Angular se entere
               this.ventanas = [...this.ventanas, ventanaIA];
             } else {
-              // Si ya existía, preservamos el historial en lugar de sobreescribirlo
-              // ventanaIA.htmlDinamico = winData.content;
+              // Si ya existía, agregamos la nueva respuesta al historial
+              if (winData.content) {
+                ventanaIA.htmlDinamico += `<br><div class="ai-response">${winData.content}</div>`;
+              }
             }
 
             // 🔥 Forzamos el redibujado inmediato del DOM de Chrome

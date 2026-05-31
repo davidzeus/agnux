@@ -57,6 +57,10 @@ const EVENT_ALIAS_MAP: Record<string, string> = {
   'SANDBOX_OK':       'SANDBOX_OK',
   'SANDBOX_RETRY':    'SANDBOX_RETRY',
 
+  // --- Streaming de texto (Backend Agno) ---
+  'TEXT-CHUNK':       'TOKEN',
+  'TEXT_CHUNK':       'TOKEN',
+
   // --- Accesos directos y sistema ---
   'ADD-SHORTCUT':     'ADD_SHORTCUT',
   'ADD_SHORTCUT':     'ADD_SHORTCUT',
