@@ -429,7 +429,6 @@ agnux_agent = Agent(
     description=None,
     instructions=None,
     system_message=None,
-    add_datetime_to_instructions=False,
     tools=TOOLS_BASE,
     # stream_intermediate_steps debe ser True para que arun() emita
     # ToolCallStartedEvent y ToolCallCompletedEvent al orquestador.
