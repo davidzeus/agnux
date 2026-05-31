@@ -138,14 +138,18 @@ async def _despachar_system_tool(tool_name: str, args: dict, user_id_norm: str) 
 
     if tool_name == "crear-acceso-directo":
         import time
+        # Workaround: algunos LLMs locales envuelven todos los args bajo 'params'
+        if "params" in args and isinstance(args.get("params"), dict):
+            args = {**args, **args["params"]}
         payload = {
-            "id": f"shortcut-{args.get('nombre', 'app').lower().replace(' ', '-').replace('_', '-')}-{int(time.time())}",
+            "id": f"shortcut-{args.get('nombre', 'shortcut').lower().replace(' ', '-').replace('_', '-')}-{int(time.time())}",
             "nombre": args.get("nombre", ""),
             "icono": args.get("icono", "📌"),
-            "tipo": args.get("tipo", "command"),
+            "tipo": args.get("tipo", "url"),
             "destino": args.get("destino", ""),
             "descripcion": args.get("descripcion", ""),
         }
+        logger.info(f"📌 [SHORTCUT-DISPATCH] Enviando ADD-SHORTCUT al frontend: {payload}")
         return (
             f"event: ADD-SHORTCUT\ndata: {json.dumps(payload, ensure_ascii=False)}\n\n",
             "Evento 'ADD-SHORTCUT' despachado al frontend exitosamente."

@@ -269,10 +269,9 @@ def evaluar_codigo_sandbox(codigo: str, lenguaje: str, descripcion: str = "") ->
 def crear_acceso_directo(
     nombre: str = "",
     icono: str = "📌",
-    tipo: str = "app",
+    tipo: str = "url",
     destino: str = "",
     descripcion: str = "",
-    **kwargs
 ) -> str:
     """
     Crea un acceso directo (icono) en el escritorio de AGNUX.
@@ -293,15 +292,6 @@ def crear_acceso_directo(
                Si tipo='command' → ej: 'muestrame el estado del hardware'
       - descripcion: tooltip al hacer hover sobre el icono
     """
-    # Workaround para LLMs locales que anidan los argumentos
-    if "params" in kwargs and isinstance(kwargs["params"], dict):
-        p = kwargs["params"]
-        nombre = p.get("nombre", nombre)
-        icono = p.get("icono", icono)
-        tipo = p.get("tipo", tipo)
-        destino = p.get("destino", destino)
-        descripcion = p.get("descripcion", descripcion)
-
     logger.info(f"📌 [SHORTCUT] Creando acceso directo: '{nombre}' tipo='{tipo}' destino='{destino}'")
     return json.dumps({
         "__agnux_event": "ADD-SHORTCUT",
