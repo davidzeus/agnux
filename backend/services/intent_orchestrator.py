@@ -2,9 +2,10 @@
 # =====================================================================
 # 🧠 AGNUX OS — ORQUESTADOR DE INTENCIONES (Motor Agno Nativo)
 # =====================================================================
-# REGLA CONSTITUCIONAL: Está TAXATIVAMENTE PROHIBIDO el uso de guiones
-# bajos ('_') en identificadores de usuario, nombre de terminal o
-# variables de contexto del host. Usar SIEMPRE guiones medios ('-').
+# REGLA CONSTITUCIONAL:
+#   • Funciones Python → camelCase (ej: openSystemApp, toolDiagnostico)
+#   • Identificadores de usuario/terminal/evento SSE → kebab-case (ej: user-thehack-dg)
+#   • PROHIBIDO guiones bajos ('_') en cualquier identificador público
 # =====================================================================
 import os
 import json
@@ -23,9 +24,9 @@ from core.memory import (
     guardar_recuerdo_qdrant,
 )
 from schemas.models import TaskbarPrompt
-from services.tools_service import SYSTEM_TOOLS, autogenerar_nueva_tool
+from services.tools_service import SYSTEM_TOOLS, autogenerarNuevaTool
 
-from agent_core import agnux_agent, recargar_herramientas_dinamicas, TOOLS_BASE
+from agent_core import agnux_agent, recargarHerramientasDinamicas, TOOLS_BASE
 
 # Memoria a corto plazo en RAM
 SESSION_HISTORY = {}
@@ -45,7 +46,7 @@ def _normalizar_id(valor: str) -> str:
 # Maneja las herramientas cuyo resultado son eventos SSE para el frontend,
 # sin necesidad de ejecutar código en el host.
 # =====================================================================
-async def _despachar_system_tool(tool_name: str, args: dict, user_id_norm: str) -> tuple[str | None, str]:
+async def _despacharSystemTool(toolName: str, args: dict, userIdNorm: str) -> tuple[str | None, str]:
     """
     Evalúa si la tool invocada corresponde a una SYSTEM_TOOL (evento de cliente)
     y emite el SSE correspondiente.
@@ -54,8 +55,10 @@ async def _despachar_system_tool(tool_name: str, args: dict, user_id_norm: str) 
     - sse_frame: el string SSE listo para yield, o None si no aplica.
     - resultado_texto: descripción humana del resultado para memoria episódica.
     """
+    tool_name    = toolName
+    user_id_norm = userIdNorm
 
-    if tool_name == "open-media-app":
+    if tool_name == "openMediaApp":
         platform = args.get("platform", "")
         platform_urls = {
             "spotify":       "https://open.spotify.com",
@@ -69,7 +72,7 @@ async def _despachar_system_tool(tool_name: str, args: dict, user_id_norm: str) 
             f"Ordenando al cliente que abra '{platform}' en pestaña."
         )
 
-    if tool_name == "open-local-media":
+    if tool_name == "openLocalMedia":
         payload = {
             "event": "OPEN-LOCAL-MEDIA",
             "media-type": args.get("media-type", args.get("media_type", "")),
@@ -80,11 +83,11 @@ async def _despachar_system_tool(tool_name: str, args: dict, user_id_norm: str) 
             f"Reproduciendo media local: {payload}"
         )
 
-    if tool_name == "open-system-app":
+    if tool_name == "openSystemApp":
         payload = {
             "event": "CREATE-WINDOW",
-            "window-id": f"app-{args.get('app-id', args.get('app_id', 'unknown'))}",
-            "app-id": args.get("app-id", args.get("app_id", "")),
+            "window-id": f"app-{args.get('appId', args.get('app-id', args.get('app_id', 'unknown')))}",
+            "app-id": args.get("appId", args.get("app-id", args.get("app_id", ""))),
             "type": "system-app",
         }
         return (
@@ -92,7 +95,7 @@ async def _despachar_system_tool(tool_name: str, args: dict, user_id_norm: str) 
             f"Abriendo aplicación de sistema: {payload['app-id']}"
         )
 
-    if tool_name == "google-workspace-action":
+    if tool_name == "googleWorkspaceAction":
         payload = {
             "event": "OPEN-IFRAME-APP",
             "app-service": args.get("service"),
@@ -104,7 +107,7 @@ async def _despachar_system_tool(tool_name: str, args: dict, user_id_norm: str) 
             f"Abriendo interfaz de {args.get('service')} en el cliente."
         )
 
-    if tool_name == "calculate-expression":
+    if tool_name == "calculateExpression":
         exp = args.get("expression", "")
         try:
             val = eval(exp, {"__builtins__": None}, {})  # noqa: S307 — entorno sandboxeado
@@ -112,14 +115,14 @@ async def _despachar_system_tool(tool_name: str, args: dict, user_id_norm: str) 
         except Exception as e:
             return None, f"Error evaluando expresión: {e}"
 
-    if tool_name == "set-wallpaper":
+    if tool_name == "setWallpaper":
         payload = {"event": "SET-WALLPAPER", "image-url": args.get("imageUrl", args.get("image-url", ""))}
         return (
             f"event: SET-WALLPAPER\ndata: {json.dumps(payload, ensure_ascii=False)}\n\n",
             "Fondo de pantalla actualizado."
         )
 
-    if tool_name == "apply-css-theme":
+    if tool_name == "applyCssTheme":
         css_code = args.get("cssCode", args.get("css-code", ""))
         payload  = {"event": "SET-THEME", "css-code": css_code}
         try:
@@ -136,7 +139,7 @@ async def _despachar_system_tool(tool_name: str, args: dict, user_id_norm: str) 
             "Tema CSS inyectado y persistido globalmente."
         )
 
-    if tool_name == "crear-acceso-directo":
+    if tool_name == "crearAccesoDirecto":
         import time
         # Workaround: algunos LLMs locales envuelven todos los args bajo 'params'
         if "params" in args and isinstance(args.get("params"), dict):
@@ -249,7 +252,7 @@ async def procesar_generador_eventos(payload: TaskbarPrompt, is_google_connected
             }) + "\n"
 
             # ── 2. Recarga de herramientas dinámicas en caliente ──────
-            recargar_herramientas_dinamicas()
+            recargarHerramientasDinamicas()
 
             # ── 3. Fusión del catálogo de herramientas disponibles ────
             tools_privadas       = CACHE_VECTORS["usuarios"].get(user_id_norm, {})
@@ -366,11 +369,12 @@ async def procesar_generador_eventos(payload: TaskbarPrompt, is_google_connected
                             t_name = getattr(tool_data, "tool_name", getattr(tool_data, "name", "unknown_tool"))
                             t_args = getattr(tool_data, "tool_args", getattr(tool_data, "arguments", {}))
                             
-                            ultima_tool_name = t_name.replace("_", "-")
+                            # Con camelCase no hay transformación: el nombre llega exacto desde Agno
+                            ultima_tool_name = t_name
                             ultima_tool_args = t_args
 
                             # Evento especial de UI para el sandbox
-                            if ultima_tool_name == "evaluar-codigo-sandbox":
+                            if ultima_tool_name == "evaluarCodigoSandbox":
                                 yield json.dumps({
                                     "event":    "SANDBOX-RUNNING",
                                     "message":  f"🐳 Evaluando código en contenedor Docker aislado...",
@@ -393,7 +397,8 @@ async def procesar_generador_eventos(payload: TaskbarPrompt, is_google_connected
                             t_name = getattr(tool_data, "tool_name", getattr(tool_data, "name", "unknown_tool"))
                             t_result = getattr(tool_data, "content", getattr(tool_data, "result", ""))
                             
-                            tool_name_result = t_name.replace("_", "-")
+                            # Con camelCase no hay transformación
+                            tool_name_result = t_name
                             resultado_bruto  = str(t_result or "")
                             logger.info(f"✅ [AGNO] ToolCallCompleted: '{tool_name_result}' → {resultado_bruto[:120]}")
 
@@ -453,7 +458,7 @@ async def procesar_generador_eventos(payload: TaskbarPrompt, is_google_connected
                                 resultado_tool = resultado_bruto
 
                         # ── Dispatch de SYSTEM_TOOLS (wallpaper, CSS, media) ──
-                        sse_frame_sys, resultado_sys = await _despachar_system_tool(
+                        sse_frame_sys, resultado_sys = await _despacharSystemTool(
                             tool_name_result, ultima_tool_args, user_id_norm
                         )
                         if sse_frame_sys:
@@ -628,7 +633,6 @@ async def procesar_generador_eventos(payload: TaskbarPrompt, is_google_connected
                         interceptado = True
                     else:
                         logger.warning("⚠️ [THEME-ENGINE] CSS inválido o incompleto. No se aplicó el tema.")
-                        "windows xp": """:root {
 
                 if not interceptado:
                     payload_ventana = {
@@ -653,8 +657,8 @@ async def procesar_generador_eventos(payload: TaskbarPrompt, is_google_connected
             ))
 
             # ── 9. Escalada de privilegios: promover tool global a RAM Kernel ──
-            if ultima_tool_name == "autogenerar-nueva-tool":
-                nombre_func = ultima_tool_args.get("nombre_funcion", "")
+            if ultima_tool_name == "autogenerarNuevaTool":
+                nombre_func = ultima_tool_args.get("nombreFuncion", ultima_tool_args.get("nombre_funcion", ""))
                 nombre_norm = nombre_func.replace("_", "-").lower()
                 if nombre_norm.startswith("global-"):
                     CACHE_VECTORS["sistema"][nombre_norm] = {

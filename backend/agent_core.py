@@ -2,10 +2,10 @@
 # =====================================================================
 # 🧠 AGNUX OS — NÚCLEO DEL AGENTE COGNITIVO (Motor Agno Nativo)
 # =====================================================================
-# REGLA CONSTITUCIONAL: Está TAXATIVAMENTE PROHIBIDO el uso de guiones
-# bajos ('_') en identificadores de usuario, nombre de terminal, variables
-# de contexto del host o nombre de herramienta dinámica.
-# Usar SIEMPRE guiones medios ('-') o alfanumérico plano en minúsculas.
+# REGLA CONSTITUCIONAL:
+#   • Nombres de función/método Python → camelCase (ej: openSystemApp)
+#   • Identificadores de usuario/terminal/evento SSE → kebab-case (ej: user-thehack-dg)
+#   • PROHIBIDO guiones bajos ('_') en cualquier identificador público
 # =====================================================================
 import os
 import sys
@@ -59,97 +59,98 @@ from tools.sandbox_tool    import ejecutar_en_docker_sync
 # Los wrappers absorben **kwargs fantasmas que Agno pueda inyectar.
 # =====================================================================
 
-def tool_diagnostico_wrapper(**kwargs) -> str:
+def toolDiagnostico(**kwargs) -> str:
     """
     Muestra el estado actual del hardware de la máquina host:
     uso de CPU, memoria RAM y espacio en disco duro.
     No requiere argumentos.
     """
-    logger.info(f"🔌 [TOOL] tool-diagnostico invocada. kwargs ignorados: {kwargs}")
+    logger.info(f"🔌 [TOOL] toolDiagnostico invocada. kwargs ignorados: {kwargs}")
     res = obtener_diagnostico_hardware()
     return json.dumps(res, indent=2, ensure_ascii=False) if isinstance(res, dict) else str(res)
 
 
-def tool_energia_wrapper(accion: Literal["apagar", "reiniciar"]) -> str:
+def toolEnergia(accion: Literal["apagar", "reiniciar"]) -> str:
     """
     Gestiona el encendido, apagado o reinicio físico del equipo host.
     Parámetros:
       - accion: 'apagar' o 'reiniciar'
     """
-    logger.info(f"🔌 [TOOL] tool-energia invocada con accion='{accion}'")
+    logger.info(f"🔌 [TOOL] toolEnergia invocada con accion='{accion}'")
     res = gestionar_energia_equipo(accion)
     return json.dumps(res, indent=2, ensure_ascii=False) if isinstance(res, dict) else str(res)
 
 
-def tool_musica_wrapper(busqueda_o_url: str) -> str:
+def toolMusica(busquedaOUrl: str) -> str:
     """
     Busca y reproduce canciones, música o audios de YouTube de fondo
     en los parlantes del sistema operativo del host.
     Parámetros:
-      - busqueda_o_url: término de búsqueda o URL directa de YouTube
+      - busquedaOUrl: término de búsqueda o URL directa de YouTube
     """
-    logger.info(f"🔌 [TOOL] tool-musica invocada. Búsqueda: '{busqueda_o_url}'")
-    return str(ejecutar_musica_fondo(busqueda_o_url))
+    logger.info(f"🔌 [TOOL] toolMusica invocada. Búsqueda: '{busquedaOUrl}'")
+    return str(ejecutar_musica_fondo(busquedaOUrl))
 
 
-def tool_control_audio_wrapper(accion: Literal["pausa", "reproducir", "detener"]) -> str:
+def toolControlAudio(accion: Literal["pausa", "reproducir", "detener"]) -> str:
     """
     Controla el estado del reproductor de música de fondo del sistema
     (pausar, reanudar o detener el proceso mpv).
     Parámetros:
       - accion: 'pausa', 'reproducir' o 'detener'
     """
-    logger.info(f"🔌 [TOOL] tool-control-audio invocada con accion='{accion}'")
+    logger.info(f"🔌 [TOOL] toolControlAudio invocada con accion='{accion}'")
     return str(controlar_reproductor_global(accion))
 
 
-def open_system_app(app_id: str) -> str:
+def openSystemApp(appId: str) -> str:
     """
     Ordena al cliente web de AGNUX que abra una aplicación de sistema
     en modo ventana flotante dentro del escritorio.
     Usá esto cuando el usuario pida abrir una app, calculadora, editor,
     terminal, o cualquier panel del sistema operativo.
     Parámetros:
-      - app-id: identificador de la aplicación a abrir.
+      - appId: identificador de la aplicación a abrir.
         Valores válidos: 'calc', 'terminal', 'files', 'settings',
         'hyper-island', 'notes', 'network-monitor'
     """
-    logger.info(f"🔌 [TOOL] open-system-app invocada. app-id='{app_id}'")
+    logger.info(f"🔌 [TOOL] openSystemApp invocada. appId='{appId}'")
     # Este tool emite un evento CLIENT-SIDE que el orquestador intercepta
     # y despacha como SSE CREATE-WINDOW al frontend Angular.
-    return json.dumps({"__agnux_event": "OPEN-SYSTEM-APP", "app-id": app_id})
+    return json.dumps({"__agnux_event": "OPEN-SYSTEM-APP", "app-id": appId})
 
 
-def open_local_media(media_type: str, query: str = "") -> str:
+def openLocalMedia(mediaType: str, query: str = "") -> str:
     """
     Abre o busca contenido multimedia local o en streaming dentro
     del escritorio de AGNUX (pestaña de Chromium en modo kiosco).
     Parámetros:
-      - media-type: tipo de media. Valores válidos: 'youtube', 'spotify',
+      - mediaType: tipo de media. Valores válidos: 'youtube', 'spotify',
         'netflix', 'youtube-music', 'local-video', 'local-audio'
       - query: término de búsqueda opcional (nombre de canción, película, etc.)
     """
-    logger.info(f"🔌 [TOOL] open-local-media invocada. media-type='{media_type}', query='{query}'")
+    logger.info(f"🔌 [TOOL] openLocalMedia invocada. mediaType='{mediaType}', query='{query}'")
     return json.dumps({
         "__agnux_event": "OPEN-LOCAL-MEDIA",
-        "media-type": media_type,
+        "media-type": mediaType,
         "query": query
     })
 
 
-def autogenerar_nueva_tool(nombre_funcion: str, descripcion_docstring: str) -> str:
+def autogenerarNuevaTool(nombreFuncion: str, descripcionDocstring: str) -> str:
     """
     OBLIGATORIA para crear, programar o desarrollar funciones de software o
     comandos que NO existan en el sistema.
     Si el usuario pide listar archivos, interactuar con carpetas, crear scripts
     o automatizar tareas que no están en las herramientas actuales, DEBÉS usar
     esta función.
-    REGLA: el nombre de la función y el archivo físico DEBEN usar guiones medios
-    (ej: 'global-control-bomba', 'user-listar-archivos').
+    REGLA: el archivo físico en disco usa kebab-case (ej: 'global-control-bomba.py').
     Parámetros:
-      - nombre_funcion: nombre de la función nueva (usar guiones medios, sin .py)
-      - descripcion_docstring: descripción del propósito de la herramienta
+      - nombreFuncion: nombre descriptivo de la nueva función (en kebab-case, sin .py)
+      - descripcionDocstring: descripción del propósito de la herramienta
     """
+    nombre_funcion = nombreFuncion
+    descripcion_docstring = descripcionDocstring
     logger.info(f"🛠️ [AUTOGÉNESIS] Delegando herramienta: '{nombre_funcion}' al Coder Model...")
     try:
         # Normalización ESTRICTA: sólo guiones medios, minúsculas, sin espacios
@@ -210,7 +211,7 @@ def autogenerar_nueva_tool(nombre_funcion: str, descripcion_docstring: str) -> s
 # =====================================================================
 import asyncio as _asyncio
 
-def evaluar_codigo_sandbox(codigo: str, lenguaje: str, descripcion: str = "") -> str:
+def evaluarCodigoSandbox(codigo: str, lenguaje: str, descripcion: str = "") -> str:
     """
     Evalúa y prueba un bloque de código en un contenedor Docker aislado
     ANTES de enviarlo a la interfaz o inyectarlo al sistema.
@@ -266,7 +267,7 @@ def evaluar_codigo_sandbox(codigo: str, lenguaje: str, descripcion: str = "") ->
 # =====================================================================
 # 📌 ACCESOS DIRECTOS DEL ESCRITORIO (Desktop Shortcuts)
 # =====================================================================
-def crear_acceso_directo(
+def crearAccesoDirecto(
     nombre: str = "",
     icono: str = "📌",
     tipo: str = "url",
@@ -307,7 +308,7 @@ def crear_acceso_directo(
 # =====================================================================
 # ℹ️ MANIFIESTO DE CAPACIDADES DEL SISTEMA
 # =====================================================================
-def obtener_info_sistema() -> str:
+def obtenerInfoSistema() -> str:
     """
     Retorna el manifiesto completo de capacidades del sistema AGNUX OS.
     Usar cuando el usuario pregunte qué podés hacer, cuáles son tus
@@ -416,16 +417,16 @@ def obtener_info_sistema() -> str:
 # Estas tools son el "firmware" del agente. Siempre presentes.
 # =====================================================================
 TOOLS_BASE = [
-    autogenerar_nueva_tool,
-    tool_diagnostico_wrapper,
-    tool_energia_wrapper,
-    tool_musica_wrapper,
-    tool_control_audio_wrapper,
-    open_system_app,
-    open_local_media,
-    evaluar_codigo_sandbox,
-    crear_acceso_directo,
-    obtener_info_sistema,
+    autogenerarNuevaTool,
+    toolDiagnostico,
+    toolEnergia,
+    toolMusica,
+    toolControlAudio,
+    openSystemApp,
+    openLocalMedia,
+    evaluarCodigoSandbox,
+    crearAccesoDirecto,
+    obtenerInfoSistema,
 ]
 
 # =====================================================================
@@ -501,7 +502,7 @@ agnux_agent = Agent(
 # Escanea dynamic_tools/, importa y registra las funciones en el agente.
 # Normaliza nombres de archivos: guiones medios en disco → guion bajo en símbolo.
 # =====================================================================
-def recargar_herramientas_dinamicas() -> None:
+def recargarHerramientasDinamicas() -> None:
     """
     Escanea la carpeta dynamic_tools/, compila cada módulo e inyecta
     sus funciones en la lista de herramientas activas del agente.
