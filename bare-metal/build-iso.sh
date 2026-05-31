@@ -65,12 +65,13 @@ xorriso -as mkisofs \
     -r -V "AGNUX_OS" \
     -o "$IMAGE_NAME" \
     -J -joliet-long \
-    -b biosbits/biosbits.cfg \
-    -c boot.cat \
+    -b boot/grub/i386-pc/eltorito.img \
+    -c boot.catalog \
     -boot-load-size 4 -boot-info-table -no-emul-boot \
     -eltorito-alt-boot \
     -e boot/grub/efi.img \
     -no-emul-boot \
+    -isohybrid-gpt-basdat \
     ./custom_iso
 
 echo "✅ [AGNUX COMPILER] Proceso completado con éxito."
