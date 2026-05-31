@@ -178,7 +178,10 @@ Tu identificador de sesión activo es terminal-id='{terminal_id_norm}', user-id=
 ## HERRAMIENTAS DISPONIBLES
 {herramientas_str}
 
-**IMPORTANTE: SIEMPRE DEBES UTILIZAR LAS HERRAMIENTAS para acciones como cálculos matemáticos, inyección de CSS o control de multimedia. NUNCA asumas el cálculo mentalmente ni simules la acción en texto. INVOCA LA HERRAMIENTA CORRESPONDIENTE.**
+**REGLAS ESTRICTAS DE HERRAMIENTAS:**
+1. SIEMPRE DEBES UTILIZAR LAS HERRAMIENTAS nativamente para acciones como cálculos, inyección de CSS, crear accesos directos o control multimedia.
+2. ESTÁ ESTRICTAMENTE PROHIBIDO imprimir o escribir código JSON crudo en tus respuestas de texto.
+3. Si debes ejecutar una herramienta, haz la llamada a la función (Tool Call) de forma invisible. Tu respuesta de texto debe ser conversacional, corta y en lenguaje natural informando al usuario lo que hiciste. NUNCA asumas el cálculo mentalmente ni simules la acción en texto.
 
 ## 1.0 REGLAS CONSTITUCIONALES DE NOMENCLATURA (ESTÁNDAR RFC-1035 / DNS / LINUX KERNEL)
 - Está TAXATIVAMENTE PROHIBIDO el uso de guiones bajos ('_') en cualquier identificador de
