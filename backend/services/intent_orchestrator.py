@@ -305,7 +305,7 @@ async def procesar_generador_eventos(payload: TaskbarPrompt, is_google_connected
             resultado_tool      = ""
 
             try:
-                async for evento in await agnux_agent.arun(
+                async for evento in agnux_agent.arun(
                     payload.prompt,
                     stream=True,
                     stream_intermediate_steps=True,

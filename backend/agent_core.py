@@ -479,13 +479,15 @@ def recargar_herramientas_dinamicas() -> None:
                 nombre_archivo_sin_ext = nombre_normalizado_disco
 
             # ── Importación del módulo ─────────────────────────────────
-            # El nombre del módulo Python usa guión bajo (requerido por importlib)
+            # El nombre del módulo Python usa guión bajo para el símbolo interno
             nombre_simbolo   = nombre_archivo_sin_ext.replace("-", "_")
-            nombre_modulo_py = f"dynamic_tools.{nombre_simbolo}"
+            ruta_absoluta    = os.path.join(DYNAMIC_DIR, f"{nombre_archivo_sin_ext}.py")
 
             try:
-                modulo = importlib.import_module(nombre_modulo_py)
-                importlib.reload(modulo)
+                import importlib.util
+                spec = importlib.util.spec_from_file_location(nombre_simbolo, ruta_absoluta)
+                modulo = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(modulo)
 
                 funcion_objeto = getattr(modulo, nombre_simbolo, None)
                 if callable(funcion_objeto):
