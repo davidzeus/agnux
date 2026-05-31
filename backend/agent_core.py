@@ -137,21 +137,20 @@ def open_local_media(media_type: str, query: str = "") -> str:
     })
 
 
-def autogenerar_nueva_tool(nombre_funcion: str, codigo_python: str, descripcion_docstring: str) -> str:
+def autogenerar_nueva_tool(nombre_funcion: str, descripcion_docstring: str) -> str:
     """
     OBLIGATORIA para crear, programar o desarrollar funciones de software o
     comandos que NO existan en el sistema.
     Si el usuario pide listar archivos, interactuar con carpetas, crear scripts
     o automatizar tareas que no están en las herramientas actuales, DEBÉS usar
-    esta función para escribir el código nuevo.
+    esta función.
     REGLA: el nombre de la función y el archivo físico DEBEN usar guiones medios
     (ej: 'global-control-bomba', 'user-listar-archivos').
     Parámetros:
       - nombre_funcion: nombre de la función nueva (usar guiones medios, sin .py)
-      - codigo_python: código fuente Python completo de la función
       - descripcion_docstring: descripción del propósito de la herramienta
     """
-    logger.info(f"🛠️ [AUTOGÉNESIS] Creando herramienta: '{nombre_funcion}'...")
+    logger.info(f"🛠️ [AUTOGÉNESIS] Delegando herramienta: '{nombre_funcion}' al Coder Model...")
     try:
         # Normalización ESTRICTA: sólo guiones medios, minúsculas, sin espacios
         nombre_normalizado = (
@@ -161,25 +160,38 @@ def autogenerar_nueva_tool(nombre_funcion: str, codigo_python: str, descripcion_
             .replace("_", "-")          # Prohibición constitucional de guiones bajos
             .rstrip(".py")
         )
-        # El nombre del símbolo Python sí puede usar guion bajo (es requerido por la sintaxis)
         nombre_simbolo = nombre_normalizado.replace("-", "_")
-
         nombre_archivo = os.path.join(DYNAMIC_DIR, f"{nombre_normalizado}.py")
+
+        coder_model = os.environ.get("AGNUX_CODER_MODEL", "deepseek-coder:1.5b")
+        from agno.agent import Agent
+        from agno.models.ollama import Ollama
+        
+        coder_agent = Agent(
+            model=Ollama(id=coder_model),
+            system_message="Sos un asistente experto en Python. Tu tarea es escribir CÓDIGO PURO. Nunca devuelvas explicaciones ni texto normal. Devuelve un bloque de código markdown ```python ... ``` con la implementación.",
+            markdown=False
+        )
+        
+        prompt = f"Escribe una función de Python completa llamada '{nombre_simbolo}' que acepte `**kwargs` y cumpla este propósito:\n\n{descripcion_docstring}\n\nIncluye todos los imports necesarios en la parte superior. Solo devuelve el bloque de código Python."
+        
+        respuesta_coder = coder_agent.run(prompt)
+        codigo_python = respuesta_coder.content if hasattr(respuesta_coder, "content") else str(respuesta_coder)
 
         # Limpiar código si viene con fence de markdown
         codigo_depurado = codigo_python.strip()
         if codigo_depurado.startswith("```"):
             partes = codigo_depurado.split("```")
             codigo_depurado = partes[1].replace("python", "", 1).strip() if len(partes) > 1 else codigo_depurado
+            if codigo_depurado.endswith("```"):
+                codigo_depurado = codigo_depurado[:-3].strip()
 
         contenido_final = (
             f'"""\n'
-            f'Auto-generada por AGNUX OS Core.\n'
+            f'Auto-generada por AGNUX OS Core (Modelo: {coder_model}).\n'
             f'Nombre del módulo: {nombre_normalizado}\n'
             f'{descripcion_docstring}\n'
             f'"""\n\n'
-            f'def {nombre_simbolo}(**kwargs):\n'
-            f'    """{descripcion_docstring}"""\n'
             f'{codigo_depurado}\n'
         )
 
