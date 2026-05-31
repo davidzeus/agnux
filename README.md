@@ -126,8 +126,31 @@ agnux/
 │           ├── auth.service.ts      # Validación Cloudflare JWT en el cliente
 │           └── theme.service.ts     # Motor de inyección CSS en tiempo real
 │
+├── bare-metal/                      # 💿 Entorno de distribución (AGNUX OS ISO)
+│   ├── build-iso.sh                 # Compilador maestro de la ISO
+│   ├── Makefile                     # Automatización de tareas
+│   ├── boot/                        # Customización de GRUB y splash screen
+│   ├── config/                      # Configuraciones de inicio (Kiosk Openbox, Systemd)
+│   └── scripts/                     # Scripts bash de aprovisionamiento de hardware
+│
 └── docker-compose.yml               # Orquestación de contenedores
 ```
+
+---
+
+## 💿 Distribución Bare-Metal (AGNUX OS ISO)
+
+El directorio `bare-metal/` contiene las herramientas para compilar AGNUX OS en una imagen ISO booteable, lista para ser instalada directamente en el hardware final.
+
+### 🐧 ¿Por qué usamos Ubuntu Server como base?
+
+Aprovechamos la imagen de Ubuntu Server fundamentalmente por su inmenso soporte de drivers pre-configurados (especialmente redes y adaptadores) y su robustez empresarial. Usamos Ubuntu **sólo como base Live CD**. En el proceso de construcción, el script extrae la estructura del sistema, le inyecta nuestro Kernel (backend y frontend) junto con las personalizaciones del arranque, reemplazando el comportamiento estándar. Esto nos evita programar un sistema Linux desde cero, permitiendo enfocarnos en la capa cognitiva y visual del OS.
+
+### 📂 ¿Qué hacen los scripts `.sh`?
+
+- **`build-iso.sh`**: Es el orquestador principal. Descarga la ISO de Ubuntu de forma automática, desempaqueta su sistema de archivos en el espacio de usuario (sin requerir montajes complejos con loop que suelen causar problemas), inyecta los componentes de AGNUX y las configuraciones de la carpeta `bare-metal/config/`, y vuelve a comprimir todo (SquashFS) sellando una ISO nueva y lista para flashear en un pendrive.
+- **`scripts/setup-agnux.sh`**: Es un script de post-instalación inyectado dentro del sistema operativo. Se asegura de instalar dependencias clave (Xorg, Docker, entorno de ventana minimalista) y deja preparado el escenario para que AGNUX inicie a pantalla completa.
+- **`scripts/install-drivers.sh`**: Evalúa el hardware en el que se ejecuta el sistema. Si detecta tarjetas gráficas NVIDIA, instala dinámicamente los controladores privativos y el toolkit de CUDA, garantizando que el entorno local de Ollama e inferencia de los LLMs tenga acceso completo a la aceleración por GPU sin intervención del usuario.
 
 ---
 

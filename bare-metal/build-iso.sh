@@ -23,9 +23,9 @@ echo "📦 Extrayendo estructura ISO base usando 7z..."
 mkdir -p ./custom_iso ./squashfs_root
 7z x ubuntu-base.iso -o./custom_iso/ -y
 
-# 4. Extraer el sistema de archivos raíz (SquashFS)
-echo "📦 Extrayendo SquashFS..."
-unsquashfs -d ./squashfs_root ./custom_iso/casper/filesystem.squashfs
+# 4. 🔥 Extraer el sistema de archivos raíz real de Ubuntu Server Base
+echo "📦 Extrayendo SquashFS base de Canonical..."
+unsquashfs -d ./squashfs_root ./custom_iso/casper/ubuntu-server-minimal.ubuntu-server.squashfs
 
 # =====================================================================
 # 🧬 INYECCIÓN DEL NÚCLEO AGNUX (RUTAS CORREGIDAS Y ORDENADAS)
@@ -51,12 +51,11 @@ if [ -f "./boot/grub.cfg" ]; then
 fi
 
 # =====================================================================
-# 💿 RE-EMPAQUETADO Y SELLADO
+# 💿 RE-EMPAQUETADO Y SELLADO (PISANDO EL SQUASHFS CORRECTO)
 # =====================================================================
-echo "🔒 Sellando y comprimiendo el sistema de archivos..."
-rm -f ./custom_iso/casper/filesystem.squashfs
-mksquashfs ./squashfs_root ./custom_iso/casper/filesystem.squashfs -comp xz
-
+echo "🔒 Sellando y comprimiendo el sistema de archivos de AGNUX..."
+rm -f ./custom_iso/casper/ubuntu-server-minimal.ubuntu-server.squashfs
+mksquashfs ./squashfs_root ./custom_iso/casper/ubuntu-server-minimal.ubuntu-server.squashfs -comp xz
 cd ./custom_iso
 find . -type f -print0 | xargs -0 md5sum | grep -v "boot.cat" | grep -v "md5sum.txt" > md5sum.txt
 cd ..
