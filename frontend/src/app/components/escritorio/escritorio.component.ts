@@ -100,8 +100,8 @@ export class EscritorioComponent implements OnInit, OnDestroy {
               // Forzamos la mutación inmutable para que Angular se entere
               this.ventanas = [...this.ventanas, ventanaIA];
             } else {
-              // Si ya existía, actualizamos el contenido final consolidado
-              ventanaIA.htmlDinamico = winData.content;
+              // Si ya existía, preservamos el historial en lugar de sobreescribirlo
+              // ventanaIA.htmlDinamico = winData.content;
             }
 
             // 🔥 Forzamos el redibujado inmediato del DOM de Chrome
@@ -501,7 +501,10 @@ export class EscritorioComponent implements OnInit, OnDestroy {
     if (tipo === 'html' && this.currentHtmlWindowId) {
       const existing = this.ventanas.find(v => v.id === this.currentHtmlWindowId);
       if (existing) {
-        existing.htmlDinamico = ''; // Reset for new output
+        if (datos) {
+          const separador = existing.htmlDinamico ? '<br><br><hr style="border-color: rgba(0,255,102,0.2)"><br>' : '';
+          existing.htmlDinamico += separador + datos;
+        }
         this.enfocarVentana(existing);
         return existing.id;
       }
