@@ -417,6 +417,40 @@ TOOLS_BASE = [
 ]
 
 # =====================================================================
+# WRAPPERS PARA SYSTEM_TOOLS
+# Agno requiere que TODAS las herramientas descritas en el system_prompt
+# existan como funciones reales en la lista de tools del agente.
+# =====================================================================
+
+def calculateExpression(expression: str) -> str:
+    """Evalúa expresiones aritméticas complejas en el Host."""
+    return json.dumps({"__agnux_event": "CALCULATE-EXPRESSION", "expression": expression})
+
+def setWallpaper(imageUrl: str) -> str:
+    """Cambia el fondo de pantalla del escritorio usando una URL de imagen válida."""
+    return json.dumps({"__agnux_event": "SET-WALLPAPER", "imageUrl": imageUrl})
+
+def applyCssTheme(cssCode: str) -> str:
+    """Aplica un nuevo estilo físico (CSS) a la interfaz de AGNUX."""
+    return json.dumps({"__agnux_event": "SET-THEME", "cssCode": cssCode})
+
+def googleWorkspaceAction(service: str, action: str, params: dict = None) -> str:
+    """Interactúa con la suite de Google (Docs, Sheets, Gmail). REQUIERE validación de token."""
+    return json.dumps({"__agnux_event": "GOOGLE-WORKSPACE-ACTION", "service": service, "action": action, "params": params or {}})
+
+def openMediaApp(platform: str) -> str:
+    """Abre aplicaciones de streaming en modo Kiosco (Chromium aislado)."""
+    return json.dumps({"__agnux_event": "OPEN-MEDIA-APP", "platform": platform})
+
+TOOLS_BASE.extend([
+    calculateExpression,
+    setWallpaper,
+    applyCssTheme,
+    googleWorkspaceAction,
+    openMediaApp
+])
+
+# =====================================================================
 # 🧠 INSTANCIACIÓN LIMPIA DEL AGENTE CORE DE AGNUX
 # El system_message e instructions se inyectan dinámicamente por el
 # orquestador en cada llamada (via additional_messages), para poder
