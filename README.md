@@ -30,7 +30,7 @@
   <p>
     <img src="https://img.shields.io/badge/Estado-En_Desarrollo_Activo-00ff66?style=flat-square" alt="Estado"/>
     <img src="https://img.shields.io/badge/IA-100%25_Local_%26_Privada-blueviolet?style=flat-square" alt="IA Local"/>
-    <img src="https://img.shields.io/badge/LLM-DeepSeek_%2B_Ministral-orange?style=flat-square" alt="LLM"/>
+    <img src="https://img.shields.io/badge/LLM-Llama3.1_%2B_Qwen2.5-orange?style=flat-square" alt="LLM"/>
     <img src="https://img.shields.io/badge/Se_buscan-Colaboradores-ff3366?style=flat-square" alt="Colaboradores"/>
   </p>
 
@@ -174,7 +174,7 @@ Dado que AGNUX opera con modelos LLM locales en caliente y modelos de embeddings
 
 - **Docker** y **Docker Compose**
 - **Node.js 18+** y **Angular CLI 15+**
-- Nodos de **Ollama** con los modelos `ministral-es:latest` (razonamiento) y `deepseek-coder:1.5b` (herramientas)
+- Nodos de **Ollama** con los modelos `llama3.1:8b` (razonamiento) y `qwen2.5-coder:7b` (herramientas)
 - Nodo de **Qdrant DB** expuesto en el puerto `6333`
 - Una cuenta en **Cloudflare** con un túnel configurado apuntando a tu servidor
 
@@ -201,8 +201,8 @@ docker-compose up -d --build
 ```env
 # Motor de IA (Ollama)
 OLLAMA_HOST=http://<IP_NODO_OLLAMA>:11434
-AGNUX_ACTIVE_MODEL=ministral-es:latest
-AGNUX_CODER_MODEL=deepseek-coder:1.5b
+AGNUX_ACTIVE_MODEL=llama3.1:8b
+AGNUX_CODER_MODEL=qwen2.5-coder:7b
 
 # Base de datos vectorial (Qdrant)
 QDRANT_HOST=http://<IP_NODO_QDRANT>:6333
