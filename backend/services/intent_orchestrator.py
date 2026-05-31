@@ -259,9 +259,9 @@ async def procesar_generador_eventos(payload: TaskbarPrompt, is_google_connected
             # ── 4. Recuperación de memoria episódica (Omnisciencia) ───
             bloque_memoria = ""
             try:
-                resultados = await qdrant_client.search(
+                resultados = await qdrant_client.query_points(
                     collection_name=COLECCION_MEMORIA,
-                    query_vector=vector_usuario,
+                    query=vector_usuario,
                     query_filter=Filter(
                         must=[FieldCondition(
                             key="user-id",
@@ -272,7 +272,7 @@ async def procesar_generador_eventos(payload: TaskbarPrompt, is_google_connected
                 )
                 recuerdos = [
                     f"- {r.payload.get('contenido', '')}"
-                    for r in resultados if r.score > 0.4
+                    for r in resultados.points if r.score > 0.4
                 ]
                 if recuerdos:
                     bloque_memoria = (
@@ -306,7 +306,7 @@ async def procesar_generador_eventos(payload: TaskbarPrompt, is_google_connected
 
             try:
                 async for evento in await agnux_agent.arun(
-                    message=payload.prompt,
+                    payload.prompt,
                     stream=True,
                     stream_intermediate_steps=True,
                     # Pasamos los identificadores de sesión como metadata

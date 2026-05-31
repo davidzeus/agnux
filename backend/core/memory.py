@@ -55,7 +55,7 @@ async def guardar_recuerdo_qdrant(user_id: str, tipo_evento: str, contenido: str
         point_id = str(uuid.uuid4())
         
         payload = {
-            "user_id": user_id,
+            "user-id": user_id,
             "tipo": tipo_evento,
             "contenido": contenido,
             "timestamp": datetime.now().isoformat()
