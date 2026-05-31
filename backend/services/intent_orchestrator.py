@@ -25,8 +25,10 @@ from core.memory import (
 from schemas.models import TaskbarPrompt
 from services.tools_service import SYSTEM_TOOLS, autogenerar_nueva_tool
 
-# Importar el agente Agno y la función de recarga desde el núcleo
 from agent_core import agnux_agent, recargar_herramientas_dinamicas, TOOLS_BASE
+
+# Memoria a corto plazo en RAM
+SESSION_HISTORY = {}
 
 
 # =====================================================================
@@ -284,6 +286,18 @@ async def procesar_generador_eventos(payload: TaskbarPrompt, is_google_connected
             except Exception as e:
                 logger.error(f"❌ [MEMORIA] Error recuperando contexto histórico: {e}")
 
+            # ── 4.5. Recuperación de memoria a corto plazo (Historial Reciente) ──
+            session_id = f"{terminal_id_norm}--{user_id_norm}"
+            if session_id not in SESSION_HISTORY:
+                SESSION_HISTORY[session_id] = []
+            
+            historial_reciente = "\n".join(SESSION_HISTORY[session_id][-6:])
+            if historial_reciente:
+                bloque_memoria += f"\n\n## HISTORIAL RECIENTE DE LA CONVERSACIÓN:\n{historial_reciente}"
+            
+            # Guardamos el prompt actual
+            SESSION_HISTORY[session_id].append(f"Usuario: {payload.prompt}")
+
             # ── 5. Construcción del system prompt contextualizado ─────
             system_prompt = _construir_system_prompt(
                 herramientas_str=herramientas_str,
@@ -451,6 +465,9 @@ async def procesar_generador_eventos(payload: TaskbarPrompt, is_google_connected
                 return
 
             # ── 7. Si el agente solo habló (sin tool call) → CREATE-WINDOW ──
+            if respuesta_completa.strip():
+                SESSION_HISTORY[session_id].append(f"AGNUX: {respuesta_completa.strip()}")
+            
             if respuesta_completa.strip() and not ultima_tool_name:
                 payload_ventana = {
                     "window-id": "agnux-ai-window",
