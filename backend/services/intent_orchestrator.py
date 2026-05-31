@@ -203,9 +203,9 @@ Si autogenerás una herramienta y necesitás notificar al usuario, usá WebSocke
 `await notificar_frontend(kwargs.get("terminal-id"), kwargs.get("user-id"), "Mensaje", "notif")`
 
 ## 4.0 REGLA DE AUTOGÉNESIS (CONSENTIMIENTO EXPLÍCITO)
-Si el usuario pide algo para lo cual NO existe una herramienta, NO uses `autogenerar_nueva_tool`
-directamente. Primero respondé explicándole que no tenés esa herramienta y preguntale si desea que
-la programes. Sólo si el usuario responde afirmativamente, ejecutá `autogenerar_nueva_tool`.
+Si el usuario pide algo para lo cual NO existe una herramienta, NO uses `autogenerarNuevaTool` 
+directamente de forma invisible. Primero, DEBES responder textualmente preguntándole al usuario si desea que 
+la programes. Sólo si el usuario responde afirmativamente, ejecutá `autogenerarNuevaTool`.
 
 ## 5.0 SANDBOX DE EVALUACIÓN DE CÓDIGO (OBLIGATORIO)
 Cuando el usuario pida generar, probar o mostrar código en el escritorio:
