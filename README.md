@@ -34,6 +34,15 @@
     <img src="https://img.shields.io/badge/Se_buscan-Colaboradores-ff3366?style=flat-square" alt="Colaboradores"/>
   </p>
 
+  <p>
+    <a href="#-apoya-el-proyecto">
+      <img src="https://img.shields.io/badge/Mercado_Pago-009EE3?style=for-the-badge&logo=mercadopago&logoColor=white" alt="Mercado Pago"/>
+    </a>
+    <a href="https://paypal.me/agnux">
+      <img src="https://img.shields.io/badge/PayPal-00457C?style=for-the-badge&logo=paypal&logoColor=white" alt="PayPal"/>
+    </a>
+  </p>
+
   <br/>
 
   <blockquote>
