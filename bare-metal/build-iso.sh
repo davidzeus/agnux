@@ -1,6 +1,6 @@
 #!/bin/bash
 # =====================================================================
-# 💿 AGNUX OS - ISO COMPILER SCRIPT (BARE-METAL DISTRO DEBIAN/ROOT)
+# 💿 AGNUX OS - ISO COMPILER SCRIPT (INMUNE A COMPLICACIONES DE LOOP)
 # =====================================================================
 set -e
 
@@ -9,8 +9,8 @@ UBUNTU_ISO_URL="https://releases.ubuntu.com/24.04.1/ubuntu-24.04.1-live-server-a
 
 echo "🟩 [AGNUX COMPILER] Iniciando la creación de la ISO como ROOT..."
 
-# 1. Instalar herramientas de empaquetado si faltan (Nativo de Debian)
-apt-get update && apt-get install -y xorriso squashfs-tools wget
+# 1. Asegurar herramientas de empaquetado y p7zip en Debian
+apt-get update && apt-get install -y xorriso squashfs-tools wget p7zip-full
 
 # 2. Descargar la ISO base oficial de Ubuntu Server
 if [ ! -f "ubuntu-base.iso" ]; then
@@ -18,12 +18,10 @@ if [ ! -f "ubuntu-base.iso" ]; then
     wget -O ubuntu-base.iso "$UBUNTU_ISO_URL"
 fi
 
-# 3. Crear directorios de trabajo y extraer la ISO
-mkdir -p ./mnt ./custom_iso ./squashfs_root
-mount -o loop ubuntu-base.iso ./mnt
-cp -r ./mnt/* ./custom_iso/
-cp -r ./mnt/.disk/ ./custom_iso/
-umount ./mnt
+# 3. 🔥 EXTRACCIÓN DIRECTA EN ESPACIO DE USUARIO (SIN MOUNT / SIN LOOP)
+echo "📦 Extrayendo estructura ISO base usando 7z..."
+mkdir -p ./custom_iso ./squashfs_root
+7z x ubuntu-base.iso -o./custom_iso/ -y
 
 # 4. Extraer el sistema de archivos raíz (SquashFS)
 echo "📦 Extrayendo SquashFS..."
