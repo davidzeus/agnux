@@ -420,10 +420,18 @@ TOOLS_BASE = [
 # WRAPPERS PARA SYSTEM_TOOLS
 # Agno requiere que TODAS las herramientas descritas en el system_prompt
 # existan como funciones reales en la lista de tools del agente.
+# Las descripciones deben ser explícitas para modelos pequeños.
 # =====================================================================
 
 def calculateExpression(expression: str) -> str:
-    """Evalúa expresiones aritméticas complejas en el Host."""
+    """
+    ¡USAR SIEMPRE PARA CUALQUIER CÁLCULO MATEMÁTICO!
+    Evalúa expresiones aritméticas complejas en el Host.
+    Nunca resuelvas cálculos mentalmente ni respondas con texto. Llama a esta herramienta.
+    
+    Args:
+        expression (str): La expresión matemática a calcular (ej: '3 + 3').
+    """
     return json.dumps({"__agnux_event": "CALCULATE-EXPRESSION", "expression": expression})
 
 def setWallpaper(imageUrl: str) -> str:
@@ -431,7 +439,14 @@ def setWallpaper(imageUrl: str) -> str:
     return json.dumps({"__agnux_event": "SET-WALLPAPER", "imageUrl": imageUrl})
 
 def applyCssTheme(cssCode: str) -> str:
-    """Aplica un nuevo estilo físico (CSS) a la interfaz de AGNUX."""
+    """
+    ¡USAR SIEMPRE PARA CAMBIAR EL TEMA O COLOR VISUAL!
+    Aplica un nuevo estilo físico (CSS) a la interfaz de AGNUX OS. 
+    Llama a esta herramienta en lugar de decirle al usuario que aplicaste el estilo.
+    
+    Args:
+        cssCode (str): El código CSS a inyectar, modificando variables en :root (ej: ':root { --agnux-bg-color: #000; }').
+    """
     return json.dumps({"__agnux_event": "SET-THEME", "cssCode": cssCode})
 
 def googleWorkspaceAction(service: str, action: str, params: dict = None) -> str:
