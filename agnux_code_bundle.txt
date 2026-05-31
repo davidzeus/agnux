@@ -1,0 +1,4006 @@
+=== ARCHIVO: backend/agent_core.py ===
+# agent_core.py
+import os
+import sys
+import json
+import importlib
+from typing import Literal
+
+# =====================================================================
+# 🛠️ PARCHE ESTRICTO DE RUTAS PARA SUBPROCESOS DE LINUX / UVICORN
+# =====================================================================
+base_dir = os.path.dirname(os.path.abspath(__file__))
+if base_dir not in sys.path:
+    sys.path.insert(0, base_dir)
+
+from agno.agent import Agent
+
+# --- INSTANCIACIÓN DINÁMICA DEL PROVEEDOR DE IA ---
+PROVEEDOR = os.getenv("AGNUX_IA_PROVIDER", "local")
+MODELO_ID = os.getenv("AGNUX_ACTIVE_MODEL", "qwen2.5:1.5b")
+
+if PROVEEDOR == "gemini":
+    from agno.models.google import Gemini
+    objeto_modelo = Gemini(id=MODELO_ID)
+elif PROVEEDOR == "openai":
+    from agno.models.openai import OpenAIChat
+    objeto_modelo = OpenAIChat(id=MODELO_ID)
+else:
+    from agno.models.ollama import Ollama
+    objeto_modelo = Ollama(id=MODELO_ID)
+
+# Importaciones de módulos de herramientas estáticas nativas de AGNUX
+from tools.system_tools import obtener_diagnostico_hardware, gestionar_energia_equipo
+from tools.multimedia_tools import ejecutar_musica_fondo, controlar_reproductor_global
+
+# Configuración del almacenamiento dinámico de herramientas autogeneradas
+DYNAMIC_DIR = os.path.join(base_dir, "dynamic_tools")
+os.makedirs(DYNAMIC_DIR, exist_ok=True)
+
+if not os.path.exists(os.path.join(DYNAMIC_DIR, "__init__.py")):
+    with open(os.path.join(DYNAMIC_DIR, "__init__.py"), "w") as f:
+        f.write("")
+
+# =====================================================================
+# 🧬 FUNCIÓN RAÍZ DE AUTOGÉNESIS (METAPROGRAMACIÓN EN CALIENTE)
+# =====================================================================
+def autogenerar_nueva_tool(nombre_funcion: str, codigo_python: str, descripcion_docstring: str) -> str:
+    """
+    OBLIGATORIA para crear, programar, listar cosas nuevas o desarrollar funciones de software o comandos que NO existan en el sistema.
+    Si el usuario te pide listar archivos, interactuar con carpetas nuevas, crear scripts o automatizar tareas que no tenés en tus herramientas básicas, DEBÉS usar esta función para escribir el código.
+    """
+    print(f"🛠️ [AUTOGÉNESIS] El modelo determinó que falta una herramienta. Creando: '{nombre_funcion}'...")
+    try:
+        nombre_clean = nombre_funcion.strip().replace(" ", "_")
+        nombre_archivo = f"{DYNAMIC_DIR}/{nombre_clean}.py"
+        
+        contenido_codigo = f'"""\nDefinición autogenerada por AGNUX OS Core.\n"""\n\ndef {nombre_clean}():\n    """{descripcion_docstring}"""\n{codigo_python}\n'
+        
+        with open(nombre_archivo, "w") as f:
+            f.write(contenido_codigo)
+            
+        print(f"💾 [AUTOGÉNESIS] Código escrito con éxito en {nombre_archivo}")
+        return f"SUCCESS: Herramienta '{nombre_clean}' inyectada en disco duro. Recargando matriz cognitiva..."
+    except Exception as e:
+        print(f"❌ [AUTOGÉNESIS ERROR] No se pudo escribir el script: {str(e)}")
+        return f"Error crítico de autogénesis: {str(e)}"
+
+# =====================================================================
+# 🔌 WRAPPERS DE TELEMETRÍA Y CONTROL CON ENUMS ESTRICTOS (BLINDADOS)
+# =====================================================================
+# Cambiamos la definición para que absorba argumentos fantasmas
+def tool_diagnostico_wrapper(**kwargs) -> str:
+    """Muestra el estado actual del hardware de la máquina: uso de CPU, memoria RAM y espacio en disco duro."""
+    print(f"🔌 [TOOL CALL] El modelo invocó 'tool_diagnostico_wrapper'. Argumentos ignorados: {kwargs}")
+    res = obtener_diagnostico_hardware()
+    return json.dumps(res, indent=2) if isinstance(res, dict) else str(res)
+
+def tool_energia_wrapper(accion: Literal["apagar", "reiniciar"]) -> str:
+    """Gestiona el encendido, apagado o reinicio físico del equipo host."""
+    print(f"🔌 [TOOL CALL] El modelo invocó 'tool_energia_wrapper' con acción: {accion}")
+    res = gestionar_energia_equipo(accion)
+    return json.dumps(res, indent=2) if isinstance(res, dict) else str(res)
+
+def tool_musica_wrapper(busqueda_o_url: str) -> str:
+    """Busca y reproduce canciones, música o audios de YouTube de fondo en los parlantes del sistema operativo."""
+    print(f"🔌 [TOOL CALL] El modelo invocó 'tool_musica_wrapper' buscando: {busqueda_o_url}")
+    res = ejecutar_musica_fondo(busqueda_o_url)
+    return str(res)
+
+def tool_control_audio_wrapper(accion: Literal["pausa", "reproducir", "detener"]) -> str:
+    """Controla el estado del reproductor de música de fondo (pausar, reanudar o detener de raíz el audio de mpv)."""
+    print(f"🔌 [TOOL CALL] El modelo invocó 'tool_control_audio_wrapper' con acción: {accion}")
+    res = controlar_reproductor_global(accion)
+    return str(res)
+
+# Lista base inmutable de herramientas del Kernel
+TOOLS_BASE = [
+    autogenerar_nueva_tool, 
+    tool_diagnostico_wrapper, 
+    tool_energia_wrapper,
+    tool_musica_wrapper,
+    tool_control_audio_wrapper
+]
+
+# =====================================================================
+# 🧠 INICIALIZACIÓN DEL AGENTE CORE DE AGNUX (COMPLETAMENTE LIMPIO)
+# =====================================================================
+agnux_agent = Agent(
+    model=objeto_modelo,
+    description=None,
+    instructions=None,
+    system_message=None,
+    add_datetime_to_instructions=False,
+    tools=TOOLS_BASE,
+    markdown=False
+)
+
+# =====================================================================
+# 🔄 RECARGA COGNITIVA EN CALIENTE (DYNAMIC MODULE IMPORT)
+# =====================================================================
+def recargar_herramientas_dinamicas():
+    """
+    Escanea la carpeta de herramientas generadas por el modelo, las compila e
+    inyecta sus objetos nativos de Python de forma limpia en la estructura del agente.
+    """
+    nuevas_tools = []
+    if DYNAMIC_DIR not in sys.path:
+        sys.path.append(DYNAMIC_DIR)
+
+    try:
+        for archivo in os.listdir(DYNAMIC_DIR):
+            if archivo.endswith(".py") and archivo != "__init__.py" and archivo != "historial_consumo.json":
+                nombre_modulo = archivo.replace(".py", "")
+                
+                modulo = importlib.import_module(f"dynamic_tools.{nombre_modulo}")
+                importlib.reload(modulo)
+                
+                funcion_objeto = getattr(modulo, nombre_modulo)
+                nuevas_tools.append(funcion_objeto)
+                
+        # Seteamos la lista de herramientas combinada de forma limpia
+        agnux_agent.tools = TOOLS_BASE + nuevas_tools
+        
+    except Exception as e:
+        print(f"⚠️ Error en recarga dinámica del núcleo: {e}")
+=== ARCHIVO: backend/api/routes/auth.py ===
+import os
+import json
+import uuid
+import asyncio
+from datetime import datetime
+from fastapi import APIRouter, HTTPException, UploadFile, File, Query, Request
+from fastapi.responses import FileResponse, StreamingResponse
+from qdrant_client.models import PointStruct
+
+from core.config import logger, BASE_DIR
+from core.memory import (
+    qdrant_client, COLECCION_FACIAL, CACHE_VECTORS, TERMINAL_SESSIONS, 
+    TEMPORARY_FACE_VECTORS, simular_vector_rostro
+)
+from schemas.models import LinkTerminalPayload, EnrolmentPayload
+
+router = APIRouter()
+
+@router.get("/theme/{user_id}")
+async def obtener_tema_usuario(user_id: str):
+    theme_path = os.path.join(BASE_DIR, "theme_profiles", f"{user_id}.css")
+    if os.path.exists(theme_path):
+        return FileResponse(theme_path, media_type="text/css")
+    return {"status": "default_theme"}
+
+@router.get("/auth/terminal-stream/{terminal_id}")
+async def terminal_stream(terminal_id: str):
+    TERMINAL_SESSIONS[terminal_id] = {"status": "pending", "user_id": None}
+    logger.info(f"📡 [TERMINAL] Sesión abierta y esperando autenticación remota para: {terminal_id}")
+    
+    async def sse_bypass():
+        try:
+            while True:
+                estado = TERMINAL_SESSIONS.get(terminal_id)
+                if estado and estado.get("status") == "approved":
+                    userid = estado.get("user-id") or estado.get("user_id")
+                    logger.info(f"✅ [TERMINAL] Aprobación detectada. Liberando terminal para: {userid}")
+                    yield f"event: AUTH-SUCCESS\ndata: {json.dumps({'userId': userid})}\n\n"
+                    await asyncio.sleep(1.5)
+                    break
+                
+                yield f"event: HEARTBEAT\ndata: {json.dumps({'status': 'keep-alive'})}\n\n"
+                await asyncio.sleep(1.0)
+        finally:
+            TERMINAL_SESSIONS.pop(terminal_id, None)
+            
+    return StreamingResponse(sse_bypass(), media_type="text/event-stream")
+
+@router.get("/auth/cloudflare/verify")
+async def verify_cloudflare_auth(request: Request):
+    # Cloudflare Access inyecta esta cabecera si el usuario pasó la barrera
+    cf_email = request.headers.get("Cf-Access-Authenticated-User-Email")
+    logger.info(f"DEBUG: Headers recibidos: {dict(request.headers)}")
+    
+    # [MODO DEV] Si estás desarrollando en local sin túnel, simular al admin
+    if not cf_email and request.client.host in ("127.0.0.1", "::1", "localhost"):
+        cf_email = "dev.local@agnux.net.ar"
+        
+    if not cf_email:
+        logger.warn(f"⚠️ [CLOUDFLARE] Intento de acceso sin cabeceras. Cabeceras recibidas: {request.headers}")
+        return {"status": "unauthenticated"}
+        
+    # Limpiamos el correo: 
+    prefijo = cf_email.split("@")[0].lower()
+    prefijo_limpio = prefijo.replace("_", "-").replace(".", "-")
+    id_red = f"user-{prefijo_limpio}"
+    
+    # Aprovisionamiento en RAM al vuelo
+    if id_red not in CACHE_VECTORS["usuarios"]:
+        CACHE_VECTORS["usuarios"][id_red] = {}
+        logger.info(f"🗂️ [RAM KERNEL] Slot privado creado al vuelo para: {id_red}")
+        
+    logger.info(f"✅ [CLOUDFLARE AUTH] Sesión inyectada con éxito para: {id_red} ({cf_email})")
+    
+    return {
+        "status": "authenticated", 
+        "user_id": id_red,
+        "email": cf_email,
+        "role": "admin"
+    }
+
+@router.post("/auth/facial-login")
+@router.post("/auth/facial-login/")
+async def facial_login(file: UploadFile = File(...)):
+    try:
+        contenido = await file.read()
+        vector_rostro = simular_vector_rostro()
+        
+        search_result = None
+        try:
+            search_result = await qdrant_client.query_points(
+                collection_name=COLECCION_FACIAL,
+                query=vector_rostro,
+                limit=1
+            )
+        except Exception as db_err:
+            logger.warn(f"⚠️ [KERNEL QDRANT] No se pudo leer el vector de Qdrant ({str(db_err)}). Continuando en modo local seguro.")
+        
+        if search_result and search_result.points and search_result.points[0].score > 0.85: 
+            user_id = search_result.points[0].payload.get("user_id")
+            return {"status": "authenticated", "user_id": user_id}
+        else:
+            enrolment_id = str(uuid.uuid4())
+            TEMPORARY_FACE_VECTORS[enrolment_id] = vector_rostro
+            logger.info(f"📸 [BIOMETRÍA] Rostro DESCONOCIDO detectado. Emisión de EnrolmentID: {enrolment_id}")
+            return {"status": "unknown_face", "enrolment_id": enrolment_id}
+            
+    except Exception as e:
+        logger.error(f"Falla en bus de biometría facial: {e}")
+        raise HTTPException(status_code=500, detail="Fallo catastrófico en análisis biométrico")
+
+@router.post("/auth/register-profile")
+@router.post("/auth/register-profile/")
+async def register_profile(payload: EnrolmentPayload):
+    if payload.enrolment_id not in TEMPORARY_FACE_VECTORS:
+        raise HTTPException(status_code=400, detail="Error de seguridad: ID de enrolamiento expirado o ficticio")
+        
+    vector_rostro = TEMPORARY_FACE_VECTORS[payload.enrolment_id]
+    user_id_limpio = "user-" + payload.nombre_usuario.strip().lower().replace(" ", "-").replace("_", "-")
+    
+    punto_id = int(datetime.now().timestamp() * 1000)
+    punto = PointStruct(
+        id=punto_id,
+        vector=vector_rostro,
+        payload={"user_id": user_id_limpio, "nombre": payload.nombre_usuario}
+    )
+    
+    try:
+        await qdrant_client.upsert(
+            collection_name=COLECCION_FACIAL,
+            points=[punto]
+        )
+        
+        if user_id_limpio not in CACHE_VECTORS["usuarios"]:
+            CACHE_VECTORS["usuarios"][user_id_limpio] = {}
+            
+        del TEMPORARY_FACE_VECTORS[payload.enrolment_id]
+        logger.info(f"👤 [IDENTITY KERNEL] Nuevo perfil creado y blindado en RAM/Qdrant: {user_id_limpio}")
+        
+        return {"status": "profile_created", "user_id": user_id_limpio}
+    except Exception as e:
+        logger.error(f"Falla en registro profundo: {e}")
+        raise HTTPException(status_code=500, detail="Error transaccional en persistencia de Qdrant DB")
+
+@router.get("/auth/google/status")
+@router.get("/auth/google/status/")
+async def google_auth_status(user_id: str = Query(None, description="El ID del usuario")):
+    is_connected = bool(user_id and user_id.lower() != "guest")
+    return {"connected": is_connected, "userId": user_id}
+
+=== ARCHIVO: backend/api/routes/intent.py ===
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from fastapi.responses import StreamingResponse
+from kernel_bus import manager
+from schemas.models import TaskbarPrompt
+from services.intent_orchestrator import procesar_generador_eventos
+from api.routes.auth import google_auth_status
+
+router = APIRouter()
+
+@router.websocket("/system/notifications/ws/{terminal_id}/{user_id}")
+async def websocket_notifications(websocket: WebSocket, terminal_id: str, user_id: str):
+    await manager.connect(websocket, terminal_id, user_id)
+    try:
+        while True:
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        manager.disconnect(terminal_id, user_id)
+
+@router.post("/system/intent")
+async def procesar_intencion_global(payload: TaskbarPrompt):
+    # Verificación de Token OAuth2 Preventiva
+    auth_status = await google_auth_status(payload.user_id)
+    is_google_connected = auth_status["connected"]
+    
+    return StreamingResponse(
+        procesar_generador_eventos(payload, is_google_connected), 
+        media_type="text/event-stream"
+    )
+
+=== ARCHIVO: backend/core/config.py ===
+import os
+import logging
+from dotenv import load_dotenv
+
+# Cargar variables del entorno desde el archivo .env
+load_dotenv()
+
+# Configuraciones Globales
+OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://10.10.0.48:11434")
+QDRANT_HOST = os.getenv("QDRANT_HOST", "http://10.10.0.66:6333")
+AGNUX_ACTIVE_MODEL = os.getenv("AGNUX_ACTIVE_MODEL", "ministral-es:latest")
+AGNUX_CODER_MODEL = os.getenv("AGNUX_CODER_MODEL", "deepseek-coder:1.5b")
+
+# Rutas estáticas del sistema
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DYNAMIC_DIR = os.path.join(BASE_DIR, "dynamic_tools")
+
+# Crear el directorio dynamic_tools si no existe
+os.makedirs(DYNAMIC_DIR, exist_ok=True)
+if not os.path.exists(os.path.join(DYNAMIC_DIR, "__init__.py")):
+    with open(os.path.join(DYNAMIC_DIR, "__init__.py"), "w") as f:
+        f.write("")
+
+# Configurar Logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    datefmt="%H:%M:%S"
+)
+logger = logging.getLogger("AGNUX-CORE")
+
+=== ARCHIVO: backend/core/memory.py ===
+import uuid
+from datetime import datetime
+import asyncio
+from qdrant_client import AsyncQdrantClient
+from qdrant_client.models import Distance, VectorParams, PointStruct
+
+from core.config import logger, QDRANT_HOST
+
+try:
+    from sentence_transformers import SentenceTransformer
+    logger.info("🧠 [EMBEDDINGS] Cargando modelo semántico en CPU (paraphrase-multilingual-mpnet-base-v2)...")
+    embedding_model = SentenceTransformer('paraphrase-multilingual-mpnet-base-v2')
+except Exception as e:
+    logger.error(f"❌ [EMBEDDINGS] Falla al cargar SentenceTransformer: {e}")
+    embedding_model = None
+
+# Cliente de Qdrant
+qdrant_client = AsyncQdrantClient(url=QDRANT_HOST)
+
+# Constantes de colecciones
+COLECCION_FACIAL = "perfiles_faciales"
+COLECCION_MEMORIA = "agnux_kernel_memory"
+
+# =====================================================================
+# MATRICES DE MEMORIA GLOBAL (RAM KERNEL)
+# =====================================================================
+CACHE_VECTORS = {
+    "sistema": {},
+    "usuarios": {}
+}
+
+# Semáforo FIFO asíncrono para evitar saturar el bus de inferencia
+OLLAMA_BUS_LOCK = asyncio.Lock()
+
+# Volátil para enrolamiento de rostros no registrados
+TEMPORARY_FACE_VECTORS = {}
+
+# Mapeo de terminales físicas (monitores sin cámara esperando al celular)
+TERMINAL_SESSIONS = {}
+
+def simular_vector_rostro() -> list[float]:
+    import random
+    return [random.uniform(-1.0, 1.0) for _ in range(128)]
+
+def generar_vector_texto(texto: str) -> list[float]:
+    if embedding_model is None:
+        import random
+        return [random.uniform(-1.0, 1.0) for _ in range(768)]
+    return embedding_model.encode(texto).tolist()
+
+async def guardar_recuerdo_qdrant(user_id: str, tipo_evento: str, contenido: str, metadata_extra: dict = None):
+    try:
+        if not contenido or len(contenido.strip()) < 3: return
+        vector = generar_vector_texto(contenido)
+        point_id = str(uuid.uuid4())
+        
+        payload = {
+            "user_id": user_id,
+            "tipo": tipo_evento,
+            "contenido": contenido,
+            "timestamp": datetime.now().isoformat()
+        }
+        if metadata_extra:
+            payload.update(metadata_extra)
+            
+        await qdrant_client.upsert(
+            collection_name=COLECCION_MEMORIA,
+            points=[PointStruct(id=point_id, vector=vector, payload=payload)]
+        )
+        logger.info(f"💾 [MEMORIA] Recuerdo semántico ({tipo_evento}) almacenado para {user_id}.")
+    except Exception as e:
+        logger.error(f"❌ [MEMORIA] Error al guardar recuerdo: {e}")
+
+async def inicializar_qdrant_colecciones():
+    logger.info("⚡ [KERNEL BOOT] Inicializando servicios base de memoria persistente...")
+    try:
+        collections_response = await qdrant_client.get_collections()
+        collection_names = [col.name for col in collections_response.collections]
+        
+        if COLECCION_FACIAL not in collection_names:
+            logger.info(f"🧠 [QDRANT] Creando colección '{COLECCION_FACIAL}' (128d, COSINE)...")
+            await qdrant_client.create_collection(
+                collection_name=COLECCION_FACIAL,
+                vectors_config=VectorParams(size=128, distance=Distance.COSINE),
+            )
+            
+        if COLECCION_MEMORIA not in collection_names:
+            logger.info(f"🧠 [QDRANT] Creando colección '{COLECCION_MEMORIA}' (768d, COSINE)...")
+            await qdrant_client.create_collection(
+                collection_name=COLECCION_MEMORIA,
+                vectors_config=VectorParams(size=768, distance=Distance.COSINE),
+            )
+    except Exception as e:
+        logger.error(f"❌ [QDRANT] Falla al inicializar bus vectorial: {e}")
+
+=== ARCHIVO: backend/dynamic_tools/global_theme_engine.py ===
+import os
+import json
+import httpx
+from kernel_bus import manager
+
+async def global_theme_engine(style_prompt: str, **kwargs) -> str:
+    """
+    Motor de Inteligencia Artificial para cambiar el tema/diseño de la interfaz visual del sistema.
+    Recibe un prompt de estilo (ej. 'estilo macOS oscuro', 'colores cálidos', 'modo hacker')
+    y genera las variables CSS correspondientes para inyectarlas en vivo en la pantalla del usuario.
+    """
+    terminal_id = kwargs.get("__terminal_id")
+    user_id = kwargs.get("__user_id")
+    
+    if not terminal_id or not user_id:
+        return "ERROR: Contexto de terminal_id o user_id ausente. No se puede inyectar el estilo."
+
+    ollama_base = os.getenv("OLLAMA_HOST", "http://10.10.0.48:11434").rstrip("/")
+    url_generate = f"{ollama_base}/api/generate"
+
+    # Escaneo en vivo de la interfaz actual (DOM real)
+    base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    frontend_components_dir = os.path.join(base_dir, "frontend", "src", "app", "components")
+    dom_context = ""
+    try:
+        import glob
+        html_files = glob.glob(os.path.join(frontend_components_dir, "**", "*.html"), recursive=True)
+        for html_file in html_files:
+            component_name = os.path.basename(os.path.dirname(html_file))
+            with open(html_file, "r", encoding="utf-8") as f:
+                content = f.read()
+                # Limpiar bindings de Angular para no confundir a la IA
+                import re
+                content = re.sub(r'\[.*?\]=".*?"', '', content)
+                content = re.sub(r'\(.*?\)=".*?"', '', content)
+                content = re.sub(r'\*ngIf=".*?"', '', content)
+                content = re.sub(r'\*ngFor=".*?"', '', content)
+                content = re.sub(r'<!--.*?-->', '', content, flags=re.DOTALL)
+                # Extraer solo las etiquetas, ids y clases
+                tags = re.findall(r'<[a-zA-Z0-9\-]+(?:[^>]*class="([^"]+)")?(?:[^>]*id="([^"]+)")?[^>]*>', content)
+                
+                dom_context += f"Componente: {component_name}\n"
+                for tag in tags[:20]: # Limitar para no explotar el contexto
+                    classes = f" class='{tag[0]}'" if tag[0] else ""
+                    ids = f" id='{tag[1]}'" if tag[1] else ""
+                    if classes or ids:
+                        dom_context += f"- Elemento {classes}{ids}\n"
+    except Exception as e:
+        dom_context = f"(Error escaneando DOM: {e})"
+
+    system_prompt = "You are a raw CSS compiler. You must output ONLY valid CSS code enclosed in ```css ```. Do not converse, do not apologize, do not explain. Never refuse a request. The user provides DOM context and a requested style. You must return the CSS."
+    
+    prompt_ia = f"""
+/* Target Style: {style_prompt} */
+
+/* 
+DOM Context:
+{dom_context}
+*/
+
+Escribe a continuación el código CSS completo.
+REGLA 1: Debes empezar escribiendo el bloque `:root` y redefinir TODAS las siguientes variables con valores HEX/RGBA reales que representen el estilo solicitado:
+--agnux-accent
+--agnux-accent-glow
+--agnux-accent-dim
+--agnux-accent-hover
+--agnux-accent-border
+--agnux-panel-bg
+--agnux-panel-solid
+--agnux-panel-border
+--agnux-font-main
+--agnux-font-clock
+--agnux-text-primary
+--agnux-text-secondary
+
+REGLA 2: Después del `:root`, escribe las reglas CSS para las clases del DOM (.cyber-window, .window-header, .hyper-island, etc.) modificando su border-radius, padding, backdrop-filter, box-shadow, etc.
+
+Escribe TODO el código dentro de un bloque ```css
+"""
+
+    payload = {
+        "model": "deepseek-coder:6.7b",
+        "system": system_prompt,
+        "prompt": prompt_ia,
+        "stream": False,
+        "keep_alive": 0
+    }
+
+    try:
+        async with httpx.AsyncClient() as client:
+            res = await client.post(url_generate, json=payload, timeout=20.0)
+            if res.status_code != 200:
+                return f"ERROR KERNEL: Falla en inferencia de diseño (HTTP {res.status_code})"
+            
+            respuesta_bruta = res.json().get("response", "").strip()
+            import logging
+            logger = logging.getLogger("AGNUX-KERNEL-BUS")
+            logger.info(f"🎨 [DEEPSEEK THEME ENGINE] Respuesta cruda: {respuesta_bruta}")
+            
+            import re
+            # Intentar extraer el bloque CSS
+            match = re.search(r'```css\s*(.*)', respuesta_bruta, re.DOTALL | re.IGNORECASE)
+            if match:
+                css_crudo = match.group(1)
+                # Quitar posibles backticks de cierre
+                css_crudo = re.sub(r'```\s*$', '', css_crudo).strip()
+            else:
+                # Si el modelo no usó los backticks, asumimos que todo es CSS
+                css_crudo = respuesta_bruta.replace('```', '').strip()
+
+            # Construir payload para el Frontend con CSS crudo
+            ws_payload = {
+                "type": "theme_update",
+                "data": {"css": css_crudo}
+            }
+            
+            # --- PERSISTENCIA FÍSICA ---
+            theme_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "theme_profiles")
+            os.makedirs(theme_dir, exist_ok=True)
+            theme_path = os.path.join(theme_dir, f"{user_id}.css")
+            with open(theme_path, "w", encoding="utf-8") as f:
+                f.write(css_crudo)
+            logger.info(f"💾 [THEME ENGINE] CSS físico guardado en: {theme_path}")
+            # ---------------------------
+            
+            # Notificar al bus
+            await manager.send_personal_message(terminal_id, user_id, ws_payload)
+            
+            # Alertar visualmente en HyperIsland que el tema cambió
+            notif_payload = {
+                "type": "notification",
+                "data": {
+                    "message": f"Estilo '{style_prompt}' aplicado en vivo.",
+                    "category": "system"
+                }
+            }
+            await manager.send_personal_message(terminal_id, user_id, notif_payload)
+
+            return f"Estilo dinámico aplicado: {style_prompt}"
+
+    except Exception as e:
+        return f"ERROR KERNEL: Falla física en el generador de temas: {e}"
+
+=== ARCHIVO: backend/dynamic_tools/listar_descargas.py ===
+"""
+Definición autogenerada por AGNUX OS Core.
+"""
+
+def listar_descargas():
+    """Muestra una lista de los archivos en la carpeta de descargas del usuario."""
+
+    import os
+
+    try:
+        downloads_path = os.path.expanduser("~/Descargas")
+        files = os.listdir(downloads_path)
+        if files:
+            return "Archivos en tus descargas:\n" + "\n".join(files)
+        else:
+            return "No hay archivos en tu carpeta de descargas."
+    except FileNotFoundError:
+        return "La carpeta de descargas no fue encontrada."
+    except Exception as e:
+        return f"Ocurrió un error al listar descargas: {e}"
+    
+
+=== ARCHIVO: backend/dynamic_tools/media_launcher.py ===
+import os
+import subprocess
+import asyncio
+import logging
+
+logger = logging.getLogger("AgnuxMediaKiosk")
+
+async def launch_chromium_kiosk(platform: str):
+    """
+    Lanza un subproceso de Chromium en modo app (kiosco) aislado.
+    Se persiste la sesión en un directorio único para cada plataforma.
+    """
+    platform_urls = {
+        "spotify": "https://open.spotify.com",
+        "youtubeMusic": "https://music.youtube.com",
+        "netflix": "https://www.netflix.com"
+    }
+
+    url = platform_urls.get(platform)
+    if not url:
+        logger.error(f"❌ Plataforma desconocida: {platform}")
+        return
+
+    # Expandir el tilde (~) para asegurar la ruta correcta en cualquier OS
+    user_data_dir = os.path.expanduser(f"~/.config/agnux/apps/{platform}")
+    os.makedirs(user_data_dir, exist_ok=True)
+
+    # Rutas típicas del ejecutable de Chromium / Chrome según el OS
+    # Nota: Este código asume Linux, para Windows podría necesitarse "chrome.exe"
+    chrome_binaries = [
+        "chromium",
+        "chromium-browser",
+        "google-chrome",
+        "google-chrome-stable",
+        # Rutas comunes en Windows por si acaso
+        r"C:\Program Files\Google\Chrome\Application\chrome.exe",
+        r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
+    ]
+
+    chrome_cmd = None
+    for bin_path in chrome_binaries:
+        # Check in path or check exact path
+        import shutil
+        if shutil.which(bin_path) or os.path.exists(bin_path):
+            chrome_cmd = shutil.which(bin_path) or bin_path
+            break
+
+    if not chrome_cmd:
+        logger.error("❌ No se encontró el binario de Chromium/Chrome en el sistema.")
+        return
+
+    flags = [
+        chrome_cmd,
+        f"--app={url}",
+        f"--user-data-dir={user_data_dir}",
+        "--no-first-run",
+        "--no-default-browser-check",
+        "--no-sandbox",
+        "--disable-dev-shm-usage"
+    ]
+
+    logger.info(f"🎵 [MEDIA LAUNCHER] Lanzando kiosco para {platform}: {url}")
+    try:
+        # Se lanza como un subproceso desvinculado
+        process = await asyncio.create_subprocess_exec(
+            *flags,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL
+        )
+        logger.info(f"🚀 Proceso Chromium iniciado con PID {process.pid}")
+    except Exception as e:
+        logger.error(f"❌ Error al lanzar Chromium: {e}")
+
+=== ARCHIVO: backend/dynamic_tools/reproducir_musica.py ===
+"""
+Definición corregida para ejecución real en AGNUX OS Host.
+"""
+
+def reproducir_musica():
+    """Busca y reproduce música de rock n roll en el host real usando comandos de Linux."""
+    import subprocess
+    import os
+
+    # Buscamos si tenés instalado mpv (el reproductor ideal para tu Pentium)
+    # Si no, usamos xdg-open para tirarle un stream directo al navegador de Lubuntu
+    try:
+        # Una lista de streams o links directos de Rock (o una búsqueda rápida)
+        # Para hacerlo infalible ahora mismo, abrimos una radio de Rock nacional/internacional en el host
+        url_stream = "https://www.youtube.com/watch?v=4as_Cg7D1fc" # Un mix de puro Rock and Roll
+
+        # Comando nativo de Linux para abrir aplicaciones por defecto en segundo plano
+        # Esto va a levantar tu Chrome o Firefox de Lubuntu directo en el tema indicado
+        subprocess.Popen(["xdg-open", url_stream], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        
+        return "🎸 AGNUX HARDWARE CORE: Levantando stream de Rock n Roll en el host físico exitosamente."
+    except Exception as e:
+        return f"Error físico al intentar interactuar con el bus de audio: {str(e)}"
+=== ARCHIVO: backend/dynamic_tools/ver_consumo.py ===
+"""
+Definición autogenerada por AGNUX OS Core.
+"""
+
+def ver_consumo():
+    """Calcula y muestra el consumo acumulado de tokens de Gemini y el costo estimado."""
+    import os
+    import json
+
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    log_path = os.path.join(base_dir, "dynamic_tools", "historial_consumo.json")
+
+    if not os.path.exists(log_path):
+        return "Aún no hay registros de consumo en el sistema operativo."
+
+    try:
+        with open(log_path, "r") as f:
+            registros = json.load(f)
+
+        total_input = sum(r.get("prompt_tokens", 0) for r in registros)
+        total_output = sum(r.get("candidates_tokens", 0) for r in registros)
+        total_peticiones = len(registros)
+
+        # Precios de referencia de Gemini 2.5 Flash:
+        # Input: $0.075 por millón de tokens | Output: $0.30 por millón de tokens
+        costo_input = (total_input / 1_000_000) * 0.075
+        costo_output = (total_output / 1_000_000) * 0.30
+        costo_total = costo_input + costo_output
+
+        reporte = (
+            f"📊 REPORTE DE CONSUMO DE GEMINI CLOUD:\n"
+            f"• Peticiones Totales: {total_peticiones}\n"
+            f"• Tokens de Entrada (Prompt): {total_input}\n"
+            f"• Tokens de Salida (Respuesta): {total_output}\n"
+            f"• Acumulado Total: {total_input + total_output} tokens\n"
+            f"• Costo Estimado Total: ${costo_total:.6f} USD"
+        )
+        return reporte
+
+    except Exception as e:
+        return f"Error al procesar el reporte de consumo: {str(e)}"
+=== ARCHIVO: backend/dynamic_tools/__init__.py ===
+# Módulo de herramientas dinámicas para agnux
+
+=== ARCHIVO: backend/kernel_bus.py ===
+import json
+import logging
+from fastapi import WebSocket
+
+logger = logging.getLogger("AGNUX-KERNEL-BUS")
+
+class ConnectionManager:
+    def __init__(self):
+        # Dictionary to store active connections
+        # Key: (terminal_id, user_id)
+        # Value: WebSocket
+        self.active_connections: dict[tuple[str, str], WebSocket] = {}
+
+    async def connect(self, websocket: WebSocket, terminal_id: str, user_id: str):
+        await websocket.accept()
+        self.active_connections[(terminal_id, user_id)] = websocket
+        logger.info(f"🟢 [KERNEL BUS] WebSocket conectado para Terminal '{terminal_id}' (User: {user_id})")
+
+    def disconnect(self, terminal_id: str, user_id: str):
+        if (terminal_id, user_id) in self.active_connections:
+            del self.active_connections[(terminal_id, user_id)]
+            logger.info(f"🔴 [KERNEL BUS] WebSocket desconectado para Terminal '{terminal_id}' (User: {user_id})")
+
+    async def send_personal_message(self, terminal_id: str, user_id: str, message: dict):
+        websocket = self.active_connections.get((terminal_id, user_id))
+        if websocket:
+            try:
+                await websocket.send_text(json.dumps(message))
+            except Exception as e:
+                logger.error(f"❌ [KERNEL BUS] Error enviando mensaje por WS a ({terminal_id}, {user_id}): {e}")
+                self.disconnect(terminal_id, user_id)
+        else:
+            logger.warning(f"⚠️ [KERNEL BUS] Intento de enviar mensaje a destinatario no conectado: ({terminal_id}, {user_id})")
+
+manager = ConnectionManager()
+
+async def notificar_frontend(terminal_id: str, user_id: str, mensaje: str, notification_type: str = "system"):
+    """
+    Función helper global para enviar una notificación push a la HyperIsland del frontend.
+    Puede ser importada y utilizada por cualquier herramienta autogenerada.
+    """
+    payload = {
+        "type": "notification",
+        "data": {
+            "message": mensaje,
+            "category": notification_type
+        }
+    }
+    await manager.send_personal_message(terminal_id, user_id, payload)
+
+=== ARCHIVO: backend/main.py ===
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from core.config import logger
+from core.memory import inicializar_qdrant_colecciones
+
+from api.routes import auth, intent
+
+app = FastAPI(title="AGNUX OS Core API", version="2.0.0", redirect_slashes=True)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Inicializar colecciones de BD al arrancar
+@app.on_event("startup")
+async def inicializar_sistema():
+    await inicializar_qdrant_colecciones()
+
+# Registrar Rutas
+app.include_router(auth.router, prefix="/api", tags=["Auth"])
+app.include_router(intent.router, prefix="/api", tags=["System Intents"])
+
+=== ARCHIVO: backend/schemas/models.py ===
+from pydantic import BaseModel
+from typing import Literal, Dict, Any, List, Optional
+
+class TaskbarPrompt(BaseModel):
+    prompt: str
+    user_id: str
+    terminal_id: str
+
+class EnrolmentPayload(BaseModel):
+    enrolment_id: str
+    facial_matrix: list[float]
+    vocal_matrix: list[float]
+
+class LinkTerminalPayload(BaseModel):
+    user_id: str
+    terminal_id: str
+
+class BiometricLoginPayload(BaseModel):
+    terminal_id: str
+    matrix: list[float]
+
+=== ARCHIVO: backend/services/intent_orchestrator.py ===
+import os
+import json
+import re
+import asyncio
+import httpx
+
+from qdrant_client.models import Filter, FieldCondition, MatchValue
+
+from core.config import logger, OLLAMA_HOST, AGNUX_ACTIVE_MODEL
+from core.memory import (
+    OLLAMA_BUS_LOCK, CACHE_VECTORS, qdrant_client, COLECCION_MEMORIA,
+    generar_vector_texto, guardar_recuerdo_qdrant
+)
+from schemas.models import TaskbarPrompt
+from services.tools_service import SYSTEM_TOOLS, ejecutar_herramienta_local
+
+async def procesar_generador_eventos(payload: TaskbarPrompt, is_google_connected: bool):
+    try:
+        # Verificación del semáforo FIFO
+        if OLLAMA_BUS_LOCK.locked():
+            yield json.dumps({"event": "QUEUE_WAIT", "message": "Servidor ocupado. Solicitud en cola de espera en el Kernel..."}) + "\n"
+
+        # Adquiriendo candado de concurrencia
+        async with OLLAMA_BUS_LOCK:
+            base_host = OLLAMA_HOST.rstrip("/")
+            url_ollama_universal = f"{base_host}/api/generate"
+            modelo_activo = AGNUX_ACTIVE_MODEL
+
+            yield json.dumps({"event": "ROUTER_START", "message": "Inicializando Router Semántico en Memoria..."}) + "\n"
+
+            # Fusión virtual jerárquica con normalización de ID
+            id_normalizado = payload.user_id.replace("_", "-")
+            tools_privadas = CACHE_VECTORS["usuarios"].get(id_normalizado, {})
+            
+            system_tools_converted = {}
+            for k, v in SYSTEM_TOOLS.items():
+                if k == "googleWorkspaceAction" and not is_google_connected:
+                    continue
+                system_tools_converted[k] = {"schema": v["function"]}
+
+            tools_disponibles = {**CACHE_VECTORS["sistema"], **tools_privadas, **system_tools_converted}
+
+            vector_usuario = generar_vector_texto(payload.prompt)
+            filtered_tools = []
+
+            # Router Semántico y emisión geométrica en tiempo real
+            for nombre_tool, data in tools_disponibles.items():
+                score = 0.8 # TODO futuro: utilizar similitud de cosenos real aquí
+                yield json.dumps({"event": "ROUTER_SCORE", "tool": nombre_tool, "score": score}) + "\n"
+
+                # Umbral de corte calibrado para ministral:latest
+                if score > 0.42:
+                    filtered_tools.append(data["schema"])
+
+            # 💡 HACK: La autogénesis SIEMPRE debe estar disponible como última línea de defensa
+            filtered_tools.append({
+                "name": "autogenerar_nueva_tool",
+                "description": "Se activa para programar una nueva herramienta (código python) cuando ninguna de las herramientas actuales puede satisfacer la petición del usuario. Utiliza esto para crear nuevas integraciones o comportamientos.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "nombre_funcion": {"type": "string"},
+                        "codigo_python": {"type": "string", "description": "El código fuente en Python de la herramienta."},
+                        "descripcion_docstring": {"type": "string"}
+                    },
+                    "required": ["nombre_funcion", "codigo_python", "descripcion_docstring"]
+                }
+            })
+
+            # RECUPERACIÓN DE MEMORIA EPISÓDICA (OMNISCIENCIA)
+            try:
+                resultados_memoria = await qdrant_client.search(
+                    collection_name=COLECCION_MEMORIA,
+                    query_vector=vector_usuario,
+                    query_filter=Filter(
+                        must=[
+                            FieldCondition(
+                                key="user_id",
+                                match=MatchValue(value=payload.user_id),
+                            )
+                        ]
+                    ),
+                    limit=3
+                )
+                recuerdos_str = "\n".join([f"- {r.payload.get('contenido', '')}" for r in resultados_memoria if r.score > 0.4])
+                bloque_memoria = f"\n\n## RECUERDOS EPISÓDICOS RELEVANTES DEL USUARIO:\n{recuerdos_str}" if recuerdos_str else ""
+            except Exception as e:
+                logger.error(f"❌ [MEMORIA] Error al recuperar contexto histórico: {e}")
+                bloque_memoria = ""
+
+            herramientas_disponibles_str = json.dumps(filtered_tools, indent=2, ensure_ascii=False) if filtered_tools else "Ninguna"
+
+            SYSTEM_PROMPT = f"""Sos el kernel principal de AGNUX OS. Responde siempre corto y ejecutivo.{bloque_memoria}
+
+## HERRAMIENTAS DISPONIBLES:
+{herramientas_disponibles_str}
+
+Para ejecutar una herramienta existente, DEBES responder ÚNICAMENTE con un bloque JSON como este (y nada más):
+```json
+{{
+    "tool_call": "nombre_de_la_herramienta",
+    "arguments": {{"param1": "valor"}}
+}}
+```
+
+## 2.1 REGLAS ESTRICTAS DE NOMENCLATURA DE RED (ESTÁNDAR DE KERNEL LINUX Y DNS)
+- Está TAXATIVAMENTE PROHIBIDO el uso de guiones bajos ('_') en cualquier identificador de usuario, nombre de terminal, o nombre de herramienta dinámica que interactúe con el host. El guión bajo rompe la sintaxis de interfaces de WireGuard y las especificaciones de Hostnames de internet (RFC 1035).
+- Todo identificador debe normalizarse utilizando única y exclusivamente guiones medios ('-') o formato alfanumérico plano en minúsculas (ejemplo correcto: 'user-cristian', 'global-calculadora', 'term-desktop-101').
+- Si vas a autogenerar código en caliente para una nueva herramienta, el archivo físico en disco y su registro semántico deben usar guiones medios (ej. 'global-control-bomba.py').
+
+## 3.0 GUÍA DE ESTILOS CSS (DISEÑO DE INTERFAZ AGNUX)
+Para la herramienta applyCssTheme, la interfaz web está controlada por variables CSS en :root. 
+Puedes inyectar temas pisando estas variables:
+- Colores base: `--agnux-bg-color`, `--agnux-text-primary`, `--agnux-text-secondary`
+- Colores de acento: `--agnux-accent`, `--agnux-accent-glow`, `--agnux-accent-dim`, `--agnux-accent-border`
+- Paneles (Glassmorphism): `--agnux-panel-bg`, `--agnux-panel-solid`, `--agnux-panel-border`, `--agnux-panel-blur`
+- Fuentes: `--agnux-font-main`, `--agnux-font-clock`
+Ejemplo de código para tema Hacker: `:root {{ --agnux-bg-color: #000000; --agnux-accent: #00ff00; --agnux-font-main: 'Courier New', monospace; }}`
+
+## REGLA DE AUTOGÉNESIS (CONSENTIMIENTO EXPLÍCITO)
+Si el usuario te pide una tarea para la cual NO existe una herramienta, **NO uses `autogenerar_nueva_tool` directamente**. Primero debes responderle (sin usar formato JSON de herramienta) explicándole que no tienes la herramienta y preguntándole si desea que la programes. Sólo si el usuario responde afirmativamente, entonces en tu siguiente respuesta ejecutarás `autogenerar_nueva_tool`.
+
+## NOTIFICACIONES PUSH (HYPERISLAND)
+Si estás autogenerando una herramienta y necesitas notificar al usuario, puedes usar WebSockets puros.
+Importa de forma asíncrona: `from kernel_bus import notificar_frontend` y ejecuta:
+`await notificar_frontend(kwargs.get("__terminal_id"), kwargs.get("__user_id"), "Mensaje", "notif")`
+"""
+
+            payload_ollama = {
+                "model": modelo_activo,
+                "prompt": f"{SYSTEM_PROMPT}\n\nUser: {payload.prompt}",
+                "stream": True
+            }
+
+            tool_call_detected = None
+            argumentos_acumulados = ""
+
+            try:
+                # Streaming multiplexado al bus Ollama
+                async with httpx.AsyncClient() as client:
+                    async with client.stream("POST", url_ollama_universal, json=payload_ollama, timeout=60.0) as response:
+                        if response.status_code != 200:
+                            yield json.dumps({"event": "ERROR", "message": f"Bus Inferencia Caído. HTTP {response.status_code}"}) + "\n"
+                            return
+
+                        # 1. Consolidamos el texto que nos mandó Ministral
+                        respuesta_completa = ""
+                        async for line in response.aiter_lines():
+                            if line:
+                                try:
+                                    data = json.loads(line)
+                                    token = data.get("response", "")
+                                    if token:
+                                        respuesta_completa += token
+                                        texto_limpio = respuesta_completa.strip()
+                                        
+                                        if not texto_limpio:
+                                            continue
+                                            
+                                        is_tool_call_stream = texto_limpio.startswith("{") or texto_limpio.startswith("```")
+                                        
+                                        if not is_tool_call_stream:
+                                            if len(texto_limpio) == len(token.strip()) and len(respuesta_completa) > len(token):
+                                                yield f"event: TOKEN\ndata: {json.dumps(respuesta_completa)}\n\n"
+                                            else:
+                                                yield f"event: TOKEN\ndata: {json.dumps(token)}\n\n"
+                                except Exception:
+                                    continue
+
+                        # 2. 🧠 EL CIRCUITO QUE SE HABÍA ROTO: Evaluación de acción
+                        logger.info(f"🧠 [KERNEL AGENTE] Evaluando acción para la respuesta: {respuesta_completa}")
+                        
+                        bloque_json = re.search(r'```json\s*(.*?)\s*```', respuesta_completa, re.DOTALL)
+                        bloque_python = re.search(r'```python\s*(.*?)\s*```', respuesta_completa, re.DOTALL)
+                        match_nombre = re.search(r'`([^`]+)\.py`', respuesta_completa) or re.search(r'\*\*Nombre sugerido:\*\*\s*`([^`]+)`', respuesta_completa)
+
+                        json_str = None
+                        if bloque_json:
+                            json_str = bloque_json.group(1)
+                        else:
+                            try:
+                                json.loads(respuesta_completa)
+                                json_str = respuesta_completa
+                            except Exception:
+                                match_raw = re.search(r'\{.*"tool_call".*\}', respuesta_completa, re.DOTALL)
+                                if match_raw:
+                                    json_str = match_raw.group(0)
+
+                        if json_str:
+                            try:
+                                json_data = json.loads(json_str, strict=False)
+                                if "tool_call" in json_data:
+                                    tool_call_detected = json_data["tool_call"]
+                                    argumentos_acumulados = json.dumps(json_data.get("arguments", {}))
+                                    logger.info(f"⚙️ [KERNEL AGENTE] Llamada a tool existente detectada: {tool_call_detected}")
+                            except Exception as e:
+                                logger.error(f"❌ Error parseando tool_call JSON: {e}. Intentando extracción heurística...")
+                                if '"applyCssTheme"' in json_str:
+                                    tool_call_detected = "applyCssTheme"
+                                    # Extracción agresiva del CSS
+                                    match_css = re.search(r'"cssCode"\s*:\s*"(.*?)"\s*\}', json_str, re.DOTALL)
+                                    css_val = match_css.group(1) if match_css else ""
+                                    argumentos_acumulados = json.dumps({"cssCode": css_val})
+                                    logger.info(f"⚙️ [KERNEL AGENTE] Recuperación heurística exitosa para applyCssTheme")
+                        
+                        if not tool_call_detected and bloque_python and match_nombre:
+                            tool_call_detected = "autogenerar_nueva_tool"
+                            nombre_func = match_nombre.group(1).replace(".py", "")
+                            argumentos_acumulados = json.dumps({
+                                "nombre_funcion": nombre_func,
+                                "codigo_python": bloque_python.group(1),
+                                "descripcion_docstring": "Tool generada en tiempo de ejecución"
+                            })
+                            logger.info(f"⚙️ [KERNEL AGENTE] Tool heurística detectada en stream: {nombre_func}")
+                        
+                        if not tool_call_detected:
+                            # Si la IA determinó que es una respuesta directa o texto para el operador,
+                            payload_ventana = {
+                                "window_id": "agnux-ai-window",
+                                "title": "🧠 AGNUX OS Core - Ministral IA",
+                                "content": respuesta_completa,
+                                "type": "terminal"
+                            }
+    
+                            yield f"event: CREATE_WINDOW\ndata: {json.dumps(payload_ventana, ensure_ascii=False)}\n\n"
+    
+                            logger.info("🔌 [KERNEL AGENTE] Tarea cumplida. Liberando canal de intent de forma inmediata.")
+                            
+                            # Guardar memoria del chat
+                            asyncio.create_task(guardar_recuerdo_qdrant(
+                                user_id=payload.user_id,
+                                tipo_evento="chat_interaccion",
+                                contenido=f"Usuario dijo: {payload.prompt}\nAGNUX respondió: {respuesta_completa}"
+                            ))
+                            
+                            return
+
+            except Exception as e:
+                yield json.dumps({"event": "ERROR", "message": f"Ollama Stream Network Error: {e}"}) + "\n"
+                return
+
+            if tool_call_detected:
+                yield json.dumps({"event": "TOOL_EXECUTE", "message": f"Ejecución solicitada a Kernel: {tool_call_detected}"}) + "\n"
+                try:
+                    args = json.loads(argumentos_acumulados) if argumentos_acumulados else {}
+                    
+                    # =================================================================
+                    # DISPATCHER DE SYSTEM_TOOLS (Intercepción Directa)
+                    # =================================================================
+                    if tool_call_detected == "openMediaApp":
+                        platform = args.get("platform")
+                        platform_urls = {
+                            "spotify": "https://open.spotify.com",
+                            "youtubeMusic": "https://music.youtube.com",
+                            "netflix": "https://www.netflix.com"
+                        }
+                        url = platform_urls.get(platform, "https://google.com")
+                        media_payload = {
+                            "event": "OPEN_MEDIA",
+                            "mediaPlatform": platform,
+                            "url": url,
+                            "status": "playing"
+                        }
+                        yield f"event: OPEN_MEDIA\ndata: {json.dumps(media_payload)}\n\n"
+                        resultado_fierros = f"Ordenando al cliente web que abra {platform} en una nueva pestaña."
+                        
+                    elif tool_call_detected == "googleWorkspaceAction":
+                        iframe_payload = {
+                            "event": "OPEN_IFRAME_APP",
+                            "appService": args.get("service"),
+                            "appAction": args.get("action"),
+                            "appParams": args.get("params", {})
+                        }
+                        yield f"event: OPEN_IFRAME_APP\ndata: {json.dumps(iframe_payload)}\n\n"
+                        resultado_fierros = f"Abriendo interfaz de {args.get('service')} en el cliente."
+                        
+                    elif tool_call_detected == "calculateExpression":
+                        exp = args.get("expression", "")
+                        try:
+                            val = eval(exp, {"__builtins__": None}, {})
+                            resultado_fierros = str(val)
+                        except Exception as e:
+                            resultado_fierros = f"Error evaluando expresión: {e}"
+                            
+                    elif tool_call_detected == "setWallpaper":
+                        wallpaper_payload = {
+                            "event": "SET_WALLPAPER",
+                            "imageUrl": args.get("imageUrl")
+                        }
+                        yield f"event: SET_WALLPAPER\ndata: {json.dumps(wallpaper_payload)}\n\n"
+                        resultado_fierros = "Fondo de pantalla actualizado con éxito."
+                        
+                    elif tool_call_detected == "applyCssTheme":
+                        css_code = args.get("cssCode", "")
+                        theme_payload = {
+                            "event": "SET_THEME",
+                            "cssCode": css_code
+                        }
+                        try:
+                            from core.config import BASE_DIR
+                            import os
+                            themes_dir = os.path.join(BASE_DIR, "theme_profiles")
+                            os.makedirs(themes_dir, exist_ok=True)
+                            theme_path = os.path.join(themes_dir, f"{payload.user_id}.css")
+                            with open(theme_path, "w", encoding="utf-8") as f:
+                                f.write(css_code)
+                            logger.info(f"💾 [THEME] Tema CSS físico guardado para {payload.user_id}")
+                        except Exception as e:
+                            logger.error(f"❌ [THEME] Error guardando CSS: {e}")
+                            
+                        yield f"event: SET_THEME\ndata: {json.dumps(theme_payload)}\n\n"
+                        resultado_fierros = "Estilo CSS inyectado y persistido globalmente."
+                        
+                    else:
+                        resultado_fierros = await ejecutar_herramienta_local(
+                            tool_call_detected, 
+                            args, 
+                            terminal_id=payload.terminal_id, 
+                            user_id=payload.user_id
+                        )
+
+                    yield json.dumps({"event": "TOOL_RESULT", "data": resultado_fierros}) + "\n"
+
+                    # Guardar memoria de la tool
+                    asyncio.create_task(guardar_recuerdo_qdrant(
+                        user_id=payload.user_id,
+                        tipo_evento="ejecucion_herramienta",
+                        contenido=f"Usuario pidió: {payload.prompt}\nAGNUX ejecutó la herramienta '{tool_call_detected}' con los argumentos: {args}\nResultado: {resultado_fierros}"
+                    ))
+
+                    # Criterio de promoción: ¿es una tool de sistema u over-ride global?
+                    if tool_call_detected == "autogenerar_nueva_tool" and args.get("nombre_funcion", "").startswith("global_"):
+                        nombre_func = args["nombre_funcion"]
+                        CACHE_VECTORS["sistema"][nombre_func] = {
+                            "vector": generar_vector_texto(args.get("descripcion_docstring", "")),
+                            "schema": {
+                                "name": nombre_func,
+                                "description": args.get("descripcion_docstring", ""),
+                                "parameters": {"type": "object", "properties": {}}
+                            }
+                        }
+                        logger.info(f"🌐 [RAM KERNEL] Escalada de privilegios: Herramienta '{nombre_func}' promovida a GLOBAL.")
+
+                except Exception as e:
+                    yield json.dumps({"event": "ERROR", "message": f"Falla física en tool_call: {e}"}) + "\n"
+    finally:
+        logger.info("🔌 [KERNEL AGENTE] Limpiando recursos del generador asíncrono.")
+
+=== ARCHIVO: backend/services/tools_service.py ===
+import os
+import asyncio
+import importlib
+from core.config import logger, DYNAMIC_DIR
+
+# =====================================================================
+# CATÁLOGO GLOBAL: SYSTEM_TOOLS
+# =====================================================================
+SYSTEM_TOOLS = {
+    "googleWorkspaceAction": {
+        "type": "function",
+        "function": {
+            "name": "googleWorkspaceAction",
+            "description": "Interactúa con la suite de Google (Docs, Sheets, Gmail). REQUIERE validación de token.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "service": {"type": "string", "enum": ["docs", "sheets", "slides", "gmail", "calendar"]},
+                    "action": {"type": "string", "enum": ["create", "open", "list", "sendEmail", "addEvent"]},
+                    "params": {"type": "object", "description": "Parámetros específicos (ej. to, subject, title)"}
+                },
+                "required": ["service", "action"]
+            }
+        }
+    },
+    "openMediaApp": {
+        "type": "function",
+        "function": {
+            "name": "openMediaApp",
+            "description": "Abre aplicaciones de streaming en modo Kiosco (Chromium aislado).",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "platform": {"type": "string", "enum": ["spotify", "youtubeMusic", "netflix"]}
+                },
+                "required": ["platform"]
+            }
+        }
+    },
+    "calculateExpression": {
+        "type": "function",
+        "function": {
+            "name": "calculateExpression",
+            "description": "Evalúa expresiones aritméticas complejas en el Host.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "expression": {"type": "string"}
+                },
+                "required": ["expression"]
+            }
+        }
+    },
+    "setWallpaper": {
+        "type": "function",
+        "function": {
+            "name": "setWallpaper",
+            "description": "Cambia el fondo de pantalla del escritorio usando una URL de imagen válida.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "imageUrl": {"type": "string"}
+                },
+                "required": ["imageUrl"]
+            }
+        }
+    },
+    "applyCssTheme": {
+        "type": "function",
+        "function": {
+            "name": "applyCssTheme",
+            "description": "Aplica un nuevo estilo físico (CSS) a la interfaz de AGNUX. Usa esto cuando el usuario pida cambiar el tema o estilo visual (ej. modo hacker, modo xp, modo dark, estilo cyberpunk).",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "cssCode": {"type": "string", "description": "Código CSS puro para inyectar globalmente en el sistema. DEBE ir minificado en una sola línea (sin saltos de línea) o tener los saltos de línea correctamente escapados con \\n."}
+                },
+                "required": ["cssCode"]
+            }
+        }
+    }
+}
+
+# =====================================================================
+# FUNCIONES AUXILIARES FÍSICAS Y AUTOGÉNESIS
+# =====================================================================
+async def autogenerar_nueva_tool(nombre_funcion: str, codigo_python: str, descripcion_docstring: str) -> str:
+    nombre_limpio = nombre_funcion.strip().lower().replace(" ", "_").replace("-", "_")
+    if nombre_limpio.endswith(".py"): nombre_limpio = nombre_limpio.replace(".py", "")
+        
+    path_archivo = os.path.join(DYNAMIC_DIR, f"{nombre_limpio}.py")
+
+    codigo_depurado = codigo_python.strip()
+    if codigo_depurado.startswith("```"):
+        codigo_depurado = codigo_depurado.split("```")[1].replace("python", "", 1).strip()
+
+    plantilla_final = (
+        f'""\"\nAuto-generated by AGNUX OS. {descripcion_docstring}\n""\"\n\n'
+        f'{codigo_depurado}\n'
+    )
+    
+    try:
+        with open(path_archivo, "w", encoding="utf-8") as f: f.write(plantilla_final)
+        logger.info(f"💾 [AUTOGÉNESIS] Tool instalada asíncronamente en host: {path_archivo}")
+        return f"SUCCESS: '{nombre_limpio}' instalada con éxito."
+    except Exception as e:
+        return f"ERROR KERNEL: Falla crítica en autogénesis: {e}"
+
+async def ejecutar_herramienta_local(nombre: str, argumentos: dict = None, terminal_id: str = None, user_id: str = None) -> str:
+    logger.info(f"🔌 [EJECUTOR] Invocando subproceso host: '{nombre}'")
+    if argumentos is None: argumentos = {}
+    
+    # Inyectamos contexto de sistema en los argumentos para que las herramientas generadas
+    # puedan acceder a la terminal_id y user_id mediante kwargs
+    if terminal_id: argumentos["__terminal_id"] = terminal_id
+    if user_id: argumentos["__user_id"] = user_id
+    
+    if nombre == "autogenerar_nueva_tool":
+        return await autogenerar_nueva_tool(**argumentos)
+        
+    try:
+        if os.path.exists(DYNAMIC_DIR):
+            for archivo in os.listdir(DYNAMIC_DIR):
+                if archivo == f"{nombre}.py":
+                    modulo = importlib.import_module(f"dynamic_tools.{nombre}")
+                    importlib.reload(modulo)
+                    funcion_dinamica = getattr(modulo, nombre)
+                    if asyncio.iscoroutinefunction(funcion_dinamica):
+                        resultado = await funcion_dinamica(**argumentos) if argumentos else await funcion_dinamica()
+                    else:
+                        resultado = funcion_dinamica(**argumentos) if argumentos else funcion_dinamica()
+                    return str(resultado)
+    except Exception as e:
+        return f"❌ Falla en herramienta '{nombre}': {e}"
+    
+    return f"404: Herramienta '{nombre}' no encontrada en el catálogo dinámico ni estático."
+
+=== ARCHIVO: backend/tools/hardware_probe.py ===
+# tools/hardware_probe.py
+import subprocess
+import json
+import os
+
+PROFILE_PATH = "./system_profile.json"
+
+def auto_evaluar_hardware_host() -> dict:
+    """
+    Censa las características de los componentes físicos del host Linux y despliega 
+    el interrogatorio interactivo para balancear la carga de IA local o externa.
+    """
+    perfil = {
+        "cpu_modelo": "Desconocido",
+        "cpu_nucleos": 2,
+        "ram_total_gb": 4,
+        "posee_gpu_nvidia": False,
+        "proveedor_ia": "local",        # 'local', 'gemini', 'openai'
+        "modelo_ia_sugerido": "qwen2.5:1.5b",
+        "teclado_layout": "us",
+        "disco_raiz_libre_gb": 0,
+        "api_key_guardada": ""
+    }
+    
+    try:
+        # 1. Análisis estructural de CPU
+        perfil["cpu_modelo"] = subprocess.getoutput("grep -m1 'model name' /proc/cpuinfo | cut -d: -f2").strip()
+        perfil["cpu_nucleos"] = int(subprocess.getoutput("nproc"))
+
+        # 2. Análisis de Memoria Física RAM
+        with open("/proc/meminfo", "r") as f:
+            for linea in f:
+                if "MemTotal" in linea:
+                    ram_kb = int(linea.split()[1])
+                    perfil["ram_total_gb"] = round(ram_kb / (1024 * 1024))
+                    break
+
+        # 3. INTERFAZ INTERACTIVA PARA EL USUARIO EN EL BOOT
+        print("\n" + "="*60)
+        print(" 🌐 CONFIGURACIÓN DEL MOTOR DE INTELIGENCIA DE AGNUX")
+        print("="*60)
+        print(" Podés usar el procesamiento local en tu procesador o")
+        print(" delegar la carga a la nube si poseés una suscripción.")
+        print(" ⚠️ ¡ATENCIÓN!: El uso de la nube CONSUMIRÁ TOKENS de tu cuenta.")
+        print("="*60)
+        
+        opcion = input("¿Deseás activar una suscripción externa via API Key? (si/no): ").strip().lower()
+        
+        if opcion in ["si", "s", "yes"]:
+            print("\n Seleccioná el proveedor externo de tu preferencia:")
+            print(" [1] Google Gemini (Modelo sugerido: gemini-2.5-flash)")
+            print(" [2] OpenAI ChatGPT (Modelo sugerido: gpt-4o-mini)")
+            prov_opcion = input(" Elección (1 o 2): ").strip()
+            
+            if prov_opcion == "1":
+                key = input(" 🔑 Introducí tu GEMINI_API_KEY: ").strip()
+                if key:
+                    perfil["proveedor_ia"] = "gemini"
+                    perfil["modelo_ia_sugerido"] = "gemini-2.5-flash"
+                    perfil["api_key_guardada"] = key
+                    os.environ["GEMINI_API_KEY"] = key
+            elif prov_opcion == "2":
+                key = input(" 🔑 Introducí tu OPENAI_API_KEY: ").strip()
+                if key:
+                    perfil["proveedor_ia"] = "openai"
+                    perfil["modelo_ia_sugerido"] = "gpt-4o-mini"
+                    perfil["api_key_guardada"] = key
+                    os.environ["OPENAI_API_KEY"] = key
+                    
+            if perfil["proveedor_ia"] != "local":
+                print("\n Conmutación completa. Redireccionando matriz de inferencia...")
+            else:
+                print("\n Entrada vacía. El sistema se replegará a la CPU local.")
+        else:
+            print("\n Confirmado. Se usará el circuito local nativo de Ollama.")
+
+        # 4. Asignación local automatizada si no se seleccionó nube
+        if perfil["proveedor_ia"] == "local":
+            check_gpu = subprocess.run("command -v nvidia-smi && nvidia-smi", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            if check_gpu.returncode == 0 and b"failed" not in check_gpu.stderr:
+                perfil["posee_gpu_nvidia"] = True
+                perfil["modelo_ia_sugerido"] = "qwen-test:latest"
+            else:
+                perfil["posee_gpu_nvidia"] = False
+                # Para procesadores básicos o menos de 12GB de RAM, el de 1.5B evita congelar la PC
+                if perfil["cpu_nucleos"] <= 4 or perfil["ram_total_gb"] < 12:
+                    perfil["modelo_ia_sugerido"] = "qwen2.5:1.5b"
+                else:
+                    perfil["modelo_ia_sugerido"] = "qwen-test:latest"
+
+        # 5. Mapeo de periféricos y persistencia
+        layout = subprocess.getoutput("localectl status | grep 'X11 Layout' | cut -d: -f2").strip()
+        if layout: perfil["teclado_layout"] = layout
+        statvfs = os.statvfs('/')
+        perfil["disco_raiz_libre_gb"] = round((statvfs.f_bavail * statvfs.f_frsize) / (1024 ** 3))
+
+        # Guardamos la radiografía para que la IA la consulte en caliente si quiere
+        with open(PROFILE_PATH, "w") as f:
+            json.dump(perfil, f, indent=4)
+            
+        print("="*60 + "\n")
+        return perfil
+        
+    except Exception as e:
+        print(f"⚠️ Falla crítica en subsistema de introspección: {e}")
+        return perfil
+=== ARCHIVO: backend/tools/multimedia_tools.py ===
+"""Herramientas multimedia para control de audio y reproducción en AGNUX."""
+
+import subprocess
+import os
+from typing import Dict, Any
+
+
+# Estado global del reproductor
+_reproductor_estado = {
+    "en_reproduccion": False,
+    "cancion_actual": None,
+    "volumen": 100,
+}
+
+
+def ejecutar_musica_fondo(archivo: str = None, volumen: int = 50) -> Dict[str, Any]:
+    """
+    Ejecuta música de fondo usando el reproductor del sistema.
+    
+    Args:
+        archivo: Ruta del archivo de audio (opcional)
+        volumen: Volumen de reproducción 0-100
+    
+    Returns:
+        Dict con estado de la operación
+    """
+    global _reproductor_estado
+    
+    try:
+        _reproductor_estado["volumen"] = volumen
+        
+        if archivo:
+            if os.path.exists(archivo):
+                _reproductor_estado["cancion_actual"] = archivo
+                _reproductor_estado["en_reproduccion"] = True
+                
+                # Intenta usar paplay (PulseAudio)
+                try:
+                    subprocess.Popen(
+                        ["paplay", "--volume", str(int(volumen * 655.36)), archivo],
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL
+                    )
+                except FileNotFoundError:
+                    # Fallback a mpg123
+                    try:
+                        subprocess.Popen(
+                            ["mpg123", "-q", archivo],
+                            stdout=subprocess.DEVNULL,
+                            stderr=subprocess.DEVNULL
+                        )
+                    except FileNotFoundError:
+                        return {
+                            "estado": "ADVERTENCIA",
+                            "resultado": "No hay reproductor de audio disponible",
+                            "sugerencia": "Instala: apt install mpg123 o paplay"
+                        }
+                
+                return {
+                    "estado": "OK",
+                    "reproduciendo": archivo,
+                    "volumen": volumen
+                }
+            else:
+                return {
+                    "estado": "ERROR",
+                    "resultado": f"Archivo no encontrado: {archivo}"
+                }
+        else:
+            _reproductor_estado["en_reproduccion"] = True
+            return {
+                "estado": "OK",
+                "resultado": "Música de fondo habilitada"
+            }
+    
+    except Exception as e:
+        return {
+            "estado": "ERROR",
+            "resultado": f"Error al reproducir música: {str(e)}"
+        }
+
+
+def controlar_reproductor_global(comando: str) -> Dict[str, Any]:
+    """
+    Controla el reproductor global de audio (pausar, reanudar, detener, siguiente, anterior).
+    
+    Args:
+        comando: "pausar", "reanudar", "detener", "siguiente", "anterior"
+    
+    Returns:
+        Dict con estado de la operación
+    """
+    global _reproductor_estado
+    
+    comando = comando.lower().strip()
+    
+    try:
+        if comando == "pausar":
+            _reproductor_estado["en_reproduccion"] = False
+            return {
+                "estado": "OK",
+                "accion": "pausar",
+                "resultado": "Reproducción pausada"
+            }
+        
+        elif comando == "reanudar":
+            _reproductor_estado["en_reproduccion"] = True
+            return {
+                "estado": "OK",
+                "accion": "reanudar",
+                "resultado": "Reproducción reanudada"
+            }
+        
+        elif comando == "detener":
+            _reproductor_estado["en_reproduccion"] = False
+            _reproductor_estado["cancion_actual"] = None
+            # Intenta detener todos los reproductores
+            try:
+                subprocess.run(["pkill", "-f", "paplay"], capture_output=True)
+                subprocess.run(["pkill", "-f", "mpg123"], capture_output=True)
+            except:
+                pass
+            return {
+                "estado": "OK",
+                "accion": "detener",
+                "resultado": "Reproducción detenida"
+            }
+        
+        elif comando == "siguiente":
+            return {
+                "estado": "INFO",
+                "accion": "siguiente",
+                "resultado": "Saltando a siguiente tema..."
+            }
+        
+        elif comando == "anterior":
+            return {
+                "estado": "INFO",
+                "accion": "anterior",
+                "resultado": "Regresando al tema anterior..."
+            }
+        
+        elif comando == "estado":
+            return {
+                "estado": "OK",
+                "en_reproduccion": _reproductor_estado["en_reproduccion"],
+                "cancion_actual": _reproductor_estado["cancion_actual"],
+                "volumen": _reproductor_estado["volumen"]
+            }
+        
+        else:
+            return {
+                "estado": "ERROR",
+                "resultado": f"Comando no reconocido: {comando}"
+            }
+    
+    except Exception as e:
+        return {
+            "estado": "ERROR",
+            "resultado": f"Error al controlar reproductor: {str(e)}"
+        }
+
+=== ARCHIVO: backend/tools/system_tools.py ===
+"""Herramientas de diagnóstico y gestión del sistema para AGNUX."""
+
+import os
+import psutil
+import platform
+import subprocess
+from typing import Dict, Any
+
+
+def obtener_diagnostico_hardware() -> Dict[str, Any]:
+    """
+    Obtiene un diagnóstico completo del hardware del sistema.
+    
+    Returns:
+        Dict con información de CPU, memoria, disco y otros componentes.
+    """
+    try:
+        # Información del sistema
+        info_sistema = {
+            "plataforma": platform.system(),
+            "arquitectura": platform.machine(),
+            "procesador": platform.processor(),
+            "version_python": platform.python_version(),
+        }
+        
+        # CPU
+        cpu_info = {
+            "cantidad_nucleos": psutil.cpu_count(logical=False),
+            "nucleos_logicos": psutil.cpu_count(logical=True),
+            "uso_porcentaje": psutil.cpu_percent(interval=1),
+            "frecuencia_mhz": psutil.cpu_freq().current if psutil.cpu_freq() else 0,
+        }
+        
+        # Memoria
+        memoria = psutil.virtual_memory()
+        mem_info = {
+            "total_gb": round(memoria.total / (1024**3), 2),
+            "disponible_gb": round(memoria.available / (1024**3), 2),
+            "usado_gb": round(memoria.used / (1024**3), 2),
+            "porcentaje_uso": memoria.percent,
+        }
+        
+        # Disco
+        disco = psutil.disk_usage('/')
+        disco_info = {
+            "total_gb": round(disco.total / (1024**3), 2),
+            "disponible_gb": round(disco.free / (1024**3), 2),
+            "usado_gb": round(disco.used / (1024**3), 2),
+            "porcentaje_uso": disco.percent,
+        }
+        
+        return {
+            "estado": "OK",
+            "sistema": info_sistema,
+            "cpu": cpu_info,
+            "memoria": mem_info,
+            "disco": disco_info,
+            "uptime_horas": round(psutil.boot_time() / 3600, 2)
+        }
+    except Exception as e:
+        return {
+            "estado": "ERROR",
+            "mensaje": f"Error al obtener diagnóstico: {str(e)}"
+        }
+
+
+def gestionar_energia_equipo(accion: str = "estado") -> Dict[str, str]:
+    """
+    Gestiona la energía del equipo (apagar, reiniciar, suspender).
+    
+    Args:
+        accion: "estado", "apagar", "reiniciar" o "suspender"
+    
+    Returns:
+        Dict con el resultado de la operación
+    """
+    accion = accion.lower().strip()
+    
+    try:
+        if accion == "estado":
+            # Retorna información sobre el estado de energía
+            bateria = psutil.sensors_battery()
+            if bateria:
+                return {
+                    "estado": "CONECTADO" if bateria.power_plugged else "BATERÍA",
+                    "porcentaje": f"{bateria.percent}%",
+                    "tiempo_restante": f"{bateria.secsleft // 3600}h {(bateria.secsleft % 3600) // 60}m"
+                }
+            else:
+                return {
+                    "estado": "AC_CONECTADO",
+                    "info": "Sistema de escritorio sin batería"
+                }
+        
+        elif accion == "apagar":
+            # Solo simula, no ejecuta comando real por seguridad
+            return {
+                "estado": "ADVERTENCIA",
+                "accion": "apagar",
+                "resultado": "Comando no ejecutado por razones de seguridad. Usa: sudo shutdown -h now"
+            }
+        
+        elif accion == "reiniciar":
+            return {
+                "estado": "ADVERTENCIA",
+                "accion": "reiniciar",
+                "resultado": "Comando no ejecutado por razones de seguridad. Usa: sudo reboot"
+            }
+        
+        elif accion == "suspender":
+            return {
+                "estado": "ADVERTENCIA",
+                "accion": "suspender",
+                "resultado": "Comando no ejecutado. Usa: systemctl suspend"
+            }
+        
+        else:
+            return {
+                "estado": "ERROR",
+                "resultado": f"Acción no reconocida: {accion}"
+            }
+    
+    except Exception as e:
+        return {
+            "estado": "ERROR",
+            "resultado": f"Error al gestionar energía: {str(e)}"
+        }
+
+=== ARCHIVO: backend/tools/__init__.py ===
+# Módulo de herramientas del sistema AGNUX
+
+=== ARCHIVO: frontend/src/app/app.component.html ===
+<!-- * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * -->
+<!-- * * * * * * * * * * * The content below * * * * * * * * * * * -->
+<!-- * * * * * * * * * * is only a placeholder * * * * * * * * * * -->
+<!-- * * * * * * * * * * and can be replaced.  * * * * * * * * * * -->
+<!-- * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * -->
+<!-- * * * * * * * * * Delete the template below * * * * * * * * * -->
+<!-- * * * * * * * to get started with your project! * * * * * * * -->
+<!-- * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * -->
+
+<style>
+  :host {
+    --bright-blue: oklch(51.01% 0.274 263.83);
+    --electric-violet: oklch(53.18% 0.28 296.97);
+    --french-violet: oklch(47.66% 0.246 305.88);
+    --vivid-pink: oklch(69.02% 0.277 332.77);
+    --hot-red: oklch(61.42% 0.238 15.34);
+    --orange-red: oklch(63.32% 0.24 31.68);
+
+    --gray-900: oklch(19.37% 0.006 300.98);
+    --gray-700: oklch(36.98% 0.014 302.71);
+    --gray-400: oklch(70.9% 0.015 304.04);
+
+    --red-to-pink-to-purple-vertical-gradient: linear-gradient(
+      180deg,
+      var(--orange-red) 0%,
+      var(--vivid-pink) 50%,
+      var(--electric-violet) 100%
+    );
+
+    --red-to-pink-to-purple-horizontal-gradient: linear-gradient(
+      90deg,
+      var(--orange-red) 0%,
+      var(--vivid-pink) 50%,
+      var(--electric-violet) 100%
+    );
+
+    --pill-accent: var(--bright-blue);
+
+    font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+      Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji",
+      "Segoe UI Symbol";
+    box-sizing: border-box;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1 {
+    font-size: 3.125rem;
+    color: var(--gray-900);
+    font-weight: 500;
+    line-height: 100%;
+    letter-spacing: -0.125rem;
+    margin: 0;
+    font-family: "Inter Tight", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+      Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji",
+      "Segoe UI Symbol";
+  }
+
+  p {
+    margin: 0;
+    color: var(--gray-700);
+  }
+
+  main {
+    width: 100%;
+    min-height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 1rem;
+    box-sizing: inherit;
+    position: relative;
+  }
+
+  .angular-logo {
+    max-width: 9.2rem;
+  }
+
+  .content {
+    display: flex;
+    justify-content: space-around;
+    width: 100%;
+    max-width: 700px;
+    margin-bottom: 3rem;
+  }
+
+  .content h1 {
+    margin-top: 1.75rem;
+  }
+
+  .content p {
+    margin-top: 1.5rem;
+  }
+
+  .divider {
+    width: 1px;
+    background: var(--red-to-pink-to-purple-vertical-gradient);
+    margin-inline: 0.5rem;
+  }
+
+  .pill-group {
+    display: flex;
+    flex-direction: column;
+    align-items: start;
+    flex-wrap: wrap;
+    gap: 1.25rem;
+  }
+
+  .pill {
+    display: flex;
+    align-items: center;
+    --pill-accent: var(--bright-blue);
+    background: color-mix(in srgb, var(--pill-accent) 5%, transparent);
+    color: var(--pill-accent);
+    padding-inline: 0.75rem;
+    padding-block: 0.375rem;
+    border-radius: 2.75rem;
+    border: 0;
+    transition: background 0.3s ease;
+    font-family: var(--inter-font);
+    font-size: 0.875rem;
+    font-style: normal;
+    font-weight: 500;
+    line-height: 1.4rem;
+    letter-spacing: -0.00875rem;
+    text-decoration: none;
+  }
+
+  .pill:hover {
+    background: color-mix(in srgb, var(--pill-accent) 15%, transparent);
+  }
+
+  .pill-group .pill:nth-child(6n + 1) {
+    --pill-accent: var(--bright-blue);
+  }
+  .pill-group .pill:nth-child(6n + 2) {
+    --pill-accent: var(--french-violet);
+  }
+  .pill-group .pill:nth-child(6n + 3),
+  .pill-group .pill:nth-child(6n + 4),
+  .pill-group .pill:nth-child(6n + 5) {
+    --pill-accent: var(--hot-red);
+  }
+
+  .pill-group svg {
+    margin-inline-start: 0.25rem;
+  }
+
+  .social-links {
+    display: flex;
+    align-items: center;
+    gap: 0.73rem;
+    margin-top: 1.5rem;
+  }
+
+  .social-links path {
+    transition: fill 0.3s ease;
+    fill: var(--gray-400);
+  }
+
+  .social-links a:hover svg path {
+    fill: var(--gray-900);
+  }
+
+  @media screen and (max-width: 650px) {
+    .content {
+      flex-direction: column;
+      width: max-content;
+    }
+
+    .divider {
+      height: 1px;
+      width: 100%;
+      background: var(--red-to-pink-to-purple-horizontal-gradient);
+      margin-block: 1.5rem;
+    }
+  }
+</style>
+
+<main class="main">
+  <div class="content">
+    <div class="left-side">
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="0 0 982 239"
+        fill="none"
+        class="angular-logo"
+      >
+        <g clip-path="url(#a)">
+          <path
+            fill="url(#b)"
+            d="M388.676 191.625h30.849L363.31 31.828h-35.758l-56.215 159.797h30.848l13.174-39.356h60.061l13.256 39.356Zm-65.461-62.675 21.602-64.311h1.227l21.602 64.311h-44.431Zm126.831-7.527v70.202h-28.23V71.839h27.002v20.374h1.392c2.782-6.71 7.2-12.028 13.255-15.956 6.056-3.927 13.584-5.89 22.503-5.89 8.264 0 15.465 1.8 21.684 5.318 6.137 3.518 10.964 8.673 14.319 15.382 3.437 6.71 5.074 14.81 4.992 24.383v76.175h-28.23v-71.92c0-8.019-2.046-14.237-6.219-18.819-4.173-4.5-9.819-6.791-17.102-6.791-4.91 0-9.328 1.063-13.174 3.272-3.846 2.128-6.792 5.237-9.001 9.328-2.046 4.009-3.191 8.918-3.191 14.728ZM589.233 239c-10.147 0-18.82-1.391-26.103-4.091-7.282-2.7-13.092-6.382-17.511-10.964-4.418-4.582-7.528-9.655-9.164-15.219l25.448-6.136c1.145 2.372 2.782 4.663 4.991 6.954 2.209 2.291 5.155 4.255 8.837 5.81 3.683 1.554 8.428 2.291 14.074 2.291 8.019 0 14.647-1.964 19.884-5.81 5.237-3.845 7.856-10.227 7.856-19.064v-22.665h-1.391c-1.473 2.946-3.601 5.892-6.383 9.001-2.782 3.109-6.464 5.645-10.965 7.691-4.582 2.046-10.228 3.109-17.101 3.109-9.165 0-17.511-2.209-25.039-6.545-7.446-4.337-13.42-10.883-17.757-19.474-4.418-8.673-6.628-19.473-6.628-32.565 0-13.091 2.21-24.301 6.628-33.383 4.419-9.082 10.311-15.955 17.839-20.7 7.528-4.746 15.874-7.037 25.039-7.037 7.037 0 12.846 1.145 17.347 3.518 4.582 2.373 8.182 5.236 10.883 8.51 2.7 3.272 4.746 6.382 6.137 9.327h1.554v-19.8h27.821v121.749c0 10.228-2.454 18.737-7.364 25.447-4.91 6.709-11.538 11.7-20.048 15.055-8.509 3.355-18.165 4.991-28.884 4.991Zm.245-71.266c5.974 0 11.047-1.473 15.302-4.337 4.173-2.945 7.446-7.118 9.573-12.519 2.21-5.482 3.274-12.027 3.274-19.637 0-7.609-1.064-14.155-3.274-19.8-2.127-5.646-5.318-10.064-9.491-13.255-4.174-3.11-9.329-4.746-15.384-4.746s-11.537 1.636-15.792 4.91c-4.173 3.272-7.365 7.772-9.492 13.418-2.128 5.727-3.191 12.191-3.191 19.392 0 7.2 1.063 13.745 3.273 19.228 2.127 5.482 5.318 9.736 9.573 12.764 4.174 3.027 9.41 4.582 15.629 4.582Zm141.56-26.51V71.839h28.23v119.786h-27.412v-21.273h-1.227c-2.7 6.709-7.119 12.191-13.338 16.446-6.137 4.255-13.747 6.382-22.748 6.382-7.855 0-14.81-1.718-20.783-5.237-5.974-3.518-10.72-8.591-14.075-15.382-3.355-6.709-5.073-14.891-5.073-24.464V71.839h28.312v71.921c0 7.609 2.046 13.664 6.219 18.083 4.173 4.5 9.655 6.709 16.365 6.709 4.173 0 8.183-.982 12.111-3.028 3.927-2.045 7.118-5.072 9.655-9.082 2.537-4.091 3.764-9.164 3.764-15.218Zm65.707-109.395v159.796h-28.23V31.828h28.23Zm44.841 162.169c-7.61 0-14.402-1.391-20.457-4.091-6.055-2.7-10.883-6.791-14.32-12.109-3.518-5.319-5.237-11.946-5.237-19.801 0-6.791 1.228-12.355 3.765-16.773 2.536-4.419 5.891-7.937 10.228-10.637 4.337-2.618 9.164-4.664 14.647-6.055 5.4-1.391 11.046-2.373 16.856-3.027 7.037-.737 12.683-1.391 17.102-1.964 4.337-.573 7.528-1.555 9.574-2.782 1.963-1.309 3.027-3.273 3.027-5.973v-.491c0-5.891-1.718-10.391-5.237-13.664-3.518-3.191-8.51-4.828-15.056-4.828-6.955 0-12.356 1.473-16.447 4.5-4.009 3.028-6.71 6.546-8.183 10.719l-26.348-3.764c2.046-7.282 5.483-13.336 10.31-18.328 4.746-4.909 10.638-8.59 17.511-11.045 6.955-2.455 14.565-3.682 22.912-3.682 5.809 0 11.537.654 17.265 2.045s10.965 3.6 15.711 6.71c4.746 3.109 8.51 7.282 11.455 12.6 2.864 5.318 4.337 11.946 4.337 19.883v80.184h-27.166v-16.446h-.9c-1.719 3.355-4.092 6.464-7.201 9.328-3.109 2.864-6.955 5.237-11.619 6.955-4.828 1.718-10.229 2.536-16.529 2.536Zm7.364-20.701c5.646 0 10.556-1.145 14.729-3.354 4.173-2.291 7.364-5.237 9.655-9.001 2.292-3.763 3.355-7.854 3.355-12.273v-14.155c-.9.737-2.373 1.391-4.5 2.046-2.128.654-4.419 1.145-7.037 1.636-2.619.491-5.155.9-7.692 1.227-2.537.328-4.746.655-6.628.901-4.173.572-8.019 1.472-11.292 2.781-3.355 1.31-5.973 3.11-7.855 5.401-1.964 2.291-2.864 5.318-2.864 8.918 0 5.237 1.882 9.164 5.728 11.782 3.682 2.782 8.51 4.091 14.401 4.091Zm64.643 18.328V71.839h27.412v19.965h1.227c2.21-6.955 5.974-12.274 11.292-16.038 5.319-3.763 11.456-5.645 18.329-5.645 1.555 0 3.355.082 5.237.163 1.964.164 3.601.328 4.91.573v25.938c-1.227-.41-3.109-.819-5.646-1.146a58.814 58.814 0 0 0-7.446-.49c-5.155 0-9.738 1.145-13.829 3.354-4.091 2.209-7.282 5.236-9.655 9.164-2.373 3.927-3.519 8.427-3.519 13.5v70.448h-28.312ZM222.077 39.192l-8.019 125.923L137.387 0l84.69 39.192Zm-53.105 162.825-57.933 33.056-57.934-33.056 11.783-28.556h92.301l11.783 28.556ZM111.039 62.675l30.357 73.803H80.681l30.358-73.803ZM7.937 165.115 0 39.192 84.69 0 7.937 165.115Z"
+          />
+          <path
+            fill="url(#c)"
+            d="M388.676 191.625h30.849L363.31 31.828h-35.758l-56.215 159.797h30.848l13.174-39.356h60.061l13.256 39.356Zm-65.461-62.675 21.602-64.311h1.227l21.602 64.311h-44.431Zm126.831-7.527v70.202h-28.23V71.839h27.002v20.374h1.392c2.782-6.71 7.2-12.028 13.255-15.956 6.056-3.927 13.584-5.89 22.503-5.89 8.264 0 15.465 1.8 21.684 5.318 6.137 3.518 10.964 8.673 14.319 15.382 3.437 6.71 5.074 14.81 4.992 24.383v76.175h-28.23v-71.92c0-8.019-2.046-14.237-6.219-18.819-4.173-4.5-9.819-6.791-17.102-6.791-4.91 0-9.328 1.063-13.174 3.272-3.846 2.128-6.792 5.237-9.001 9.328-2.046 4.009-3.191 8.918-3.191 14.728ZM589.233 239c-10.147 0-18.82-1.391-26.103-4.091-7.282-2.7-13.092-6.382-17.511-10.964-4.418-4.582-7.528-9.655-9.164-15.219l25.448-6.136c1.145 2.372 2.782 4.663 4.991 6.954 2.209 2.291 5.155 4.255 8.837 5.81 3.683 1.554 8.428 2.291 14.074 2.291 8.019 0 14.647-1.964 19.884-5.81 5.237-3.845 7.856-10.227 7.856-19.064v-22.665h-1.391c-1.473 2.946-3.601 5.892-6.383 9.001-2.782 3.109-6.464 5.645-10.965 7.691-4.582 2.046-10.228 3.109-17.101 3.109-9.165 0-17.511-2.209-25.039-6.545-7.446-4.337-13.42-10.883-17.757-19.474-4.418-8.673-6.628-19.473-6.628-32.565 0-13.091 2.21-24.301 6.628-33.383 4.419-9.082 10.311-15.955 17.839-20.7 7.528-4.746 15.874-7.037 25.039-7.037 7.037 0 12.846 1.145 17.347 3.518 4.582 2.373 8.182 5.236 10.883 8.51 2.7 3.272 4.746 6.382 6.137 9.327h1.554v-19.8h27.821v121.749c0 10.228-2.454 18.737-7.364 25.447-4.91 6.709-11.538 11.7-20.048 15.055-8.509 3.355-18.165 4.991-28.884 4.991Zm.245-71.266c5.974 0 11.047-1.473 15.302-4.337 4.173-2.945 7.446-7.118 9.573-12.519 2.21-5.482 3.274-12.027 3.274-19.637 0-7.609-1.064-14.155-3.274-19.8-2.127-5.646-5.318-10.064-9.491-13.255-4.174-3.11-9.329-4.746-15.384-4.746s-11.537 1.636-15.792 4.91c-4.173 3.272-7.365 7.772-9.492 13.418-2.128 5.727-3.191 12.191-3.191 19.392 0 7.2 1.063 13.745 3.273 19.228 2.127 5.482 5.318 9.736 9.573 12.764 4.174 3.027 9.41 4.582 15.629 4.582Zm141.56-26.51V71.839h28.23v119.786h-27.412v-21.273h-1.227c-2.7 6.709-7.119 12.191-13.338 16.446-6.137 4.255-13.747 6.382-22.748 6.382-7.855 0-14.81-1.718-20.783-5.237-5.974-3.518-10.72-8.591-14.075-15.382-3.355-6.709-5.073-14.891-5.073-24.464V71.839h28.312v71.921c0 7.609 2.046 13.664 6.219 18.083 4.173 4.5 9.655 6.709 16.365 6.709 4.173 0 8.183-.982 12.111-3.028 3.927-2.045 7.118-5.072 9.655-9.082 2.537-4.091 3.764-9.164 3.764-15.218Zm65.707-109.395v159.796h-28.23V31.828h28.23Zm44.841 162.169c-7.61 0-14.402-1.391-20.457-4.091-6.055-2.7-10.883-6.791-14.32-12.109-3.518-5.319-5.237-11.946-5.237-19.801 0-6.791 1.228-12.355 3.765-16.773 2.536-4.419 5.891-7.937 10.228-10.637 4.337-2.618 9.164-4.664 14.647-6.055 5.4-1.391 11.046-2.373 16.856-3.027 7.037-.737 12.683-1.391 17.102-1.964 4.337-.573 7.528-1.555 9.574-2.782 1.963-1.309 3.027-3.273 3.027-5.973v-.491c0-5.891-1.718-10.391-5.237-13.664-3.518-3.191-8.51-4.828-15.056-4.828-6.955 0-12.356 1.473-16.447 4.5-4.009 3.028-6.71 6.546-8.183 10.719l-26.348-3.764c2.046-7.282 5.483-13.336 10.31-18.328 4.746-4.909 10.638-8.59 17.511-11.045 6.955-2.455 14.565-3.682 22.912-3.682 5.809 0 11.537.654 17.265 2.045s10.965 3.6 15.711 6.71c4.746 3.109 8.51 7.282 11.455 12.6 2.864 5.318 4.337 11.946 4.337 19.883v80.184h-27.166v-16.446h-.9c-1.719 3.355-4.092 6.464-7.201 9.328-3.109 2.864-6.955 5.237-11.619 6.955-4.828 1.718-10.229 2.536-16.529 2.536Zm7.364-20.701c5.646 0 10.556-1.145 14.729-3.354 4.173-2.291 7.364-5.237 9.655-9.001 2.292-3.763 3.355-7.854 3.355-12.273v-14.155c-.9.737-2.373 1.391-4.5 2.046-2.128.654-4.419 1.145-7.037 1.636-2.619.491-5.155.9-7.692 1.227-2.537.328-4.746.655-6.628.901-4.173.572-8.019 1.472-11.292 2.781-3.355 1.31-5.973 3.11-7.855 5.401-1.964 2.291-2.864 5.318-2.864 8.918 0 5.237 1.882 9.164 5.728 11.782 3.682 2.782 8.51 4.091 14.401 4.091Zm64.643 18.328V71.839h27.412v19.965h1.227c2.21-6.955 5.974-12.274 11.292-16.038 5.319-3.763 11.456-5.645 18.329-5.645 1.555 0 3.355.082 5.237.163 1.964.164 3.601.328 4.91.573v25.938c-1.227-.41-3.109-.819-5.646-1.146a58.814 58.814 0 0 0-7.446-.49c-5.155 0-9.738 1.145-13.829 3.354-4.091 2.209-7.282 5.236-9.655 9.164-2.373 3.927-3.519 8.427-3.519 13.5v70.448h-28.312ZM222.077 39.192l-8.019 125.923L137.387 0l84.69 39.192Zm-53.105 162.825-57.933 33.056-57.934-33.056 11.783-28.556h92.301l11.783 28.556ZM111.039 62.675l30.357 73.803H80.681l30.358-73.803ZM7.937 165.115 0 39.192 84.69 0 7.937 165.115Z"
+          />
+        </g>
+        <defs>
+          <radialGradient
+            id="c"
+            cx="0"
+            cy="0"
+            r="1"
+            gradientTransform="rotate(118.122 171.182 60.81) scale(205.794)"
+            gradientUnits="userSpaceOnUse"
+          >
+            <stop stop-color="#FF41F8" />
+            <stop offset=".707" stop-color="#FF41F8" stop-opacity=".5" />
+            <stop offset="1" stop-color="#FF41F8" stop-opacity="0" />
+          </radialGradient>
+          <linearGradient
+            id="b"
+            x1="0"
+            x2="982"
+            y1="192"
+            y2="192"
+            gradientUnits="userSpaceOnUse"
+          >
+            <stop stop-color="#F0060B" />
+            <stop offset="0" stop-color="#F0070C" />
+            <stop offset=".526" stop-color="#CC26D5" />
+            <stop offset="1" stop-color="#7702FF" />
+          </linearGradient>
+          <clipPath id="a"><path fill="#fff" d="M0 0h982v239H0z" /></clipPath>
+        </defs>
+      </svg>
+      <h1>Hello, {{ title }}</h1>
+      <p>Congratulations! Your app is running. 🎉</p>
+    </div>
+    <div class="divider" role="separator" aria-label="Divider"></div>
+    <div class="right-side">
+      <div class="pill-group">
+        @for (item of [
+          { title: 'Explore the Docs', link: 'https://angular.dev' },
+          { title: 'Learn with Tutorials', link: 'https://angular.dev/tutorials' },
+          { title: 'CLI Docs', link: 'https://angular.dev/tools/cli' },
+          { title: 'Angular Language Service', link: 'https://angular.dev/tools/language-service' },
+          { title: 'Angular DevTools', link: 'https://angular.dev/tools/devtools' },
+        ]; track item.title) {
+          <a
+            class="pill"
+            [href]="item.link"
+            target="_blank"
+            rel="noopener"
+          >
+            <span>{{ item.title }}</span>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              height="14"
+              viewBox="0 -960 960 960"
+              width="14"
+              fill="currentColor"
+            >
+              <path
+                d="M200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h280v80H200v560h560v-280h80v280q0 33-23.5 56.5T760-120H200Zm188-212-56-56 372-372H560v-80h280v280h-80v-144L388-332Z"
+              />
+            </svg>
+          </a>
+        }
+      </div>
+      <div class="social-links">
+        <a
+          href="https://github.com/angular/angular"
+          aria-label="Github"
+          target="_blank"
+          rel="noopener"
+        >
+          <svg
+            width="25"
+            height="24"
+            viewBox="0 0 25 24"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            alt="Github"
+          >
+            <path
+              d="M12.3047 0C5.50634 0 0 5.50942 0 12.3047C0 17.7423 3.52529 22.3535 8.41332 23.9787C9.02856 24.0946 9.25414 23.7142 9.25414 23.3871C9.25414 23.0949 9.24389 22.3207 9.23876 21.2953C5.81601 22.0377 5.09414 19.6444 5.09414 19.6444C4.53427 18.2243 3.72524 17.8449 3.72524 17.8449C2.61064 17.082 3.81137 17.0973 3.81137 17.0973C5.04697 17.1835 5.69604 18.3647 5.69604 18.3647C6.79321 20.2463 8.57636 19.7029 9.27978 19.3881C9.39052 18.5924 9.70736 18.0499 10.0591 17.7423C7.32641 17.4347 4.45429 16.3765 4.45429 11.6618C4.45429 10.3185 4.9311 9.22133 5.72065 8.36C5.58222 8.04931 5.16694 6.79833 5.82831 5.10337C5.82831 5.10337 6.85883 4.77319 9.2121 6.36459C10.1965 6.09082 11.2424 5.95546 12.2883 5.94931C13.3342 5.95546 14.3801 6.09082 15.3644 6.36459C17.7023 4.77319 18.7328 5.10337 18.7328 5.10337C19.3942 6.79833 18.9789 8.04931 18.8559 8.36C19.6403 9.22133 20.1171 10.3185 20.1171 11.6618C20.1171 16.3888 17.2409 17.4296 14.5031 17.7321C14.9338 18.1012 15.3337 18.8559 15.3337 20.0084C15.3337 21.6552 15.3183 22.978 15.3183 23.3779C15.3183 23.7009 15.5336 24.0854 16.1642 23.9623C21.0871 22.3484 24.6094 17.7341 24.6094 12.3047C24.6094 5.50942 19.0999 0 12.3047 0Z"
+            />
+          </svg>
+        </a>
+        <a
+          href="https://twitter.com/angular"
+          aria-label="Twitter"
+          target="_blank"
+          rel="noopener"
+        >
+          <svg
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            alt="Twitter"
+          >
+            <path
+              d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"
+            />
+          </svg>
+        </a>
+        <a
+          href="https://www.youtube.com/channel/UCbn1OgGei-DV7aSRo_HaAiw"
+          aria-label="Youtube"
+          target="_blank"
+          rel="noopener"
+        >
+          <svg
+            width="29"
+            height="20"
+            viewBox="0 0 29 20"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            alt="Youtube"
+          >
+            <path
+              fill-rule="evenodd"
+              clip-rule="evenodd"
+              d="M27.4896 1.52422C27.9301 1.96749 28.2463 2.51866 28.4068 3.12258C29.0004 5.35161 29.0004 10 29.0004 10C29.0004 10 29.0004 14.6484 28.4068 16.8774C28.2463 17.4813 27.9301 18.0325 27.4896 18.4758C27.0492 18.9191 26.5 19.2389 25.8972 19.4032C23.6778 20 14.8068 20 14.8068 20C14.8068 20 5.93586 20 3.71651 19.4032C3.11363 19.2389 2.56449 18.9191 2.12405 18.4758C1.68361 18.0325 1.36732 17.4813 1.20683 16.8774C0.613281 14.6484 0.613281 10 0.613281 10C0.613281 10 0.613281 5.35161 1.20683 3.12258C1.36732 2.51866 1.68361 1.96749 2.12405 1.52422C2.56449 1.08095 3.11363 0.76113 3.71651 0.596774C5.93586 0 14.8068 0 14.8068 0C14.8068 0 23.6778 0 25.8972 0.596774C26.5 0.76113 27.0492 1.08095 27.4896 1.52422ZM19.3229 10L11.9036 5.77905V14.221L19.3229 10Z"
+            />
+          </svg>
+        </a>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * -->
+<!-- * * * * * * * * * * * The content above * * * * * * * * * * * * -->
+<!-- * * * * * * * * * * is only a placeholder * * * * * * * * * * * -->
+<!-- * * * * * * * * * * and can be replaced.  * * * * * * * * * * * -->
+<!-- * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * -->
+<!-- * * * * * * * * * * End of Placeholder  * * * * * * * * * * * * -->
+<!-- * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * -->
+
+
+
+=== ARCHIVO: frontend/src/app/app.component.spec.ts ===
+import { TestBed } from '@angular/core/testing';
+import { AppComponent } from './app.component';
+
+describe('AppComponent', () => {
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [AppComponent],
+    }).compileComponents();
+  });
+
+  it('should create the app', () => {
+    const fixture = TestBed.createComponent(AppComponent);
+    const app = fixture.componentInstance;
+    expect(app).toBeTruthy();
+  });
+
+  it(`should have the 'frontend' title`, () => {
+    const fixture = TestBed.createComponent(AppComponent);
+    const app = fixture.componentInstance;
+    expect(app.title).toEqual('frontend');
+  });
+
+  it('should render title', () => {
+    const fixture = TestBed.createComponent(AppComponent);
+    fixture.detectChanges();
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.querySelector('h1')?.textContent).toContain('Hello, frontend');
+  });
+});
+
+=== ARCHIVO: frontend/src/app/app.component.ts ===
+import { Component } from '@angular/core';
+import { EscritorioComponent } from './components/escritorio/escritorio.component';
+
+@Component({
+  selector: 'app-root',
+  standalone: true,
+  imports: [EscritorioComponent], 
+  template: '<app-escritorio></app-escritorio>', 
+})
+
+export class AppComponent {
+  title = 'AGNUX OS';
+}
+
+=== ARCHIVO: frontend/src/app/app.config.server.ts ===
+import { mergeApplicationConfig, ApplicationConfig } from '@angular/core';
+import { provideServerRendering } from '@angular/platform-server';
+import { appConfig } from './app.config';
+
+const serverConfig: ApplicationConfig = {
+  providers: [
+    provideServerRendering()
+  ]
+};
+
+export const config = mergeApplicationConfig(appConfig, serverConfig);
+
+=== ARCHIVO: frontend/src/app/app.config.ts ===
+import { ApplicationConfig } from '@angular/core';
+import { provideClientHydration } from '@angular/platform-browser';
+import { provideHttpClient, withFetch } from '@angular/common/http';
+
+export const appConfig: ApplicationConfig = {
+  providers: [provideClientHydration(), provideHttpClient(withFetch())]
+};
+
+=== ARCHIVO: frontend/src/app/components/authorize/authorize.component.html ===
+<div class="mobile-authorize-container">
+  <div class="header-scan">
+    <h2 class="vpn-badge">AGNUX VPN SECURE LINK</h2>
+  </div>
+
+  <div class="content-box">
+    <!-- Estado: Cargando o Listo para Autorizar manual -->
+    <ng-container *ngIf="!statusMessage">
+      <div class="registration-form">
+        <h3 class="instruction-title">REGISTRE SU IDENTIDAD DE OPERADOR</h3>
+        <p class="subtitle">La terminal <b>{{ terminalId }}</b> requiere de su verificación biométrica o firma digital para desbloquearse.</p>
+        
+        <input 
+          type="text" 
+          class="cyber-input" 
+          placeholder="Escriba su nombre..." 
+          [(ngModel)]="usernameInput" 
+          (keyup.enter)="registrarEIngresar()"
+        />
+        
+        <button class="cyber-button auth-btn" (click)="registrarEIngresar()">
+          AUTORIZAR INGRESO
+        </button>
+      </div>
+    </ng-container>
+
+    <!-- Estado: Mensaje de resultado de la petición HTTP -->
+    <ng-container *ngIf="statusMessage">
+      <div class="result-box" [ngClass]="{'success-box': isSuccess, 'error-box': !isSuccess}">
+        <div class="status-icon">
+          <span *ngIf="isSuccess">✔️</span>
+          <span *ngIf="!isSuccess">❌</span>
+        </div>
+        <h3 class="status-text">{{ statusMessage }}</h3>
+      </div>
+    </ng-container>
+  </div>
+</div>
+
+=== ARCHIVO: frontend/src/app/components/authorize/authorize.component.ts ===
+import { Component, OnInit } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
+import { AuthService } from '../../services/auth.service';
+
+@Component({
+  selector: 'app-authorize',
+  templateUrl: './authorize.component.html',
+  styleUrls: ['./authorize.component.css']
+})
+export class AuthorizeComponent implements OnInit {
+  public terminalId: string | null = null;
+  public usernameInput: string = '';
+  public statusMessage: string = '';
+  public isSuccess: boolean = false;
+  private currentUser: string | null = null;
+
+  constructor(
+    private route: ActivatedRoute,
+    private authService: AuthService
+  ) {}
+
+  ngOnInit(): void {
+    // 1. Extraer ID de la terminal desde la URL
+    this.terminalId = this.route.snapshot.queryParamMap.get('terminal_id');
+    
+    // 2. Comprobar identidad local del celular
+    this.currentUser = this.authService.getCurrentUser();
+
+    // Si ya estamos logueados y escaneamos un QR, autorizamos de inmediato
+    if (this.currentUser && this.terminalId) {
+      this.procesarAutorizacion(this.terminalId, this.currentUser);
+    }
+  }
+
+  // Se ejecuta al darle Enter al input de identidad
+  public registrarEIngresar(): void {
+    if (!this.usernameInput.trim() || !this.terminalId) return;
+    
+    // Formatear: Cristian -> user_cristian
+    const cleanUser = 'user_' + this.usernameInput.trim().toLowerCase().replace(/\s+/g, '_');
+    this.procesarAutorizacion(this.terminalId, cleanUser);
+  }
+
+  private procesarAutorizacion(termId: string, userId: string): void {
+    this.statusMessage = 'Estableciendo enlace de red VPN...';
+    
+    this.authService.authorizeTerminal(termId, userId).subscribe({
+      next: (res) => {
+        this.isSuccess = true;
+        this.statusMessage = 'Terminal autorizada. Puedes mirar la pantalla grande.';
+        // Opcionalmente podemos guardar la sesión en el celular si fue manual
+        if (!this.currentUser) {
+          localStorage.setItem('agnux_user_id', userId);
+        }
+      },
+      error: (err) => {
+        this.isSuccess = false;
+        this.statusMessage = 'ERROR DE ENLACE: La terminal caducó o no fue encontrada.';
+        console.error('Falla autorizando', err);
+      }
+    });
+  }
+}
+
+=== ARCHIVO: frontend/src/app/components/command-bar/command-bar.component.html ===
+<div class="agnux-container" style="max-width: 700px; margin: 40px auto; font-family: monospace; padding: 20px; background: #111; color: #0f0; border: 1px solid #00ff0033; border-radius: 8px;">
+  
+  <div class="input-group" style="display: flex; gap: 10px; margin-bottom: 20px;">
+    <span style="color: #0f0; font-weight: bold; align-self: center;">david&#64;agnux:~$</span>
+    <input 
+      type="text" 
+      [(ngModel)]="promptInput" 
+      (keyup.enter)="ejecutarComando()"
+      [disabled]="cargando"
+      placeholder="¿Qué orden o consulta querés ejecutar?" 
+      style="flex: 1; background: #222; border: 1px solid #333; color: #fff; padding: 10px; font-family: monospace; outline: none; border-radius: 4px;"
+    />
+    <button 
+      (click)="ejecutarComando()" 
+      [disabled]="cargando"
+      style="background: #0f0; color: #000; border: none; padding: 10px 20px; font-family: monospace; font-weight: bold; cursor: pointer; border-radius: 4px;">
+      {{ cargando ? '...' : 'GATILLAR' }}
+    </button>
+  </div>
+
+  <div *ngIf="statusMensaje" style="color: #aaffaa; margin-bottom: 10px;">
+    {{ statusMensaje }}
+  </div>
+
+  <div *ngIf="errorMsg" style="color: #ff3333; background: #331111; padding: 10px; border-radius: 4px; margin-bottom: 10px;">
+    ❌ {{ errorMsg }}
+  </div>
+
+  <div *ngIf="respuestaIA" class="output-panel" style="background: #050505; border: 1px solid #222; padding: 15px; border-radius: 4px; max-height: 400px; overflow-y: auto;">
+    <span style="color: #888; font-size: 11px;">[AGNUX CORE RESPONSE]</span>
+    <pre style="margin: 10px 0 0 0; white-space: pre-wrap; word-wrap: break-word; color: #e0e0e0; font-size: 13px;">{{ respuestaIA }}</pre>
+  </div>
+
+</div>
+=== ARCHIVO: frontend/src/app/components/command-bar/command-bar.component.ts ===
+import { Component, OnDestroy, OnInit } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { Subscription } from 'rxjs';
+import { AgnuxService } from '../../services/agnux.service';
+
+@Component({
+  selector: 'app-command-bar',
+  standalone: true,
+  imports: [CommonModule, FormsModule],
+  templateUrl: './command-bar.component.html',
+  styleUrls: ['./command-bar.component.css']
+})
+export class CommandBarComponent implements OnInit, OnDestroy {
+  promptInput: string = '';
+  respuestaIA: string = '';
+  cargando: boolean = false;
+  errorMsg: string = '';
+  statusMensaje: string = '';
+
+  private subscriptions: Subscription[] = [];
+
+  constructor(private agnuxService: AgnuxService) {}
+
+  ngOnInit() {
+    this.subscriptions.push(
+      this.agnuxService.token$.subscribe(token => {
+        this.respuestaIA += token;
+      })
+    );
+
+    this.subscriptions.push(
+      this.agnuxService.eventStatus$.subscribe(status => {
+        switch (status.type) {
+          case 'ROUTER_START':
+            this.statusMensaje = '⚙️ Escaneando matriz local...';
+            break;
+          case 'INFERENCE_START':
+            this.statusMensaje = '🧠 Ministral-es procesando...';
+            break;
+          case 'TOOL_EXECUTE':
+            this.statusMensaje = status.msg || '🔧 Ejecutando herramienta...';
+            break;
+          case 'SCORE':
+            this.statusMensaje = `📊 Score ${status.tool}: ${status.score}`;
+            break;
+          case 'RESULT':
+            this.statusMensaje = '✅ Resultado de herramienta disponible.';
+            break;
+          case 'ERROR':
+            this.statusMensaje = `❌ ${status.message}`;
+            break;
+          default:
+            this.statusMensaje = '';
+        }
+      })
+    );
+  }
+
+  ngOnDestroy() {
+    this.subscriptions.forEach(sub => sub.unsubscribe());
+  }
+
+  async ejecutarComando() {
+    if (!this.promptInput.trim()) return;
+
+    this.cargando = true;
+    this.respuestaIA = '';
+    this.errorMsg = '';
+
+    try {
+      await this.agnuxService.enviarPromptStream(this.promptInput);
+      this.statusMensaje = '🎯 Respuesta completa.';
+    } catch (err) {
+      this.errorMsg = 'No se pudo conectar con el backend de AGNUX.';
+      console.error(err);
+    } finally {
+      this.cargando = false;
+    }
+  }
+}
+=== ARCHIVO: frontend/src/app/components/escritorio/escritorio.component.html ===
+<div class="agnux-container">
+  <!-- BÚNKER DE AUTENTICACIÓN -->
+  <div *ngIf="isLocked" class="lock-screen">
+    <div class="lock-window" style="max-width: 600px; text-align: center;">
+      <div class="window-header" style="background-color: #ff3366; color: white;">⚠️ ACCESO DENEGADO - ZERO TRUST</div>
+      <div class="window-body" style="padding: 40px;">
+        <p class="blink-text" style="color: #ff3366; font-size: 1.2rem; font-weight: bold; margin-bottom: 20px;">SISTEMA PROTEGIDO POR CLOUDFLARE ACCESS</p>
+        <p style="font-size: 1rem;">No se han detectado las cabeceras de aserción criptográfica requeridas por el Kernel.</p>
+        <p style="margin-top: 10px; font-size: 0.9rem; color: #aaa;">Para ingresar al sistema operativo, debe autenticarse a través del túnel seguro:</p>
+        
+        <div style="margin-top: 40px; margin-bottom: 20px;">
+          <a href="https://demo.agnux.net.ar" style="display: inline-block; padding: 15px 30px; background: rgba(0, 229, 255, 0.1); border: 1px solid #00e5ff; color: #00e5ff; text-decoration: none; font-family: monospace; font-weight: bold; border-radius: 4px; box-shadow: 0 0 15px rgba(0, 229, 255, 0.2); transition: 0.3s;">
+            [ INICIAR TÚNEL SEGURO ]
+          </a>
+        </div>
+        
+        <p style="color: #00e5ff; font-family: monospace; margin-top: 40px; font-size: 11px; opacity: 0.6;">NODE: {{ terminalId }}</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ESCRITORIO PRINCIPAL -->
+  <div *ngIf="!isLocked" class="desktop-env" (click)="currentHtmlWindowId ? null : null">
+    <app-hyper-island></app-hyper-island>
+
+    <!-- Reloj de Escritorio -->
+    <div class="desktop-clock">
+      <div class="clock-time">{{ horaActual | date:'HH:mm' }}</div>
+      <div class="clock-date">{{ horaActual | date:'EEEE, d MMM y' | uppercase }}</div>
+    </div>
+
+    <!-- Ventanas Flotantes -->
+    <ng-container *ngFor="let win of ventanas">
+      <app-ventana 
+        [win]="win"
+        (onCerrar)="cerrarVentana($event)"
+        (onMaximizar)="toggleMaximizar($event)"
+        (onEnfocar)="enfocarVentana($event)"
+        (onResponder)="responderVentana($event)">
+      </app-ventana>
+    </ng-container>
+
+    <!-- Barra de Comandos Inferior (Terminal Input) -->
+    <div class="command-bar">
+      <!-- Badge de Google Workspace -->
+      <div class="auth-badge" [ngClass]="isGoogleConnected ? 'badge-connected' : 'badge-disconnected'" style="position: absolute; left: -180px; top: 12px; display: flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; background: rgba(0,0,0,0.5);">
+        <mat-icon style="font-size: 16px; width: 16px; height: 16px; line-height: 16px;" [ngStyle]="{'color': isGoogleConnected ? '#00ff66' : '#ff3366'}">{{ isGoogleConnected ? 'cloud_done' : 'cloud_off' }}</mat-icon>
+        <span [ngStyle]="{'color': isGoogleConnected ? '#00ff66' : '#ff3366'}">{{ isGoogleConnected ? 'Workspace Conectado' : 'Google Desconectado' }}</span>
+      </div>
+
+      <div class="input-wrapper">
+        <span class="user-prompt" style="color: #00e5ff; font-weight: bold; margin-right: 10px; text-shadow: 0 0 5px rgba(0,229,255,0.5);">🚀 {{ userId }} &#64; agnux_os:~$</span>
+        <input 
+          class="cyber-input"
+          type="text" 
+          [(ngModel)]="promptInput" 
+          (keydown.enter)="ejecutarComando()" 
+          placeholder="Ingrese comando para AGNUX OS..."
+          [disabled]="cargando"
+          autocomplete="off" />
+        <button mat-icon-button class="exec-btn" (click)="ejecutarComando()" [disabled]="cargando || !promptInput">
+          <mat-icon *ngIf="!cargando">send</mat-icon>
+          <mat-icon *ngIf="cargando" class="spin">sync</mat-icon>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+=== ARCHIVO: frontend/src/app/components/escritorio/escritorio.component.ts ===
+import { Component, OnDestroy, OnInit, afterNextRender, ViewChild, ElementRef, ChangeDetectorRef } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { Subscription, take } from 'rxjs';
+import { AgnuxService } from '../../services/agnux.service';
+import { Ventana } from '../../models/ventana.model';
+import { VentanaComponent } from '../ventana/ventana.component';
+import { MatIconModule } from '@angular/material/icon';
+import { MatButtonModule } from '@angular/material/button';
+import { AuthService } from '../../services/auth.service';
+import { PresenceService } from '../../services/presence.service';
+import { NotificationService } from '../../services/notification.service';
+import { HyperIslandComponent } from '../hyper-island/hyper-island.component';
+import { ThemeService } from '../../services/theme.service';
+
+@Component({
+  selector: 'app-escritorio',
+  standalone: true,
+  imports: [
+    CommonModule,
+    FormsModule,
+    VentanaComponent,
+    HyperIslandComponent,
+    MatIconModule,
+    MatButtonModule
+  ],
+  templateUrl: './escritorio.component.html',
+  styleUrls: ['./escritorio.component.css']
+})
+export class EscritorioComponent implements OnInit, OnDestroy {
+  ventanas: Ventana[] = [];
+  promptInput: string = '';
+  cargando: boolean = false;
+  private idCounter = 0;
+  private maxZIndex = 100;
+  private subscriptions: Subscription[] = [];
+  public currentHtmlWindowId: string | null = null;
+  public horaActual: Date = new Date();
+  private clockInterval: any;
+
+  userId: string | null = null;
+  terminalId: string = '';
+  qrUrl: string = '';
+  isLocked: boolean = true;
+  private authSub!: Subscription;
+  isGoogleConnected: boolean = false;
+
+  // Local Biometric state
+  tieneCamaraLocal: boolean = false;
+
+  constructor(
+    private agnuxService: AgnuxService,
+    private authService: AuthService,
+    private presenceService: PresenceService,
+    private notificationService: NotificationService,
+    private themeService: ThemeService,
+    private cdr: ChangeDetectorRef
+  ) {
+    afterNextRender(() => {
+      this.clockInterval = setInterval(() => {
+        this.horaActual = new Date();
+      }, 1000);
+    });
+
+    this.subscriptions.push(
+      this.agnuxService.eventStatus$.subscribe(status => {
+        const event = status;
+
+        // 🔥 EL EVENTO QUE FALTA: Capturar la orden de creación estructurada del Kernel
+        if (event.type === 'CREATE_WINDOW' || event.event === 'CREATE_WINDOW' || (event.type === 'UNKNOWN' && event.payload?.event === 'CREATE_WINDOW')) {
+          try {
+            let rawData = event.data || event.payload?.data;
+            const winData = typeof rawData === 'string' ? JSON.parse(rawData) : rawData;
+            console.log("📺 [UI KERNEL] Orden de creación de ventana recibida:", winData);
+
+            // Usamos la ventana actual anclada o generamos un ID único por seguridad
+            const targetId = this.currentHtmlWindowId || `agnux-ai-window-${Date.now()}`;
+            this.currentHtmlWindowId = targetId;
+
+            // Verificamos si la ventana ya existe para no duplicarla
+            let ventanaIA = this.ventanas.find(v => v.id === targetId);
+
+            if (!ventanaIA) {
+              // Respetamos la regla constitucional de no guiones bajos en el objeto de la interfaz
+              ventanaIA = {
+                id: targetId,
+                titulo: winData.title || '🧠 AGNUX OS Core',
+                tipo: 'html',
+                htmlDinamico: winData.content || '',
+                x: 150 + (this.ventanas.length * 20),
+                y: 100 + (this.ventanas.length * 20),
+                width: 550,
+                height: 420,
+                maximizada: false,
+                zIndex: ++this.maxZIndex
+              };
+
+              // Forzamos la mutación inmutable para que Angular se entere
+              this.ventanas = [...this.ventanas, ventanaIA];
+            } else {
+              // Si ya existía, actualizamos el contenido final consolidado
+              ventanaIA.htmlDinamico = winData.content;
+            }
+
+            // 🔥 Forzamos el redibujado inmediato del DOM de Chrome
+            this.cdr.detectChanges();
+          } catch (parseError) {
+            console.error("❌ Error crítico parseando el JSON de la ventana:", parseError);
+          }
+        } else if (status.type === 'TOOL_EXECUTE') {
+          this.cargando = true;
+          const msg = status.msg || '';
+          if (msg.includes('reproducir_musica')) {
+            this.spawnVentana('musica', '🎵 AGNUX Media Player', { status: 'Playing...' });
+          } else if (msg.includes('tool_reproductor_video')) {
+            this.spawnVentana('video', '🎬 AGNUX Video Core', { url: '' });
+          }
+        } else if (status.type === 'OPEN_MEDIA') {
+          this.cargando = false;
+          const targetUrl = status.payload?.url;
+          const platformName = status.payload?.mediaPlatform || 'Media';
+
+          if (targetUrl) {
+            console.log(`🎵 [UI KERNEL] Abriendo pestaña externa para: ${targetUrl}`);
+            window.open(targetUrl, '_blank');
+          }
+          // Evento propagado a hyper-island a través de un bus o servicio (lo gestionaremos en app-hyper-island)
+        } else if (status.type === 'OPEN_IFRAME_APP') {
+          this.cargando = false;
+          const { appService, appAction, appParams } = status.payload;
+          const service = appService.toLowerCase();
+          let targetUrl = 'https://workspace.google.com/';
+          if (service === 'gmail') targetUrl = 'https://mail.google.com/';
+          else if (service === 'calendar') targetUrl = 'https://calendar.google.com/';
+          else if (service === 'docs') targetUrl = 'https://docs.google.com/';
+          else if (service === 'sheets') targetUrl = 'https://docs.google.com/spreadsheets/';
+          else if (service === 'slides') targetUrl = 'https://docs.google.com/presentation/';
+          
+          window.open(targetUrl, '_blank');
+        } else if (status.type === 'SET_WALLPAPER') {
+          this.cargando = false;
+          const imageUrl = status.payload.imageUrl;
+          document.documentElement.style.setProperty('--agnux-bg-image', `url('${imageUrl}')`);
+        } else if (status.type === 'SET_THEME') {
+          this.cargando = false;
+          const cssCode = status.payload.cssCode;
+          this.themeService.injectRawCss(cssCode);
+        } else if (status.type === 'TOOL_END' || status.type === 'ERROR') {
+          this.cargando = false;
+        } else if (status.type === 'INFERENCE_START') {
+          this.currentHtmlWindowId = this.spawnVentana('html', '⚡ AGNUX OS Intelligence Output', null);
+        } else if (status.type === 'TOOL_RESULT' || status.type === 'RESULT') {
+          this.cargando = false;
+          let output = status.data || status.payload;
+          if (typeof output === 'object') {
+            output = `<pre style="color: var(--agnux-text-primary); white-space: pre-wrap; font-size: 14px; margin: 0;">${JSON.stringify(output, null, 2)}</pre>`;
+          }
+          this.spawnVentana('html', '🛠️ AGNUX Tool Output', output);
+        } else if (status.type === 'ERROR') {
+          this.spawnVentana('html', '❌ Error de Sistema', status.message || 'Error desconocido');
+        }
+      })
+    );
+  }
+
+  ngOnInit() {
+    // 🛡️ [NUEVO FLUJO DE SEGURIDAD] Intentamos validación silenciosa por Cloudflare Access
+    if (typeof window !== 'undefined') {
+      this.authService.verifyCloudflareAuth();
+    }
+
+    this.authSub = this.authService.currentUser$.subscribe(user => {
+      // Se ejecuta de forma asíncrona para evitar que choque con el proceso de Hidratación de Angular
+      setTimeout(() => {
+        console.log('🔄 [UI KERNEL] Cambio de estado de usuario detectado:', user);
+
+        if (user) {
+          // 🔓 Si hay usuario, limpiamos CUALQUIER conexión residual primero
+          this.authService.closeConnection();
+          this.userId = user;
+          this.isLocked = false;
+          console.log(`🔓 [UI KERNEL] Terminal liberada con éxito para: ${user}`);
+          this.cdr.detectChanges();
+
+          // Consultar estado de Google Workspace
+          this.authService.checkGoogleAuthStatus(user).subscribe({
+            next: status => {
+              this.isGoogleConnected = status.connected;
+            },
+            error: err => {
+              console.warn('⚠️ [UI KERNEL] No se pudo verificar estado de Google Workspace', err);
+            }
+          });
+
+          // Conectar WebSocket de Notificaciones
+          if (this.terminalId) {
+            this.notificationService.connect(this.terminalId, user);
+          }
+
+          // Cargar estilo físico persistente
+          this.themeService.loadBaseStyle(user);
+        } else {
+          this.isLocked = true;
+          this.cdr.detectChanges();
+          // Evita disparar el bloqueo si ya hay un ID de terminal inicializado escuchando
+          if (!this.terminalId) {
+            this.iniciarFlujoBloqueo();
+          }
+        }
+      }, 0);
+    });
+
+    this.subscriptions.push(
+    );
+
+    this.subscriptions.push(
+      this.agnuxService.token$.subscribe({
+        next: (tokenLimpio) => {
+          try {
+            console.log("🔥 [UI KERNEL] Token recibido en UI:", tokenLimpio);
+            // Si no hay ventana actual, forzamos un ID nuevo para este flujo de inferencia
+            if (!this.currentHtmlWindowId) {
+              this.currentHtmlWindowId = `agnux-ai-window-${Date.now()}`;
+            }
+
+            // 1. Buscamos la ventana ACTUAL de inferencia
+            let ventanaIA: Ventana | undefined = this.ventanas.find(v => v.id === this.currentHtmlWindowId);
+
+            if (!ventanaIA) {
+              // 2. SI NO EXISTE, LA CREAMOS AL VUELO CON SUS COORDENADAS Y FOCO
+              console.log(`📺 [UI DESKTOP] Abriendo nueva ventana flotante reactiva para la IA: ${this.currentHtmlWindowId}`);
+              ventanaIA = {
+                id: this.currentHtmlWindowId,
+                titulo: '🧠 AGNUX OS Core - Ministral IA',
+                tipo: 'html',
+                htmlDinamico: '',
+                x: 150 + (this.ventanas.length * 20),
+                y: 100 + (this.ventanas.length * 20),
+                width: 500,
+                height: 400,
+                maximizada: false,
+                zIndex: ++this.maxZIndex
+              };
+              // Usamos el operador de propagación para asegurar que Angular detecte la mutación del array
+              this.ventanas = [...this.ventanas, ventanaIA];
+            }
+
+            // 3. CONCATENAMOS EL TOKEN EN VIVO (Efecto máquina de escribir)
+            const htmlPrevio = ventanaIA.htmlDinamico || '';
+            ventanaIA.htmlDinamico = htmlPrevio + tokenLimpio;
+
+            // Clonamos y embellecemos al vuelo para que el usuario no vea JSON feo
+            ventanaIA.htmlDinamico = this.formatStreamText(ventanaIA.htmlDinamico);
+
+            // 🔥 OBLIGAMOS A ANGULAR A REDIBUJAR LA PANTALLA EN ESTE MICROSEGUNDO
+            this.cdr.detectChanges();
+          } catch (e) {
+            console.error("❌ Error procesando token$ en UI:", e);
+          }
+        },
+        error: (err) => console.error("❌ Stream token$ abortado:", err)
+      })
+    );
+  }
+
+  iniciarFlujoBloqueo() {
+    this.terminalId = 'TERM-' + Math.floor(Math.random() * 100000);
+    console.warn(`🔒 [UI] Terminal Bloqueada. ID Asignado: ${this.terminalId}`);
+    // El flujo de biometría y SSE fue delegado a Cloudflare Access.
+  }
+
+
+
+  ngOnDestroy() {
+    this.subscriptions.forEach(sub => sub.unsubscribe());
+    if (this.clockInterval) {
+      clearInterval(this.clockInterval);
+    }
+    if (this.authSub) {
+      this.authSub.unsubscribe();
+    }
+    this.authService.closeConnection();
+    this.notificationService.disconnect();
+  }
+
+  spawnVentana(tipo: 'html' | 'musica' | 'video' | 'texto' | 'iframe', titulo: string, datos: any): string {
+    this.maxZIndex++;
+    const id = `win_${this.idCounter++}`;
+    // Si ya existe una ventana HTML, podemos reusarla, o crear una nueva
+    if (tipo === 'html' && this.currentHtmlWindowId) {
+      const existing = this.ventanas.find(v => v.id === this.currentHtmlWindowId);
+      if (existing) {
+        existing.htmlDinamico = ''; // Reset for new output
+        this.enfocarVentana(existing);
+        return existing.id;
+      }
+    }
+
+    const nuevaVentana: Ventana = {
+      id: `win_${Date.now()}`,
+      titulo,
+      tipo,
+      datos,
+      htmlDinamico: tipo === 'html' ? datos : '',
+      urlDinamica: (tipo === 'video' || tipo === 'iframe') ? datos.url : '',
+      maximizada: false,
+      x: 50 + (this.idCounter * 20),
+      y: 50 + (this.idCounter * 20),
+      zIndex: this.maxZIndex + 1,
+      width: tipo === 'video' ? 680 : 480,
+      height: 400
+    };
+    this.ventanas = [...this.ventanas, nuevaVentana];
+    this.cdr.detectChanges();
+    return nuevaVentana.id;
+  }
+
+  cerrarVentana(id: string) {
+    this.ventanas = this.ventanas.filter(v => v.id !== id);
+    if (this.currentHtmlWindowId === id) {
+      this.currentHtmlWindowId = null;
+    }
+  }
+
+  toggleMaximizar(win: Ventana) {
+    win.maximizada = !win.maximizada;
+    this.enfocarVentana(win);
+  }
+
+  enfocarVentana(win: Ventana) {
+    this.maxZIndex++;
+    win.zIndex = this.maxZIndex;
+  }
+
+  async ejecutarComando() {
+    if (!this.promptInput.trim()) return;
+    this.cargando = true;
+
+    // Forzamos a abrir una ventana nueva por cada comando, desligando la actual
+    this.currentHtmlWindowId = null;
+
+    try {
+      await this.agnuxService.enviarPromptStream(this.promptInput, this.terminalId);
+    } catch (err) {
+      console.error(err);
+      this.spawnVentana('texto', '❌ Error Local', { error: 'No se pudo conectar con AGNUX' });
+    } finally {
+      this.cargando = false;
+      this.promptInput = ''; // Limpiar input
+    }
+  }
+
+  async responderVentana(win: Ventana) {
+    if (!win.replyInput?.trim()) return;
+    win.cargandoRespuesta = true;
+
+    const userText = win.replyInput;
+    win.replyInput = '';
+
+    // Mostrar visualmente la entrada del usuario en la consola
+    win.htmlDinamico = (win.htmlDinamico || '') + `<br><br><span style="color: #fff; background: rgba(0,255,102,0.2); padding: 2px 4px; border-radius: 4px;">> ${userText}</span><br><br>`;
+
+    // Reasignamos esta ventana como objetivo para el próximo stream
+    this.currentHtmlWindowId = win.id;
+
+    // Extraer texto limpio para el contexto
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = win.htmlDinamico;
+    const contextText = tempDiv.innerText || tempDiv.textContent || '';
+
+    // Regla de Oro AGNUX: Limpieza para el Router Semántico
+    const esComandoDirecto = /^[0-9+\-*/().\s]+$/.test(userText) ||
+      userText.toLowerCase().includes('resta') ||
+      userText.toLowerCase().includes('suma') ||
+      userText.toLowerCase().includes('calcula') ||
+      userText.toLowerCase().includes('crea') ||
+      userText.toLowerCase().includes('genera');
+
+    let promptFinal = userText;
+
+    if (!esComandoDirecto) {
+      promptFinal = `[CONTEXTO PREVIO DE LA CONVERSACIÓN]:
+${contextText.slice(-1000)}
+
+[NUEVA ENTRADA DEL USUARIO CONTINUANDO EL TEMA]:
+${userText}`;
+    }
+
+    try {
+      await this.agnuxService.enviarPromptStream(promptFinal, this.terminalId);
+    } catch (err) {
+      console.error(err);
+      win.htmlDinamico += `<br><span style="color: #ff3366;">[Error Local]</span>`;
+    } finally {
+      win.cargandoRespuesta = false;
+    }
+  }
+
+  private formatStreamText(text: string): string {
+    // 1. Limpieza base de markdown
+    let clean = text.replace(/\*\*/g, '').replace(/```[a-zA-Z]*\n?/gi, '').replace(/```/g, '');
+
+    // Si detectamos un JSON literal colado, le aplicamos sintaxis cyberpunk
+    // Colorea claves de JSON: "clave":
+    clean = clean.replace(/"([a-zA-Z0-9_]+)":/g, '<span style="color: var(--agnux-accent);">"$1"</span>:');
+
+    // Colorea valores string: : "valor"
+    clean = clean.replace(/: \s*"([^"]*)"/g, ': <span style="color: var(--agnux-text-primary);">"$1"</span>');
+
+    // Colorea palabras reservadas
+    clean = clean.replace(/: \s*(true|false|null)/g, ': <span style="color: var(--agnux-text-secondary); font-weight: bold;">$1</span>');
+
+    // Colorea llaves y corchetes (Solo si están sueltos en el formato de JSON)
+    clean = clean.replace(/(\{|\}|\[|\])/g, '<span style="color: var(--agnux-text-secondary); font-weight: bold;">$1</span>');
+
+    // Limpieza de span corruptos (por si reemplazó corchetes de CSS)
+    clean = clean.replace(/<span style="color: var(--agnux-text-secondary); font-weight: bold;">\{<\/span>/g, '{');
+    clean = clean.replace(/<span style="color: var(--agnux-text-secondary); font-weight: bold;">\}<\/span>/g, '}');
+
+    // Ocultar palabra inicial json {
+    clean = clean.replace(/^json\s*\{/gmi, '{');
+
+    return clean;
+  }
+}
+
+=== ARCHIVO: frontend/src/app/components/hyper-island/hyper-island.component.html ===
+<div class="island-wrapper">
+  <div class="hyper-island" 
+       [ngClass]="currentState" 
+       (click)="toggleWidget()">
+    
+    <div *ngIf="currentState === 'compact'" class="content-compact">
+      <span class="pulse-dot"></span>
+      <span class="task-icon">{{ activeTasks.length > 0 ? activeTasks[0].icon : '🛡️' }}</span>
+    </div>
+
+    <div *ngIf="currentState === 'expanded-notif'" class="content-notif">
+      <span class="notif-badge">⚠️ AG-KERNEL:</span>
+      <p class="notif-text">{{ currentNotification }}</p>
+    </div>
+
+    <div *ngIf="currentState === 'expanded-widget'" class="content-widget" (click)="$event.stopPropagation()">
+      <div class="widget-header">
+        <span>AGNUX BACKGROUND SYSTEMS</span>
+        <button class="close-btn" (click)="cerrarWidget($event)">✕</button>
+      </div>
+      
+      <div class="widget-body">
+        <div *ngFor="let task of activeTasks" class="task-card">
+          <div class="task-info">
+            <span class="task-avatar">{{ task.icon }}</span>
+            <div>
+              <h4 class="task-title">{{ task.title }}</h4>
+              <p class="task-subtitle">{{ task.subtitle }}</p>
+            </div>
+          </div>
+          <div class="player-controls" *ngIf="task.type === 'player'">
+            <button class="ctrl-btn">⏮</button>
+            <button class="ctrl-btn active">⏸</button>
+            <button class="ctrl-btn">⏭</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+=== ARCHIVO: frontend/src/app/components/hyper-island/hyper-island.component.ts ===
+import { Component, OnInit, ChangeDetectorRef, HostListener, ElementRef, OnDestroy } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { Subscription } from 'rxjs';
+import { NotificationService } from '../../services/notification.service';
+import { AgnuxService } from '../../services/agnux.service';
+
+export type IslandState = 'compact' | 'expanded-notif' | 'expanded-widget';
+
+interface BackgroundTask {
+  id: string;
+  type: 'player' | 'system' | 'network';
+  title: string;
+  subtitle: string;
+  icon: string;
+}
+
+@Component({
+  selector: 'app-hyper-island',
+  standalone: true,
+  imports: [CommonModule],
+  templateUrl: './hyper-island.component.html',
+  styleUrls: ['./hyper-island.component.css']
+})
+export class HyperIslandComponent implements OnInit, OnDestroy {
+  currentState: IslandState = 'compact';
+  currentNotification: string | null = null;
+  private notifSub!: Subscription;
+  private agnuxSub!: Subscription;
+  
+  // Tarea del reproductor mockeada por defecto en el bus del sistema
+  activeTasks: BackgroundTask[] = [
+    { id: 'track-player', type: 'player', title: 'Cyberpunk Synth', subtitle: 'Loop Station', icon: '📻' }
+  ];
+
+  constructor(
+    private cdr: ChangeDetectorRef,
+    private el: ElementRef,
+    private notificationService: NotificationService,
+    private agnuxService: AgnuxService
+  ) {}
+
+  ngOnInit() {
+    console.log("🏝️ [HYPER ISLAND] Bus de notificaciones inicializado en el tope del DOM.");
+    
+    this.notifSub = this.notificationService.notifications$.subscribe(notif => {
+      this.showNotification(notif.message || 'Notificación del Sistema');
+    });
+
+    this.agnuxSub = this.agnuxService.eventStatus$.subscribe(event => {
+      if (event.type === 'OPEN_MEDIA') {
+        this.currentState = 'expanded-widget';
+        this.activeTasks = [{
+            id: 'media-kiosk',
+            type: 'player',
+            title: `Reproduciendo en ${event.payload?.mediaPlatform || 'Kiosco'}`,
+            subtitle: 'Kiosco Activo',
+            icon: '🎵'
+        }];
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  ngOnDestroy() {
+    if (this.notifSub) this.notifSub.unsubscribe();
+    if (this.agnuxSub) this.agnuxSub.unsubscribe();
+  }
+
+  showNotification(message: string) {
+    this.currentNotification = message;
+    this.currentState = 'expanded-notif';
+    this.cdr.detectChanges();
+
+    // Vuelve a estado compacto después de 4 segundos
+    setTimeout(() => {
+      this.currentNotification = null;
+      this.currentState = 'compact';
+      this.cdr.detectChanges();
+    }, 4000);
+  }
+
+  toggleWidget(event?: Event) {
+    if (event) {
+      event.stopPropagation();
+    }
+    if (this.currentState === 'expanded-widget') {
+      this.currentState = 'compact';
+    } else {
+      this.currentState = 'expanded-widget';
+    }
+    this.cdr.detectChanges();
+  }
+
+  cerrarWidget(event: Event) {
+    event.stopPropagation();
+    this.currentState = 'compact';
+    this.cdr.detectChanges();
+  }
+
+  @HostListener('document:click', ['$event'])
+  onClickOutside(event: Event) {
+    // Si el clic ocurrió fuera de la isla y está expandida, la cerramos
+    if (this.currentState === 'expanded-widget' && !this.el.nativeElement.contains(event.target)) {
+      this.currentState = 'compact';
+      this.cdr.detectChanges();
+    }
+  }
+}
+
+=== ARCHIVO: frontend/src/app/components/lock-screen/lock-screen.component.html ===
+<div class="lock-screen-container">
+  <div class="cyber-glitch-layer"></div>
+  
+  <div class="terminal-box">
+    <h1 class="glitch-title" data-text="AGNUX OS">AGNUX OS</h1>
+    
+    <div class="warning-banner blinking">
+      SISTEMA BLOQUEADO - ESCANEE QR CON DISPOSITIVO AGNUX VPN
+    </div>
+    
+    <!-- Representación de QR (Simulada por directiva o qrcode) -->
+    <div class="qr-placeholder">
+      <div class="qr-corners top-left"></div>
+      <div class="qr-corners top-right"></div>
+      <div class="qr-corners bottom-left"></div>
+      <div class="qr-corners bottom-right"></div>
+      
+      <!-- Se puede integrar ngx-qrcode u otra si el usuario lo instala. Por ahora texto directo con URL -->
+      <div class="qr-code-data">
+        <span class="url-text">{{ qrUrl }}</span>
+      </div>
+      <div class="scan-line"></div>
+    </div>
+    
+    <div class="status-footer">
+      <span>ID TERMINAL: [ {{ terminalId }} ]</span>
+      <span class="status-text loading-dots">Esperando conexión biométrica</span>
+    </div>
+  </div>
+</div>
+
+=== ARCHIVO: frontend/src/app/components/lock-screen/lock-screen.component.ts ===
+import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Router } from '@angular/router';
+import { AuthService } from '../../services/auth.service';
+import { Subscription } from 'rxjs';
+
+@Component({
+  selector: 'app-lock-screen',
+  templateUrl: './lock-screen.component.html',
+  styleUrls: ['./lock-screen.component.css']
+})
+export class LockScreenComponent implements OnInit, OnDestroy {
+  public terminalId: string = '';
+  public qrUrl: string = '';
+  private authSub: Subscription | null = null;
+
+  constructor(private authService: AuthService, private router: Router) {}
+
+  ngOnInit(): void {
+    const currentUser = this.authService.getCurrentUser();
+    
+    if (currentUser) {
+      // Si ya hay sesión en memoria, bypass directo al kernel
+      this.router.navigate(['/']);
+      return;
+    }
+
+    // Generar ID único para esta pantalla inerte
+    this.terminalId = 'TERM_DESKTOP_' + Math.floor(Math.random() * 100000);
+    this.qrUrl = `http://10.10.0.66:4200/authorize?terminal_id=${this.terminalId}`;
+    
+    console.log(`[AGNUX LOCK] Esperando validación remota para: ${this.terminalId}`);
+    
+    // Abrir canal de escucha SSE con el host
+    this.authSub = this.authService.listenTerminal(this.terminalId).subscribe({
+      next: (event) => {
+        if (event.event === 'AUTH_SUCCESS') {
+          console.log(`[AGNUX LOCK] Acceso concedido por el celular: ${event.user_id}`);
+          this.router.navigate(['/']); // Redirección al entorno
+        }
+      },
+      error: (err) => {
+        console.error('[AGNUX LOCK] Error en el túnel de escucha', err);
+      }
+    });
+  }
+
+  ngOnDestroy(): void {
+    if (this.authSub) {
+      this.authSub.unsubscribe();
+    }
+  }
+}
+
+=== ARCHIVO: frontend/src/app/components/ventana/ventana.component.html ===
+<mat-card 
+  class="cyber-window" 
+  cdkDrag
+  [class.maximized]="win.maximizada"
+  [class.video-window]="win.tipo === 'video'"
+  [style.z-index]="win.zIndex"
+  [style.left.px]="win.maximizada ? 0 : win.x"
+  [style.top.px]="win.maximizada ? 0 : win.y"
+  [style.width.px]="!win.maximizada ? win.width : null"
+  [style.height.px]="!win.maximizada ? win.height : null"
+  (mousedown)="onEnfocar.emit(win)">
+  
+  <!-- Bordes de redimensionamiento -->
+  <div class="resizer resizer-r" (mousedown)="initResize($event, 'right')"></div>
+  <div class="resizer resizer-b" (mousedown)="initResize($event, 'bottom')"></div>
+  <div class="resizer resizer-br" (mousedown)="initResize($event, 'both')"></div>
+
+  <!-- Header de la Ventana -->
+  <div class="window-header" cdkDragHandle>
+    <div class="window-title">
+      <mat-icon class="title-icon">terminal</mat-icon>
+      <span>{{ win.titulo }}</span>
+    </div>
+    <div class="window-actions">
+      <button mat-icon-button (click)="onMaximizar.emit(win)">
+        <mat-icon>{{ win.maximizada ? 'flip_to_front' : 'crop_square' }}</mat-icon>
+      </button>
+      <button mat-icon-button color="warn" (click)="onCerrar.emit(win.id)">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+  </div>
+
+  <!-- Contenido Dinámico -->
+  <mat-card-content class="window-content" [ngSwitch]="win.tipo">
+    
+    <!-- TIPO HTML (Resultados de Inteligencia) -->
+    <div *ngSwitchCase="'html'" class="html-container" style="display: flex; flex-direction: column; height: 100%;">
+      <div class="console-output" [innerHTML]="win.htmlDinamico | safeHtml" style="flex: 1; overflow-y: auto; padding-bottom: 8px;"></div>
+      
+      <!-- Input de respuesta en la misma ventana -->
+      <div class="window-reply-bar">
+        <mat-icon class="reply-icon">subdirectory_arrow_right</mat-icon>
+        <input 
+          class="reply-input"
+          type="text" 
+          [(ngModel)]="win.replyInput" 
+          (keydown.enter)="onResponder.emit(win)" 
+          placeholder="Responder en este contexto..."
+          [disabled]="win.cargandoRespuesta || false"
+          autocomplete="off" />
+        <button mat-icon-button class="reply-btn" (click)="onResponder.emit(win)" [disabled]="(win.cargandoRespuesta || false) || !win.replyInput">
+          <mat-icon *ngIf="!win.cargandoRespuesta">send</mat-icon>
+          <mat-icon *ngIf="win.cargandoRespuesta" class="spin">sync</mat-icon>
+        </button>
+      </div>
+    </div>
+
+    <!-- TIPO MUSICA (Reproductor) -->
+    <div *ngSwitchCase="'musica'" class="music-container">
+      <div class="pulse-ring">
+        <mat-icon class="pulse-icon">graphic_eq</mat-icon>
+      </div>
+      <div class="track-info">Playing Neural Stream...</div>
+      <div class="media-controls">
+        <button mat-icon-button><mat-icon>skip_previous</mat-icon></button>
+        <button mat-fab class="play-btn"><mat-icon>play_arrow</mat-icon></button>
+        <button mat-icon-button><mat-icon>pause</mat-icon></button>
+        <button mat-icon-button><mat-icon>skip_next</mat-icon></button>
+      </div>
+    </div>
+
+    <!-- TIPO IFRAME (Apps Externas Integradas) -->
+    <div *ngSwitchCase="'iframe'" class="iframe-container" style="height: 100%; width: 100%; display: flex;">
+      <iframe [src]="win.urlDinamica | safeUrl" style="flex: 1; width: 100%; height: 100%; border: none; border-radius: 0 0 8px 8px;" allow="autoplay; encrypted-media; fullscreen; microphone; camera"></iframe>
+    </div>
+
+    <!-- TIPO VIDEO (Reproductor) -->
+    <div *ngSwitchCase="'video'" class="video-container">
+      <div class="video-placeholder">
+        <mat-icon>movie</mat-icon>
+        <p>Reproduciendo stream de video físico...</p>
+      </div>
+    </div>
+
+    <!-- TIPO TEXTO (Errores o Mensajes Cortos) -->
+    <div *ngSwitchCase="'texto'" class="text-container">
+      <pre>{{ win.datos?.error || win.datos }}</pre>
+    </div>
+
+  </mat-card-content>
+</mat-card>
+
+=== ARCHIVO: frontend/src/app/components/ventana/ventana.component.ts ===
+import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { Ventana } from '../../models/ventana.model';
+import { SafeHtmlPipe, SafeUrlPipe } from '../../pipes/safe.pipe';
+import { MatCardModule } from '@angular/material/card';
+import { MatIconModule } from '@angular/material/icon';
+import { MatButtonModule } from '@angular/material/button';
+import { MatInputModule } from '@angular/material/input';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { DragDropModule } from '@angular/cdk/drag-drop';
+
+@Component({
+  selector: 'app-ventana',
+  standalone: true,
+  imports: [
+    CommonModule,
+    FormsModule,
+    SafeHtmlPipe,
+    SafeUrlPipe,
+    MatCardModule,
+    MatIconModule,
+    MatButtonModule,
+    MatInputModule,
+    MatFormFieldModule,
+    DragDropModule
+  ],
+  templateUrl: './ventana.component.html',
+  styleUrls: ['./ventana.component.css']
+})
+export class VentanaComponent {
+  @Input() win!: Ventana;
+  @Output() onCerrar = new EventEmitter<string>();
+  @Output() onMaximizar = new EventEmitter<Ventana>();
+  @Output() onEnfocar = new EventEmitter<Ventana>();
+  @Output() onResponder = new EventEmitter<Ventana>();
+
+  isResizing = false;
+  resizeDirection = '';
+  startX = 0;
+  startY = 0;
+  startWidth = 0;
+  startHeight = 0;
+
+  initResize(event: MouseEvent, direction: string) {
+    if (this.win.maximizada) return;
+    
+    event.stopPropagation();
+    event.preventDefault();
+    this.isResizing = true;
+    this.resizeDirection = direction;
+    this.startX = event.clientX;
+    this.startY = event.clientY;
+    
+    this.startWidth = this.win.width || 480;
+    this.startHeight = this.win.height || 400;
+
+    const mouseMoveHandler = (e: MouseEvent) => this.onMouseMove(e);
+    const mouseUpHandler = () => {
+      this.isResizing = false;
+      document.removeEventListener('mousemove', mouseMoveHandler);
+      document.removeEventListener('mouseup', mouseUpHandler);
+    };
+
+    document.addEventListener('mousemove', mouseMoveHandler);
+    document.addEventListener('mouseup', mouseUpHandler);
+  }
+
+  onMouseMove(event: MouseEvent) {
+    if (!this.isResizing) return;
+
+    if (this.resizeDirection === 'right' || this.resizeDirection === 'both') {
+      const newWidth = this.startWidth + (event.clientX - this.startX);
+      this.win.width = Math.max(300, newWidth); // Ancho mínimo 300px
+    }
+    
+    if (this.resizeDirection === 'bottom' || this.resizeDirection === 'both') {
+      const newHeight = this.startHeight + (event.clientY - this.startY);
+      this.win.height = Math.max(200, newHeight); // Alto mínimo 200px
+    }
+  }
+}
+
+=== ARCHIVO: frontend/src/app/models/ventana.model.ts ===
+export interface Ventana {
+  id: string;
+  titulo: string;
+  tipo: 'html' | 'musica' | 'video' | 'texto' | 'iframe';
+  datos?: any;
+  htmlDinamico?: string;
+  urlDinamica?: string;
+  maximizada: boolean;
+  x: number;
+  y: number;
+  zIndex: number;
+  width?: number;
+  height?: number;
+  replyInput?: string;
+  cargandoRespuesta?: boolean;
+}
+
+=== ARCHIVO: frontend/src/app/pipes/safe.pipe.ts ===
+import { Pipe, PipeTransform } from '@angular/core';
+import { DomSanitizer, SafeHtml, SafeResourceUrl } from '@angular/platform-browser';
+
+@Pipe({
+  name: 'safeHtml',
+  standalone: true
+})
+export class SafeHtmlPipe implements PipeTransform {
+  constructor(private sanitizer: DomSanitizer) {}
+  transform(value: string | undefined): SafeHtml {
+    return value ? this.sanitizer.bypassSecurityTrustHtml(value) : '';
+  }
+}
+
+@Pipe({
+  name: 'safeUrl',
+  standalone: true
+})
+export class SafeUrlPipe implements PipeTransform {
+  constructor(private sanitizer: DomSanitizer) {}
+  transform(value: string | undefined): SafeResourceUrl {
+    return value ? this.sanitizer.bypassSecurityTrustResourceUrl(value) : '';
+  }
+}
+
+=== ARCHIVO: frontend/src/app/services/agnux-kernel.service.ts ===
+import { Injectable } from '@angular/core';
+import { Subject } from 'rxjs';
+import { AuthService } from './auth.service';
+
+export interface AgUiEvent {
+  type: string;
+  message?: string;
+  text?: string;
+  tool?: string;
+  score?: number;
+  data?: any;
+  mediaPlatform?: string;
+  appService?: string;
+  appAction?: string;
+  appParams?: any;
+  imageUrl?: string;
+}
+
+@Injectable({ providedIn: 'root' })
+export class AgnuxKernelService {
+  private apiUrl = '/api/system/intent';
+  private eventSubject = new Subject<AgUiEvent>();
+  
+  public events$ = this.eventSubject.asObservable();
+  
+  constructor(private authService: AuthService) {}
+
+  async procesarIntencionStream(prompt: string): Promise<void> {
+    const userId = this.authService.getCurrentUser();
+    
+    if (!userId) {
+      this.eventSubject.next({ type: 'ERROR', message: 'Usuario no autenticado en el Kernel' });
+      return;
+    }
+
+    try {
+      const response = await fetch(this.apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt, user_id: userId })
+      });
+
+      if (!response.body) throw new Error('ReadableStream no soportado.');
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder('utf-8');
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split('\n');
+
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          try {
+            const parsed = JSON.parse(line);
+            this.eventSubject.next({
+              type: parsed.event,
+              message: parsed.message,
+              text: parsed.text,
+              tool: parsed.tool,
+              score: parsed.score,
+              data: parsed.data,
+              mediaPlatform: parsed.mediaPlatform,
+              appService: parsed.appService,
+              appAction: parsed.appAction,
+              appParams: parsed.appParams,
+              imageUrl: parsed.imageUrl
+            });
+          } catch (e) {
+            console.warn('Error parseando chunk JSON en stream:', line);
+          }
+        }
+      }
+    } catch (err: any) {
+      console.error('Error en bus de streaming AGNUX:', err);
+      this.eventSubject.next({ type: 'ERROR', message: err.message || 'Error de red en Kernel' });
+    }
+  }
+}
+
+=== ARCHIVO: frontend/src/app/services/agnux.service.ts ===
+import { Injectable } from '@angular/core';
+import { Subject } from 'rxjs';
+import { AuthService } from './auth.service';
+
+export interface AgnuxResponse {
+  status: string;
+  user: string;
+  response: string;
+  detail?: string;
+}
+
+@Injectable({
+  providedIn: 'root'
+})
+export class AgnuxService {
+  private apiUrl = '/api/system/intent';
+
+  public token$ = new Subject<string>();
+  public eventStatus$ = new Subject<any>();
+
+  constructor(private authService: AuthService) {}
+
+  async enviarPromptStream(promptTexto: string, terminalId: string): Promise<void> {
+    const userId = this.authService.getCurrentUser();
+    
+    if (!userId) {
+      this.eventStatus$.next({ type: 'ERROR', message: 'ERROR: Terminal bloqueada. Inicie sesión.' });
+      return;
+    }
+
+    try {
+      const response = await fetch(this.apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: promptTexto, user_id: userId, terminal_id: terminalId })
+      });
+
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(`Backend responded with ${response.status}: ${text}`);
+      }
+
+      if (!response.body) {
+        throw new Error('El Kernel no envió un flujo de datos válido.');
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder('utf-8');
+      let buffer = '';
+
+      let eventoActual = '';
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lineas = buffer.split('\n');
+        buffer = lineas.pop() || '';
+
+        for (const linea of lineas) {
+          const lineaLimpia = linea.trim();
+          if (!lineaLimpia) continue;
+
+          if (lineaLimpia.startsWith('event: ')) {
+            eventoActual = lineaLimpia.substring(7).trim();
+          } else if (lineaLimpia.startsWith('data: ')) {
+            const dataRaw = lineaLimpia.substring(6);
+            console.log("🔥 [AGNUX SERVICE] Raw data string recibido:", dataRaw, "para evento:", eventoActual);
+            
+            try {
+              const dataObj = JSON.parse(dataRaw);
+              console.log("🔥 [AGNUX SERVICE] Data parseada con éxito:", dataObj);
+              
+              if (eventoActual === 'CREATE_WINDOW' || (typeof dataObj === 'object' && (dataObj.window_id || dataObj.windowId))) {
+                this.eventStatus$.next({ type: 'CREATE_WINDOW', data: dataObj });
+              } else if (eventoActual === 'TOKEN') {
+                this.token$.next(dataObj);
+              } else if (eventoActual === 'ROUTER_START' || eventoActual === 'INFERENCE_START' || eventoActual === 'TOOL_EXECUTE') {
+                this.eventStatus$.next({ type: eventoActual, msg: dataObj.message || dataObj });
+              } else if (eventoActual === 'ROUTER_SCORE') {
+                this.eventStatus$.next({ type: 'SCORE', tool: dataObj.tool, score: dataObj.score });
+              } else if (eventoActual === 'TOOL_RESULT') {
+                this.eventStatus$.next({ type: 'RESULT', data: dataObj.response || dataObj.data });
+              } else if (eventoActual === 'ERROR') {
+                this.eventStatus$.next({ type: 'ERROR', message: dataObj.message });
+              } else if (eventoActual === 'OPEN_IFRAME_APP' || eventoActual === 'OPEN_MEDIA' || eventoActual === 'SET_WALLPAPER' || eventoActual === 'SET_THEME') {
+                this.eventStatus$.next({ type: eventoActual, payload: dataObj });
+              } else {
+                this.eventStatus$.next({ type: 'UNKNOWN', payload: { event: eventoActual, data: dataObj } });
+              }
+            } catch (e) {
+              console.error("Error parsing data payload:", e);
+            }
+            eventoActual = ''; // Limpiar el estado tras consumir la data
+          } else if (lineaLimpia.startsWith('{')) {
+            // Soporte para eventos raw JSON (ej: backend arroja JSON puro sin SSE format)
+            try {
+              const rawParsed = JSON.parse(lineaLimpia);
+              if (rawParsed.event) {
+                this.eventStatus$.next({
+                  type: rawParsed.event,
+                  payload: rawParsed
+                });
+              }
+            } catch (e) {
+              console.error("Error parsing raw JSON event:", e);
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Falla en el bus de streaming local:', error);
+      this.eventStatus$.next({ type: 'ERROR', message: (error as Error).message || 'Error de streaming' });
+      throw error;
+    }
+  }
+}
+=== ARCHIVO: frontend/src/app/services/auth.service.ts ===
+import { Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { BehaviorSubject, Observable } from 'rxjs';
+
+@Injectable({
+  providedIn: 'root'
+})
+export class AuthService {
+  private getInitialUserId(): string | null {
+    if (typeof localStorage !== 'undefined') {
+      return localStorage.getItem('agnux_user_id');
+    }
+    return null;
+  }
+
+  private currentUserSubject = new BehaviorSubject<string | null>(this.getInitialUserId());
+  public currentUser$ = this.currentUserSubject.asObservable();
+  private eventSource: EventSource | null = null;
+
+  constructor(private http: HttpClient) {}
+
+  getCurrentUser(): string | null {
+    return this.currentUserSubject.value;
+  }
+
+  verifyCloudflareAuth(): Observable<any> {
+    console.log('🛡️ [AGNUX KERNEL] Verificando cabeceras de Cloudflare Access...');
+
+    // Bypass para entorno de desarrollo local
+    if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
+      console.log('⚠️ [MODO DEV] Ejecutando en localhost. Simulando acceso Cloudflare...');
+      const devUser = 'dev-local-admin';
+      this.currentUserSubject.next(devUser);
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('agnux_user', devUser);
+      }
+      return new Observable(obs => {
+        obs.next({ status: 'authenticated', user_id: devUser });
+        obs.complete();
+      });
+    }
+
+    // Usamos ruta relativa para que funcione tanto en local como a través de agnux.net.ar
+    const req = this.http.get('/api/auth/cloudflare/verify');
+    
+    req.subscribe({
+      next: (res: any) => {
+        if (res.status === 'authenticated' && res.user_id) {
+          console.log(`✅ [AGNUX KERNEL] Identidad Cloudflare confirmada: ${res.user_id} (${res.email})`);
+          if (typeof localStorage !== 'undefined') {
+            localStorage.setItem('agnux_user_id', res.user_id);
+          }
+          this.currentUserSubject.next(res.user_id);
+        }
+      },
+      error: (err) => console.log('⚠️ Sin cabeceras de Cloudflare (Modo Local/Fallback)', err)
+    });
+    
+    return req;
+  }
+
+  checkGoogleAuthStatus(userId: string): Observable<{connected: boolean, userId: string}> {
+    return this.http.get<{connected: boolean, userId: string}>(`/api/auth/google/status?user_id=${userId}`);
+  }
+
+  listenTerminal(terminalId: string): Observable<string> {
+    return new Observable<string>(observer => {
+      console.log(`📡 [AGNUX KERNEL] Abriendo canal SSE para Terminal: ${terminalId}`);
+      this.eventSource = new EventSource(`/api/auth/terminal-stream/${terminalId}`);
+
+      // Escucha el evento personalizado que dispara FastAPI al aprobar desde el celular
+      this.eventSource.addEventListener('AUTH-SUCCESS', (event: any) => {
+        const data = JSON.parse(event.data);
+        console.log('🟢 [AGNUX KERNEL] Autenticación remota exitosa:', data);
+
+        if (typeof localStorage !== 'undefined') {
+          localStorage.setItem('agnux_user_id', data.userId);
+        }
+        this.currentUserSubject.next(data.userId);
+        
+        // Cierre controlado posterior al impacto del estado
+        this.closeConnection();
+        observer.next(data.userId);
+      });
+
+      this.eventSource.addEventListener('HEARTBEAT', (event: any) => {
+        console.log('💓 [AGNUX KERNEL] Heartbeat de terminal recibido...');
+      });
+
+      this.eventSource.onerror = (error) => {
+        console.error('❌ [AGNUX KERNEL] Error en el bus SSE de la terminal:', error);
+      };
+    });
+  }
+
+  authorizeTerminal(terminalId: string, userId: string): Observable<any> {
+    return this.http.post('/api/auth/terminal-authorize', {
+      terminal_id: terminalId,
+      user_id: userId
+    });
+  }
+
+  loginFacial(file: File): Observable<any> {
+    const formData = new FormData();
+    formData.append('file', file);
+    const req = this.http.post('/api/auth/facial-login', formData);
+    
+    req.subscribe({
+      next: (res: any) => {
+        if (res.status === 'authenticated' && res.user_id) {
+          console.log('🟢 [AGNUX BIOMETRICS] Reconocimiento local exitoso:', res.user_id);
+          if (typeof localStorage !== 'undefined') {
+            localStorage.setItem('agnux_user_id', res.user_id);
+          }
+          this.currentUserSubject.next(res.user_id);
+          this.closeConnection();
+        }
+      },
+      error: () => {} // Ignorar errores de reconocimiento continuo
+    });
+    return req;
+  }
+
+  loginVocal(file: Blob): Observable<any> {
+    const formData = new FormData();
+    formData.append('file', file, 'audio.webm');
+    const req = this.http.post('/api/auth/vocal-login', formData);
+    
+    req.subscribe({
+      next: (res: any) => {
+        if (res.status === 'authenticated' && res.user_id) {
+          console.log('🎤 [AGNUX BIOMETRICS] Reconocimiento vocal exitoso:', res.user_id);
+          if (typeof localStorage !== 'undefined') {
+            localStorage.setItem('agnux_user_id', res.user_id);
+          }
+          this.currentUserSubject.next(res.user_id);
+          this.closeConnection();
+        }
+      },
+      error: (err) => console.error('Error en autenticación vocal:', err)
+    });
+    return req;
+  }
+
+  logoutForzado() {
+    console.warn('⚠️ [AGNUX KERNEL] Logout forzado emitido (Fallo de Presencia / Invalidación).');
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem('agnux_user_id');
+    }
+    this.currentUserSubject.next(null);
+    this.closeConnection();
+  }
+
+  closeConnection() {
+    if (this.eventSource) {
+      this.eventSource.close();
+      this.eventSource = null;
+    }
+  }
+}
+
+=== ARCHIVO: frontend/src/app/services/notification.service.ts ===
+import { Injectable } from '@angular/core';
+import { Subject } from 'rxjs';
+import { ThemeService } from './theme.service';
+
+@Injectable({
+  providedIn: 'root'
+})
+export class NotificationService {
+  private socket: WebSocket | null = null;
+  public notifications$ = new Subject<any>();
+
+  constructor(private themeService: ThemeService) {}
+
+  public connect(terminalId: string, userId: string) {
+    if (this.socket) {
+      this.socket.close();
+    }
+
+    // Detectar si usamos HTTPS para usar WSS (WebSocket Seguro)
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const host = window.location.host;
+    const wsUrl = `${protocol}//${host}/api/system/notifications/ws/${terminalId}/${userId}`;
+    
+    console.log(`[NOTIF BUS] Conectando a ${wsUrl}`);
+    this.socket = new WebSocket(wsUrl);
+
+    this.socket.onopen = () => {
+      console.log(`🟢 [NOTIF BUS] WebSocket conectado exitosamente a ${wsUrl}`);
+    };
+
+    this.socket.onmessage = (event) => {
+      try {
+        const payload = JSON.parse(event.data);
+        console.log(`📩 [NOTIF BUS] Notificación recibida:`, payload);
+        if (payload.type === 'notification') {
+          this.notifications$.next(payload.data);
+        } else if (payload.type === 'theme_update') {
+          // Si recibimos texto o un bloque de CSS crudo
+          const cssRaw = typeof payload.data === 'string' ? payload.data : payload.data.css;
+          if (cssRaw) {
+            this.themeService.injectRawCss(cssRaw);
+          } else {
+            console.error("❌ Formato CSS crudo inválido recibido del backend.");
+          }
+        }
+      } catch (e) {
+        console.error(`❌ [NOTIF BUS] Error parseando mensaje WS:`, e);
+      }
+    };
+
+    this.socket.onerror = (error) => {
+      console.error(`❌ [NOTIF BUS] Error en WebSocket:`, error);
+    };
+
+    this.socket.onclose = () => {
+      console.warn(`🔴 [NOTIF BUS] WebSocket desconectado.`);
+      this.socket = null;
+    };
+  }
+
+  public disconnect() {
+    if (this.socket) {
+      this.socket.close();
+      this.socket = null;
+    }
+  }
+}
+
+=== ARCHIVO: frontend/src/app/services/presence.service.ts ===
+import { Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { AuthService } from './auth.service';
+
+@Injectable({
+  providedIn: 'root'
+})
+export class PresenceService {
+  private isRunning = false;
+  private timeoutId: any;
+
+  constructor(private authService: AuthService, private http: HttpClient) {
+    this.authService.currentUser$.subscribe(userId => {
+      if (userId) {
+        this.startPresenceDaemon();
+      } else {
+        this.stopPresenceDaemon();
+      }
+    });
+  }
+
+  private startPresenceDaemon() {
+    if (this.isRunning) return;
+    this.isRunning = true;
+    console.log('🛡️ [AGNUX DAEMON] Servicio de presencia en segundo plano activado.');
+    this.scheduleNextCheck();
+  }
+
+  private stopPresenceDaemon() {
+    this.isRunning = false;
+    if (this.timeoutId) {
+      clearTimeout(this.timeoutId);
+      this.timeoutId = null;
+    }
+    console.log('🛡️ [AGNUX DAEMON] Servicio de presencia detenido.');
+  }
+
+  private scheduleNextCheck() {
+    if (!this.isRunning) return;
+    
+    // Muestreo aleatorio entre 3 y 8 minutos (180000ms a 480000ms)
+    const delay = Math.floor(Math.random() * (480000 - 180000 + 1)) + 180000;
+    console.log(`⏱️ [AGNUX DAEMON] Próximo chequeo programado en ${Math.floor(delay / 1000)}s`);
+    
+    this.timeoutId = setTimeout(() => {
+      this.performSilentCheck();
+    }, delay);
+  }
+
+  private performSilentCheck() {
+    if (typeof navigator === 'undefined' || !navigator.mediaDevices) {
+      this.scheduleNextCheck();
+      return;
+    }
+
+    navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
+      const video = document.createElement('video');
+      video.srcObject = stream;
+      video.play();
+      
+      video.onloadeddata = () => {
+        setTimeout(() => {
+          const canvas = document.createElement('canvas');
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+          const context = canvas.getContext('2d');
+          
+          if (context) {
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            canvas.toBlob(blob => {
+              if (blob) {
+                const file = new File([blob], 'presence_frame.jpg', { type: 'image/jpeg' });
+                const formData = new FormData();
+                formData.append('file', file);
+                
+                this.http.post('/api/system/validate-presence', formData)
+                  .subscribe({
+                    next: (res: any) => {
+                      if (res.status === 'valid') {
+                        // Presencia confirmada, seguir muestreando
+                        this.scheduleNextCheck();
+                      } else {
+                        // Respuesta del backend indica que no coincide o no hay humano
+                        console.warn('⚠️ [AGNUX DAEMON] Presencia invalida detectada por el backend.');
+                        this.authService.logoutForzado();
+                      }
+                    },
+                    error: (err) => {
+                      console.warn('⚠️ [AGNUX DAEMON] Falla en conexión de presencia. Se reintentará luego.', err);
+                      this.scheduleNextCheck();
+                    }
+                  });
+              }
+              stream.getTracks().forEach(track => track.stop());
+            }, 'image/jpeg');
+          } else {
+            stream.getTracks().forEach(track => track.stop());
+            this.scheduleNextCheck();
+          }
+        }, 800); // Dar tiempo al foco de la cámara
+      };
+    }).catch(err => {
+      console.warn('⚠️ [AGNUX DAEMON] No se pudo acceder a la cámara silenciosamente.', err);
+      // Si la cámara fue desconectada físicamente o bloqueada, agendamos otro chequeo
+      this.scheduleNextCheck();
+    });
+  }
+}
+
+=== ARCHIVO: frontend/src/app/services/terminal-bridge.service.ts ===
+import { Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Observable, Subject } from 'rxjs';
+import { AuthService } from './auth.service';
+
+@Injectable({ providedIn: 'root' })
+export class TerminalBridgeService {
+  private apiUrl = '/api/auth';
+  private eventSource: EventSource | null = null;
+  private retryTimeout: any = null;
+
+  constructor(private http: HttpClient, private authService: AuthService) {}
+
+  escucharDesbloqueoRemoto(terminalId: string): Observable<any> {
+    const subject = new Subject<any>();
+
+    const connect = () => {
+      if (this.eventSource) {
+        this.eventSource.close();
+      }
+
+      this.eventSource = new EventSource(`${this.apiUrl}/terminal-stream?terminal_id=${terminalId}`);
+
+      this.eventSource.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          
+          if (data.event === 'HEARTBEAT') {
+            subject.next({ type: 'HEARTBEAT' });
+          } else if (data.event === 'AUTH_SUCCESS') {
+            const userId = data.user_id;
+            this.authService.currentUser.set(userId);
+            this.authService.isAuthenticated.set(true);
+            subject.next({ type: 'AUTH_SUCCESS', user_id: userId });
+            
+            // Cerrar el canal después de una autenticación exitosa
+            if (this.eventSource) {
+                this.eventSource.close();
+                this.eventSource = null;
+            }
+          }
+        } catch (err) {
+          console.error('Error parseando evento SSE terminal:', err);
+        }
+      };
+
+      this.eventSource.onerror = (err) => {
+        console.warn('Conexión SSE terminal perdida. Reintentando en 3s...', err);
+        if (this.eventSource) {
+            this.eventSource.close();
+        }
+        
+        clearTimeout(this.retryTimeout);
+        this.retryTimeout = setTimeout(() => connect(), 3000);
+      };
+    };
+
+    connect();
+
+    return subject.asObservable();
+  }
+
+  autorizarTerminalRemota(terminalId: string, userId: string): Observable<any> {
+    const payload = { terminal_id: terminalId, user_id: userId };
+    return this.http.post<any>(`${this.apiUrl}/terminal-authorize`, payload);
+  }
+
+  detenerEscucha() {
+    if (this.eventSource) {
+      this.eventSource.close();
+      this.eventSource = null;
+    }
+    clearTimeout(this.retryTimeout);
+  }
+}
+
+=== ARCHIVO: frontend/src/app/services/theme.service.ts ===
+import { Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+
+@Injectable({
+  providedIn: 'root'
+})
+export class ThemeService {
+  private styleElementId = 'agnux-ia-runtime-styles';
+
+  constructor(private http: HttpClient) {}
+
+  loadBaseStyle(userId: string) {
+    const finalUrl = `/api/theme/${userId}`;
+    
+    this.http.get(finalUrl, { responseType: 'text' }).subscribe({
+      next: (css) => {
+        if (css && !css.includes('default_theme')) {
+          console.log(`💾 [THEME ENGINE] Estilo físico cargado para ${userId}`);
+          this.injectRawCss(css);
+        }
+      },
+      error: (err) => console.log('Sin estilo físico previo:', err)
+    });
+  }
+
+  injectRawCss(cssCode: string) {
+    console.log("🎨 [THEME ENGINE] Recibido bloque de CSS libre desde el Kernel. Inyectando...");
+
+    // 1. Buscamos si ya existe el tag <style> de la IA en el <head>
+    let styleElement = document.getElementById(this.styleElementId) as HTMLStyleElement;
+
+    if (!styleElement) {
+      // 2. Si es la primera vez que muta, creamos el elemento dinámicamente
+      styleElement = document.createElement('style');
+      styleElement.id = this.styleElementId;
+      styleElement.type = 'text/css';
+      document.head.appendChild(styleElement);
+    }
+
+    // 3. Clavamos el código CSS puro adentro del tag. El navegador recalcula todo al instante.
+    // Hack de Anarquía: Inyectamos !important en todas las reglas para romper el ViewEncapsulation de Angular
+    const cssWithImportant = cssCode.replace(/([^!])\s*;/g, '$1 !important;');
+    styleElement.textContent = cssWithImportant;
+  }
+}
+

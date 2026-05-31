@@ -17,12 +17,12 @@ export class AuthorizeComponent implements OnInit {
   constructor(
     private route: ActivatedRoute,
     private authService: AuthService
-  ) {}
+  ) { }
 
   ngOnInit(): void {
     // 1. Extraer ID de la terminal desde la URL
     this.terminalId = this.route.snapshot.queryParamMap.get('terminal_id');
-    
+
     // 2. Comprobar identidad local del celular
     this.currentUser = this.authService.getCurrentUser();
 
@@ -35,22 +35,22 @@ export class AuthorizeComponent implements OnInit {
   // Se ejecuta al darle Enter al input de identidad
   public registrarEIngresar(): void {
     if (!this.usernameInput.trim() || !this.terminalId) return;
-    
-    // Formatear: Cristian -> user_cristian
-    const cleanUser = 'user_' + this.usernameInput.trim().toLowerCase().replace(/\s+/g, '_');
+
+    // Formatear: Cristian -> user-cristian
+    const cleanUser = 'user-' + this.usernameInput.trim().toLowerCase().replace(/\s+/g, '_');
     this.procesarAutorizacion(this.terminalId, cleanUser);
   }
 
   private procesarAutorizacion(termId: string, userId: string): void {
     this.statusMessage = 'Estableciendo enlace de red VPN...';
-    
+
     this.authService.authorizeTerminal(termId, userId).subscribe({
       next: (res) => {
         this.isSuccess = true;
         this.statusMessage = 'Terminal autorizada. Puedes mirar la pantalla grande.';
         // Opcionalmente podemos guardar la sesión en el celular si fue manual
         if (!this.currentUser) {
-          localStorage.setItem('agnux_user_id', userId);
+          localStorage.setItem('agnux-user-id', userId);
         }
       },
       error: (err) => {

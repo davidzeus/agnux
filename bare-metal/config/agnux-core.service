@@ -1,0 +1,20 @@
+[Unit]
+Description=AGNUX OS - Inteligencia Artificial & Orquestador Core
+After=network.target docker.service
+Requires=docker.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/agnux/backend
+
+# 🔥 LEER VARIABLES EN CALIENTE DESDE TU .ENV DE BACKEND
+EnvironmentFile=/opt/agnux/backend/.env
+
+# Ejecución limpia heredando todo el entorno dinámico
+ExecStart=/opt/agnux/backend/venv/bin/uvicorn main:app --host 0.0.0.0 --port 8000
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

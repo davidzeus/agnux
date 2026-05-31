@@ -1,0 +1,13 @@
+#!/bin/bash
+# Configuración de inicio de Openbox para AGNUX (Modo Kiosco)
+
+# Desactivar DPMS (ahorro de energía) y screensaver
+xset -dpms
+xset s off
+xset s noblank
+
+# Ocultar el cursor después de un tiempo de inactividad (requiere unclutter)
+unclutter -idle 3 &
+
+# Iniciar el navegador Chromium en modo kiosco
+chromium-browser --kiosk --incognito --noerrdialogs --disable-infobars http://localhost:80 &
