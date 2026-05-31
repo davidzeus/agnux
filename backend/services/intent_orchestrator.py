@@ -488,13 +488,53 @@ async def procesar_generador_eventos(payload: TaskbarPrompt, is_google_connected
                 SESSION_HISTORY[session_id].append(f"AGNUX: {respuesta_completa.strip()}")
             
             if respuesta_completa.strip() and not ultima_tool_name:
-                payload_ventana = {
-                    "window-id": "agnux-ai-window",
-                    "title":     "🧠 AGNUX OS Core — IA",
-                    "content":   respuesta_completa.strip(),
-                    "type":      "terminal",
-                }
-                yield f"event: CREATE-WINDOW\ndata: {json.dumps(payload_ventana, ensure_ascii=False)}\n\n"
+                # ── Sniff: ¿el modelo escribió un JSON de herramienta como texto? ──
+                texto_norm = respuesta_completa.strip()
+                interceptado = False
+                # Puede venir envuelto en ```json ... ``` o solo como JSON plano
+                import re as _re
+                json_match = _re.search(r'\{.*\}', texto_norm, _re.DOTALL)
+                if json_match:
+                    try:
+                        candidato = json.loads(json_match.group(0))
+                        css_code = candidato.get("cssCode") or candidato.get("css-code")
+                        image_url = candidato.get("imageUrl") or candidato.get("image-url")
+                        agnux_event = candidato.get("__agnux_event")
+
+                        if css_code:
+                            logger.info("🎨 [INTERCEPT] Respuesta de texto contiene cssCode — despachando SET-THEME")
+                            payload_tema = {"event": "SET-THEME", "css-code": css_code}
+                            yield f"event: SET-THEME\ndata: {json.dumps(payload_tema, ensure_ascii=False)}\n\n"
+                            try:
+                                themes_dir = os.path.join(BASE_DIR, "theme-profiles")
+                                os.makedirs(themes_dir, exist_ok=True)
+                                with open(os.path.join(themes_dir, f"{user_id_norm}.css"), "w", encoding="utf-8") as f:
+                                    f.write(css_code)
+                            except Exception:
+                                pass
+                            interceptado = True
+
+                        elif image_url:
+                            logger.info("🖼️ [INTERCEPT] Respuesta de texto contiene imageUrl — despachando SET-WALLPAPER")
+                            yield f"event: SET-WALLPAPER\ndata: {json.dumps({'event': 'SET-WALLPAPER', 'image-url': image_url}, ensure_ascii=False)}\n\n"
+                            interceptado = True
+
+                        elif agnux_event:
+                            logger.info(f"⚡ [INTERCEPT] Respuesta de texto contiene __agnux_event='{agnux_event}' — re-despachando")
+                            yield f"event: {agnux_event}\ndata: {json.dumps(candidato, ensure_ascii=False)}\n\n"
+                            interceptado = True
+
+                    except (json.JSONDecodeError, TypeError):
+                        pass
+
+                if not interceptado:
+                    payload_ventana = {
+                        "window-id": "agnux-ai-window",
+                        "title":     "🧠 AGNUX OS Core — IA",
+                        "content":   texto_norm,
+                        "type":      "terminal",
+                    }
+                    yield f"event: CREATE-WINDOW\ndata: {json.dumps(payload_ventana, ensure_ascii=False)}\n\n"
 
             logger.info("🔌 [KERNEL] Tarea cumplida. Liberando canal de intent.")
 
