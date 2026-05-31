@@ -69,7 +69,7 @@ xorriso -as mkisofs \
     -c boot.catalog \
     -boot-load-size 4 -boot-info-table -no-emul-boot \
     -eltorito-alt-boot \
-    -e boot/grub/efi.img \
+    -e '[BOOT]/1-Boot-NoEmul.img' \
     -no-emul-boot \
     -isohybrid-gpt-basdat \
     ./custom_iso
