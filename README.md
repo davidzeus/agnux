@@ -25,15 +25,20 @@
   </p>
 
   <p>
+    <a href="#-apoya-el-proyecto">
+      <img src="https://img.shields.io/badge/Mercado_Pago-009EE3?style=flat-square&logo=mercadopago&logoColor=white" alt="Mercado Pago"/>
+    </a>
+    <a href="https://paypal.me/agnux">
+      <img src="https://img.shields.io/badge/PayPal-00457C?style=flat-square&logo=paypal&logoColor=white" alt="PayPal"/>
+    </a>
     <img src="https://img.shields.io/badge/Estado-Listo_para_Producción-00ff66?style=flat-square" alt="Estado"/>
     <img src="https://img.shields.io/badge/Visuales-macOS_Glass_%2B_Aero_Blur-blue?style=flat-square" alt="Diseño Visual"/>
-    <img src="https://img.shields.io/badge/Arquitectura-Native_Shell-orange?style=flat-square" alt="Arquitectura"/>
   </p>
 
   <br/>
 
   <blockquote>
-    <em>"No construimos otro chatbot de IA. Diseñamos un Kernel de procesamiento cognitivo donde el LLM gobierna el espacio de usuario nativo."</em>
+    <em>"No construimos otro chatbot de IA. Diseñamos un Kernel de procesamiento cognitivo donde el LLM gobierna el espacio de usuario nativo y autogenera su propia interface."</em>
     <br/>
     — <strong>David González</strong> · 🇦🇷 Desde Argentina para el mundo
   </blockquote>
@@ -42,24 +47,60 @@
 
 ---
 
-## 🔁 El Cambio de Arquitectura: ¿Por qué abandonamos Angular por PySide6 + HTML5 Native Shell?
+## 🧬 La Filosofía AGNUX: El Espacio de Usuario Autogestionado
 
-En la versión v1.0, el escritorio de AGNUX se renderizaba como una aplicación SPA en **Angular** servida por Nginx, corriendo sobre un navegador Chromium en modo quiosco. Aunque proveía modularidad, esta aproximación introducía graves ineficiencias de rendimiento y limitaciones de integración del sistema que impedían su salida a producción.
+Los sistemas operativos tradicionales (Linux, Windows, macOS) fueron diseñados como traductores estáticos entre comandos humanos y hardware. El usuario debe saber qué aplicación abrir, cómo configurarla y cómo encadenar comandos para lograr un objetivo.
 
-Para la versión v2.0, decidimos realizar un **cambio de arquitectura radical**: implementamos un **Shell NATIVO en PySide6** que envuelve un `QWebEngineView` (Chromium Core embebido) cargando componentes puramente escritos en **HTML5 / CSS3 / Vanilla JS** localmente (`file://`).
-
-### 🛠️ Razones Clave de la Migración
-
-1. **Acceso Nativo al File System y Hardware:** Angular corre estrictamente en la Sandbox de seguridad del navegador web. Para realizar llamadas de sistema, cambiar el wallpaper o iniciar aplicaciones de escritorio (como el explorador de archivos o la terminal), se requería delegar por red mediante WebSockets. Con PySide6, el frontend carga de manera local y expone slots de ejecución Python nativos que cruzan la barrera del sandbox web al instante.
-2. **Eliminación del Overhead del Servidor Web:** La arquitectura anterior dependía de Nginx corriendo localmente para compilar y resolver las rutas de Angular, aumentando el tiempo de arranque. La v2.0 carga el DOM directamente desde el disco rígido del sistema de archivos en descompresión del Casper Live USB, eliminando dependencias de red.
-3. **Inyección en Tiempo Real del Motor de Estilos (Style Engine):** Angular compila sus hojas de estilo de manera estática y encapsulada (ViewEncapsulation). Inyectar código CSS sintetizado por IA sobre la marcha obligaba a actualizar el árbol completo o alterar variables globales forzando ciclos de detección de cambios (`Zone.js`). Con HTML5 + CSS3 vanilla, la inyección ocurre en menos de `5ms` editando un tag `<style>` del head del DOM.
-4. **Simplificación en el Pipeline Bare-Metal (Live USB):** Angular añade miles de dependencias en `node_modules` y requiere transpilar código TS a JS. Al usar Vanilla JS + HTML5, el proceso de compilación de la ISO no requiere herramientas Node ni bundlers de frontend adicionales.
+**AGNUX** invierte este paradigma. Es un **Sistema Operativo Cognitivo**. 
+* El espacio de usuario no es una rejilla rígida de iconos; es un **lienzo dinámico** en HTML5 que muta en tiempo real según las necesidades del usuario.
+* La interfaz de comandos tradicional es reemplazada por un **agente conversacional nativo** empotrado en el fondo de pantalla (sistema widget interactivo).
+* El sistema operativo no viene pre-cargado con herramientas estáticas para todo; tiene la **capacidad de programarse a sí mismo en caliente**, creando, testeando e inyectando nuevas herramientas ("Superpoderes") para resolver problemas sobre la marcha.
 
 ---
 
-## 📊 Comparativa de Rendimiento
+## ⚡ Características Principales y "Superpoderes"
 
-La optimización de recursos resultante de esta migración ha sido drástica, reduciendo drásticamente el consumo de memoria RAM y el tiempo de booteo:
+### 1. Sistema de Superpoderes (Dynamic Tool Generation)
+Cuando el usuario solicita una tarea para la cual AGNUX no tiene una herramienta registrada (por ejemplo, abrir una calculadora personalizada, decodificar un formato de archivo extraño, emular un navegador ligero para abrir Netflix o inspeccionar un puerto de red), el sistema ejecuta su **pipeline de autogeneración**:
+* **Generación de código:** El orquestador escribe un script ejecutable en Python.
+* **Sandbox de Seguridad:** El script se ejecuta de manera aislada dentro de un contenedor Docker (`core/sandbox.py`) con recursos limitados para verificar que su ejecución sea segura y exitosa.
+* **Inyección en Caliente:** Tras pasar la verificación, el script se registra dinámicamente en el Kernel como una nueva herramienta ejecutable (`dynamicTools/`) y se ejecuta inmediatamente devolviendo el resultado al entorno de usuario.
+
+### 2. Motor de Estilos Semántico (Semantic Style Engine)
+La estética de AGNUX no es fija. A través de consultas semánticas, el usuario puede pedir cambios visuales como *"Quiero un estilo cyberpunk con tonos neón violeta y bordes redondeados translúcidos"*. El agente de estilos de IA:
+* Diseña y valida una hoja de estilos CSS en tiempo real.
+* Inyecta el bloque CSS dinámicamente en el DOM del frontend en menos de **5ms** mediante Server-Sent Events (SSE).
+* Almacena las configuraciones vectorizadas en la base de datos de recuerdos de Qdrant.
+
+### 3. Memoria Episódica y Semántica (Hybrid Memory Hub)
+* **Memoria a Corto Plazo (Conversacional):** Historial de sesión de chat almacenado en una base SQLite local (`agnux.db` / `local.db`).
+* **Memoria a Largo Plazo (Episódica/Semántica):** Integración nativa con **Qdrant Vector DB**. Los hechos clave de las interacciones anteriores se vectorizan usando `SentenceTransformers` locales, permitiendo que la IA recuerde datos del usuario en arranques posteriores (incluso corriendo desde un Live USB sin conexión a Internet).
+
+### 4. Router de Cómputo Híbrido (Eficiencia Energética y de Tokens)
+Para minimizar la dependencia de APIs externas y optimizar la latencia en hardware real:
+* **Razonamiento Local (CPU/Ollama Mini):** AGNUX procesa tareas simples de clasificación de intenciones, comandos del sistema, cambios estéticos e interacciones cotidianas localmente usando modelos pequeños (ej. `qwen2.5-coder:7b` o similares en Ollama).
+* **Razonamiento Avanzado (Cloud/Gemini/OpenAI):** Cuando se requiere depuración compleja de código, creación de scripts sofisticados o análisis de errores profundos, el router deriva de forma inteligente la consulta a APIs en la nube.
+
+### 5. HyperIsland & Kernel Bus
+Un canal bidireccional mediante WebSockets y streams de telemetría en tiempo real que mantiene al usuario informado sobre el uso de recursos del hardware (CPU, VRAM, RAM, disco) y el estado del procesamiento cognitivo (tokens consumidos, estado de los agentes) directamente en un widget integrado al fondo de pantalla de forma fluida.
+
+---
+
+## 🔁 El Cambio de Arquitectura: PySide6 + HTML5 Native Shell vs Angular v1.0
+
+En la versión v1.0, el escritorio se ejecutaba sobre un navegador Chromium en modo quiosco que renderizaba una SPA en **Angular** servida por Nginx. Esta aproximación limitaba la integración nativa y consumía recursos excesivos de CPU/VRAM.
+
+En la **versión v2.0**, migramos a un **Shell Nativo en PySide6** que envuelve un motor Chromium integrado (`QWebEngineView`) y carga los archivos de la interfaz localmente (`file://`).
+
+### 📊 Comparativa de Rendimiento y Recursos
+
+| Métrica / Recurso | Arquitectura Angular v1.0 (Nginx + Kiosk) | Arquitectura PySide6 + HTML5 v2.0 | Ganancia de Rendimiento |
+| :--- | :---: | :---: | :---: |
+| **Uso de Memoria RAM** | ~850 MB | **~320 MB** | **- 62.3% (Ahorro)** |
+| **Overhead de VRAM (GPU)** | ~380 MB | **~150 MB** | **- 60.5% (Ahorro)** |
+| **Boot a Interacción (B2I)** | 4.8 segundos | **0.8 segundos** | **6x más rápido** |
+| **Tiempo de Hot-Reload (CSS)** | ~250 ms | **< 5 ms** | **Instantáneo** |
+| **Acceso al File System** | Por red (WebSockets/API) | **Nativo (Slots de PySide6)** | **Seguridad e Inmediatez** |
 
 ```mermaid
 gantt
@@ -77,117 +118,103 @@ gantt
     Cargar local index.html en Qt      :done, 0.6, 0.8
 ```
 
-### Tabla Comparativa de Recursos de Sistema
-
-| Métrica / Recurso | Arquitectura Angular v1.0 (Nginx + Kiosk) | Arquitectura PySide6 + HTML5 v2.0 | Ganancia de Rendimiento |
-| :--- | :---: | :---: | :---: |
-| **Uso de Memoria RAM** | ~850 MB | **~320 MB** | **- 62.3% (Ahorro)** |
-| **Overhead de VRAM (GPU)** | ~380 MB | **~150 MB** | **- 60.5% (Ahorro)** |
-| **Boot a Interacción (B2I)** | 4.8 segundos | **0.8 segundos** | **6x más rápido** |
-| **Tiempo de Hot-Reload (CSS)** | ~250 ms | **< 5 ms** | **Instantáneo** |
-| **Procesos en Background** | 6 (Nginx, Chrome-tree, uvicorn) | **2 (Python process + QtWebEngine)** | **Simplificación** |
-
 ---
 
-## 🏗️ Arquitectura de AGNUX OS v2.0
+## 🏗️ Arquitectura del Sistema
 
 ```mermaid
 graph TD
-    UI[PySide6 Shell + QWebEngineView] <-->|WebSockets & SSE| Backend[FastAPI Gateway]
+    UI[PySide6 Shell + QWebEngineView] <-->|Slots Nativos & SSE| Backend[FastAPI Gateway]
     Backend <-->|Agno Agentic Engine| Orchestrator[Intent Orchestrator]
     Orchestrator <-->|Style Queries| StyleEngine[Style Engine Agent]
-    Orchestrator <-->|Vector Memory / Episodic| Qdrant[(Qdrant Vector DB)]
-    Orchestrator <-->|Session / Chat Logs| SQLite[(SQLite local.db)]
-    Orchestrator <-->|Autogenesis chroot| Sandbox[Docker Container Sandbox]
-    Orchestrator <-->|Host Call / APT| HostOS[Host OS Debian/Ubuntu]
+    Orchestrator <-->|Vector Memory| Qdrant[(Qdrant Vector DB)]
+    Orchestrator <-->|Chat Logs & State| SQLite[(SQLite local.db)]
+    Orchestrator <-->|Dynamic Code Test| Sandbox[Docker Sandbox Container]
+    Orchestrator <-->|System Calls| HostOS[Host OS Linux]
 ```
 
-### 🧬 Módulos Clave del Sistema
+---
 
-* **El Motor de Estilos (Style Engine):** A través de [services/orchestrator.py](backend/services/orchestrator.py), la IA toma prompts descriptivos de diseño, sintetiza bloques CSS en caliente y los despacha al frontend mediante Server-Sent Events (SSE). Los perfiles se guardan vectorizados en Qdrant.
-* **Orquestador Cognitivo:** Gobernado mediante agentes Agno que implementan un Router Semántico, emparejando la entrada del usuario con herramientas de sistema registradas en [core/tools.py](backend/core/tools.py).
-* **Docker Sandboxing:** Autogenera scripts para tareas no nativas y los prueba de forma aislada ejecutando pruebas lógicas dentro de contenedores `python:3.11-alpine` configurados en [core/sandbox.py](backend/core/sandbox.py).
-* **Persistencia Integrada:** Configura una base SQLite local mediante [core/database.py](backend/core/database.py) para almacenar el historial cronológico `chatHistory` y la tabla `systemPreferences`.
+## 📁 Estructura del Repositorio
+
+* **`desktop/`**: Contiene `shell.py`, el script en PySide6 que inicializa la ventana del escritorio sin bordes y expone el puente de comunicación nativo hacia el frontend.
+* **`backend/`**: El core cognitivo desarrollado en FastAPI.
+  * `main.py`: Punto de entrada de la API.
+  * `core/tools.py`: Definición de herramientas del sistema (manipulación de archivos, ejecución de comandos, consulta de hardware).
+  * `core/sandbox.py`: Interfaz para instanciar contenedores Docker y validar código generado en caliente.
+  * `services/orchestrator.py`: Lógica de agentes utilizando el framework Agno.
+* **`frontend/`**: La interfaz gráfica del escritorio basada en HTML5, CSS3 translúcido (efectos Aero Glassmorphic) y Vanilla JS.
+* **`bare-metal/`**: Herramientas y scripts para la generación de la distribución autónoma del sistema operativo en formato ISO (remasterización sobre base KDE Neon).
 
 ---
 
-## 📂 Directorio del Proyecto
+## 🚀 Despliegue e Instalación
 
-Estructura de archivos implementada y disponible en este repositorio:
+### Requisitos Previos
+* **OS:** Linux (Ubuntu/Debian recomendado para aceleración NVIDIA CUDA nativa).
+* **Dependencias del Host:** Docker Engine (para el sandbox de herramientas), Python 3.10+, Qdrant (corriendo localmente o en contenedor).
 
-- **[backend/main.py](backend/main.py)**: Punto de entrada del servidor FastAPI y cargador del ciclo de vida.
-- **[backend/core/config.py](backend/core/config.py)**: Cargador central de variables en camelCase.
-- **[backend/core/database.py](backend/core/database.py)**: Gestor SQLite para guardar conversaciones e historiales.
-- **[backend/core/memory.py](backend/core/memory.py)**: Cliente asíncrono para Qdrant y SentenceTransformer.
-- **[backend/core/sandbox.py](backend/core/sandbox.py)**: Orquestador de Docker para testeo de scripts autogenerados.
-- **[backend/core/tools.py](backend/core/tools.py)**: Herramientas del Kernel expuestas al agente (OpenApp, CSS Apply, etc.).
-- **[backend/core/kernelBus.py](backend/core/kernelBus.py)**: Administrador de conexiones WebSocket del hyperisland.
-- **[backend/api/routes/auth.py](backend/api/routes/auth.py)**: API de login facial, Cloudflare Access y sincronización de terminales.
-- **[backend/api/routes/intent.py](backend/api/routes/intent.py)**: Stream de Server-Sent Events para interactuar con el Kernel.
-- **[backend/api/routes/system.py](backend/api/routes/system.py)**: Probadora de hardware en tiempo real (CPU, Memoria, Disco).
-- **[backend/schemas/models.py](backend/schemas/models.py)**: Modelos de datos de validación Pydantic.
-- **[frontend/index.html](frontend/index.html)**: Layout HTML5 del escritorio.
-- **[frontend/styles.css](frontend/styles.css)**: Hoja de estilos con desenfoques Aero.
-- **[frontend/app.js](frontend/app.js)**: Lógica JS del cliente, lector de flujos SSE y telemetría periódica.
-- **[desktop/shell.py](desktop/shell.py)**: Lanzador Qt/PySide6 de la ventana principal de escritorio.
-- **[bare-metal/build-iso.sh](bare-metal/build-iso.sh)**: Script bash para compilar la ISO autoinstalable.
+### Ejecución Local
 
----
-
-## 🚀 Despliegue e Instalación Rápida
-
-### Hardware Recomendado de Producción
-* **Procesador:** Intel Core i7 o superior.
-* **Memoria RAM:** Mínimo 16GB DDR4 (Recomendado 32GB).
-* **Placa de Video:** NVIDIA GPU con soporte CUDA (Mínimo 8GB VRAM).
-
-### Ejecución Local del Core
-
-1. **Asegurar variables de configuración en `.env`:**
-   Crea el archivo [.env](backend/.env) en el backend con las credenciales necesarias:
+1. **Configurar el Entorno del Backend:**
+   Crea un archivo `.env` en la raíz de la carpeta `backend/` siguiendo esta estructura:
    ```env
    iaProvider=local
    ollamaHost=http://127.0.0.1:11434
    qdrantHost=http://127.0.0.1:6333
-   agnuxActiveModel=qwen2.5-coder:7b
-   agnuxCoderModel=qwen2.5-coder:7b
    ```
 
-2. **Iniciar el Servidor Backend:**
+2. **Instalar dependencias e iniciar FastAPI:**
    ```bash
    cd backend
-   python -m uvicorn main:app --port 8000 --host 127.0.0.1
+   python3 -m venv venv
+   source venv/bin/activate
+   pip install -r requirements.txt
+   python3 -m uvicorn main:app --port 8000 --host 127.0.0.1
    ```
 
-3. **Ejecutar el Shell Gráfico:**
+3. **Lanzar el Escritorio Gráfico:**
    ```bash
-   cd desktop
-   python shell.py
+   cd ../desktop
+   python3 shell.py
    ```
 
 ---
 
 ## 💿 Distribución Live USB Bare-Metal (Creación de la ISO)
 
-Para empaquetar todo el sistema operativo funcional con soporte Docker, aceleración CUDA y entorno de arranque Openbox autogestionado:
+AGNUX OS v2.0 puede compilarse en una distribución autónoma autoinstalable basada en **KDE Neon**. El proceso de compilación empaqueta los drivers propietarios de NVIDIA, configura el gestor de inicio **SDDM** para iniciar directamente en la sesión gráfica de AGNUX (Openbox + PySide6 Shell) y precarga la imagen de Qdrant en formato tarball (`qdrant.tar`) para que funcione 100% sin conexión a Internet.
 
-1. Ingresa al directorio de construcción física:
+1. Navega al directorio de compilación física:
    ```bash
    cd bare-metal
    ```
-2. Ejecuta el compilador como root:
+2. Ejecuta el empaquetador del sistema:
    ```bash
-   sudo ./build-iso.sh
+   sudo ./repack-iso.sh
    ```
-3. Esto generará el instalador `agnux-os-v2.0-installer.iso`.
-4. Graba la ISO a tu unidad USB utilizando la utilidad `dd`:
+3. Esto generará el archivo `agnux-os-neon-v2.0.iso`. Grábalo en tu pendrive usando `dd`:
    ```bash
-   sudo dd if=agnux-os-v2.0-installer.iso of=/dev/sdX bs=4M status=progress conv=fdatasync
+   sudo dd if=agnux-os-neon-v2.0.iso of=/dev/sdX bs=4M status=progress conv=fdatasync
    ```
-   *(Reemplaza `/dev/sdX` con el nombre correcto de tu unidad de almacenamiento flash)*.
+   *(Reemplaza `/dev/sdX` por tu unidad USB real)*.
+
+---
+
+## 🤝 Apoya el Proyecto (Sponsorship)
+
+AGNUX OS es un proyecto independiente desarrollado a pulmón. Si te gusta el concepto de sistemas cognitivos autónomos, te ha servido de base para tus proyectos o simplemente quieres apoyar las horas de café y cómputo de GPU destinadas a este desarrollo, puedes realizar una colaboración monetaria:
+
+* **Mercado Pago (🇦🇷 Argentina):**
+  * **Alias:** `gonzalez360.mp`
+  * **Link directo:** [gonzalez360.mp (Mercado Pago)](https://link.mercadopago.com.ar/gonzalez360.mp)
+* **PayPal (🌍 Global):**
+  * **Link de Donación:** [paypal.me/agnux](https://paypal.me/agnux)
+
+*¡Muchísimas gracias por el apoyo para seguir impulsando AGNUX!* 🇦🇷💡
 
 ---
 
 ## 📄 Licencia
 
-Este proyecto está bajo la licencia **MIT**. Para más detalles, consulta el archivo `LICENSE` en el repositorio raíz.
+Este proyecto está bajo la licencia **MIT**. Para más detalles, consulta el archivo [LICENSE](LICENSE) en el repositorio raíz.
