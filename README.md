@@ -227,9 +227,8 @@ Elegimos **KDE Neon (User Edition)** como la distribución base para remasteriza
 
 AGNUX OS es un proyecto independiente desarrollado a pulmón. Si te gusta el concepto de sistemas cognitivos autónomos, te ha servido de base para tus proyectos o simplemente quieres apoyar las horas de café y cómputo de GPU destinadas a este desarrollo, puedes realizar una colaboración monetaria:
 
-* **Mercado Pago / Transferencia (🇦🇷 Argentina):**
+* **Transferencia (🇦🇷 Argentina):**
   * **Alias:** `agnuxArg`
-  * **Link directo:** [agnuxArg (Mercado Pago)](https://link.mercadopago.com.ar/angieydavid)
 * **PayPal (🌍 Global):**
   * **Link de Donación:** [paypal.me/agnux](https://paypal.me/agnux)
 
