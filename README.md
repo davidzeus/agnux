@@ -86,21 +86,24 @@ Un canal bidireccional mediante WebSockets y streams de telemetría en tiempo re
 
 ---
 
-## 🔁 El Cambio de Arquitectura: PySide6 + HTML5 Native Shell vs Angular v1.0
+## 🔁 El Cambio de Arquitectura: ¿Por qué abandonamos Angular por PySide6 + HTML5 Native Shell?
 
-En la versión v1.0, el escritorio se ejecutaba sobre un navegador Chromium en modo quiosco que renderizaba una SPA en **Angular** servida por Nginx. Esta aproximación limitaba la integración nativa y consumía recursos excesivos de CPU/VRAM.
+En la versión v1.0, el escritorio de AGNUX se renderizaba como una aplicación SPA en **Angular** servida por Nginx, corriendo sobre un navegador Chromium en modo quiosco. Aunque proveía modularidad, esta aproximación introducía graves ineficiencias de rendimiento y limitaciones de integración del sistema que impedían su salida a producción.
 
-En la **versión v2.0**, migramos a un **Shell Nativo en PySide6** que envuelve un motor Chromium integrado (`QWebEngineView`) y carga los archivos de la interfaz localmente (`file://`).
+Para la versión v2.0, decidimos realizar un **cambio de arquitectura radical**: implementamos un **Shell NATIVO en PySide6** que envuelve un `QWebEngineView` (Chromium Core embebido) cargando componentes puramente escritos en **HTML5 / CSS3 / Vanilla JS** localmente (`file://`).
 
-### 📊 Comparativa de Rendimiento y Recursos
+### 🛠️ Razones Clave de la Migración
 
-| Métrica / Recurso | Arquitectura Angular v1.0 (Nginx + Kiosk) | Arquitectura PySide6 + HTML5 v2.0 | Ganancia de Rendimiento |
-| :--- | :---: | :---: | :---: |
-| **Uso de Memoria RAM** | ~850 MB | **~320 MB** | **- 62.3% (Ahorro)** |
-| **Overhead de VRAM (GPU)** | ~380 MB | **~150 MB** | **- 60.5% (Ahorro)** |
-| **Boot a Interacción (B2I)** | 4.8 segundos | **0.8 segundos** | **6x más rápido** |
-| **Tiempo de Hot-Reload (CSS)** | ~250 ms | **< 5 ms** | **Instantáneo** |
-| **Acceso al File System** | Por red (WebSockets/API) | **Nativo (Slots de PySide6)** | **Seguridad e Inmediatez** |
+1. **Acceso Nativo al File System y Hardware:** Angular corre estrictamente en la Sandbox de seguridad del navegador web. Para realizar llamadas de sistema, cambiar el wallpaper o iniciar aplicaciones de escritorio (como el explorador de archivos o la terminal), se requería delegar por red mediante WebSockets. Con PySide6, el frontend carga de manera local y expone slots de ejecución Python nativos que cruzan la barrera del sandbox web al instante.
+2. **Eliminación del Overhead del Servidor Web:** La arquitectura anterior dependía de Nginx corriendo localmente para compilar y resolver las rutas de Angular, aumentando el tiempo de arranque. La v2.0 carga el DOM directamente desde el disco rígido del sistema de archivos en descompresión del Casper Live USB, eliminando dependencias de red.
+3. **Inyección en Tiempo Real del Motor de Estilos (Style Engine):** Angular compila sus hojas de estilo de manera estática y encapsulada (ViewEncapsulation). Inyectar código CSS sintetizado por IA sobre la marcha obligaba a actualizar el árbol completo o alterar variables globales forzando ciclos de detección de cambios (`Zone.js`). Con HTML5 + CSS3 vanilla, la inyección ocurre en menos de `5ms` editando un tag `<style>` del head del DOM.
+4. **Simplificación en el Pipeline Bare-Metal (Live USB):** Angular añade miles de dependencias en `node_modules` y requiere transpilar código TS a JS. Al usar Vanilla JS + HTML5, el proceso de compilación de la ISO no requiere herramientas Node ni bundlers de frontend adicionales.
+
+---
+
+## 📊 Comparativa de Rendimiento
+
+La optimización de recursos resultante de esta migración ha sido drástica, reduciendo drásticamente el consumo de memoria RAM y el tiempo de booteo:
 
 ```mermaid
 gantt
@@ -117,6 +120,16 @@ gantt
     Iniciar Backend y X11              :done, 0, 0.6
     Cargar local index.html en Qt      :done, 0.6, 0.8
 ```
+
+### Tabla Comparativa de Recursos de Sistema
+
+| Métrica / Recurso | Arquitectura Angular v1.0 (Nginx + Kiosk) | Arquitectura PySide6 + HTML5 v2.0 | Ganancia de Rendimiento |
+| :--- | :---: | :---: | :---: |
+| **Uso de Memoria RAM** | ~850 MB | **~320 MB** | **- 62.3% (Ahorro)** |
+| **Overhead de VRAM (GPU)** | ~380 MB | **~150 MB** | **- 60.5% (Ahorro)** |
+| **Boot a Interacción (B2I)** | 4.8 segundos | **0.8 segundos** | **6x más rápido** |
+| **Tiempo de Hot-Reload (CSS)** | ~250 ms | **< 5 ms** | **Instantáneo** |
+| **Procesos en Background** | 6 (Nginx, Chrome-tree, uvicorn) | **2 (Python process + QtWebEngine)** | **Simplificación** |
 
 ---
 
@@ -209,7 +222,7 @@ AGNUX OS es un proyecto independiente desarrollado a pulmón. Si te gusta el con
   * **Alias:** `gonzalez360.mp`
   * **Link directo:** [gonzalez360.mp (Mercado Pago)](https://link.mercadopago.com.ar/gonzalez360.mp)
 * **PayPal (🌍 Global):**
-  * **Link de Donación:** [paypal.me/agnux](https://paypal.me/agnux)
+  * **Link de Donación:** [paypal.me/agnux] (https://paypal.me/agnux)
 
 *¡Muchísimas gracias por el apoyo para seguir impulsando AGNUX!* 🇦🇷💡
 
