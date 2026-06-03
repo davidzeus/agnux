@@ -76,10 +76,11 @@ La estética de AGNUX no es fija. A través de consultas semánticas, el usuario
 * **Memoria a Corto Plazo (Conversacional):** Historial de sesión de chat almacenado en una base SQLite local (`agnux.db` / `local.db`).
 * **Memoria a Largo Plazo (Episódica/Semántica):** Integración nativa con **Qdrant Vector DB**. Los hechos clave de las interacciones anteriores se vectorizan usando `SentenceTransformers` locales, permitiendo que la IA recuerde datos del usuario en arranques posteriores (incluso corriendo desde un Live USB sin conexión a Internet).
 
-### 4. Router de Cómputo Híbrido (Eficiencia Energética y de Tokens)
-Para minimizar la dependencia de APIs externas y optimizar la latencia en hardware real:
-* **Razonamiento Local (CPU/Ollama Mini):** AGNUX procesa tareas simples de clasificación de intenciones, comandos del sistema, cambios estéticos e interacciones cotidianas localmente usando modelos pequeños (ej. `qwen2.5-coder:7b` o similares en Ollama).
-* **Razonamiento Avanzado (Cloud/Gemini/OpenAI):** Cuando se requiere depuración compleja de código, creación de scripts sofisticados o análisis de errores profundos, el router deriva de forma inteligente la consulta a APIs en la nube.
+### 4. Soberanía de Datos, Privacidad Total y Ejecución Local
+Para asegurar la privacidad del usuario, AGNUX prioriza la inferencia local:
+* **Ejecución 100% Local:** El procesamiento de lenguaje y lógica de comandos se realiza localmente en la GPU/CPU del usuario a través de **Ollama** (usando modelos como `qwen2.5-coder:7b`).
+* **Cero Gasto de Tokens y Sin Fugas de Datos:** Toda tu información, conversaciones e interacciones del sistema permanecen en tu computadora. No se envía telemetría ni texto a servidores externos de terceros.
+* **Cómputo Híbrido Opcional (Cloud):** Si el usuario requiere el máximo poder de razonamiento de modelos más grandes (o no cuenta con hardware GPU dedicado), puede configurar fácilmente proveedores en la nube como **Gemini** (Google Generative AI) o **OpenAI** simplemente completando su clave de API en el archivo `.env`.
 
 ### 5. HyperIsland & Kernel Bus
 Un canal bidireccional mediante WebSockets y streams de telemetría en tiempo real que mantiene al usuario informado sobre el uso de recursos del hardware (CPU, VRAM, RAM, disco) y el estado del procesamiento cognitivo (tokens consumidos, estado de los agentes) directamente en un widget integrado al fondo de pantalla de forma fluida.
@@ -212,6 +213,13 @@ AGNUX OS v2.0 puede compilarse en una distribución autónoma autoinstalable bas
    ```
    *(Reemplaza `/dev/sdX` por tu unidad USB real)*.
 
+### 💎 ¿Por qué elegimos KDE Neon como base del sistema operativo?
+
+Elegimos **KDE Neon (User Edition)** como la distribución base para remasterizar la ISO de AGNUX por tres razones técnicas fundamentales:
+1. **Base Ubuntu LTS (Noble):** Ofrece máxima estabilidad a largo plazo, compatibilidad universal con binarios de Linux, paquetería Debian nativa y soporte directo y robusto para controladores de tarjetas gráficas NVIDIA y CUDA.
+2. **Ecosistema Qt Nativo y Moderno:** KDE Neon proporciona por defecto las librerías compartidas de Qt más actualizadas. Como la interface gráfica de AGNUX está construida en **PySide6** (el puente oficial de Qt6 para Python), la compatibilidad binaria es del 100% y el rendimiento gráfico es óptimo, evitando empaquetar librerías extra que aumentarían el peso de la ISO.
+3. **Gestión de Sesión con SDDM:** Emplea SDDM como display manager por defecto. Esto nos facilitó interceptar la inicialización gráfica en el live boot para forzar el autologin de forma modular y cargar nuestra sesión de usuario `agnux.desktop` y scripts de preparación de permisos sin alterar el instalador principal.
+
 ---
 
 ## 🤝 Apoya el Proyecto (Sponsorship)
@@ -222,7 +230,7 @@ AGNUX OS es un proyecto independiente desarrollado a pulmón. Si te gusta el con
   * **Alias:** `gonzalez360.mp`
   * **Link directo:** [gonzalez360.mp (Mercado Pago)](https://link.mercadopago.com.ar/gonzalez360.mp)
 * **PayPal (🌍 Global):**
-  * **Link de Donación:** [paypal.me/agnux] (https://paypal.me/agnux)
+  * **Link de Donación:** [paypal.me/agnux](https://paypal.me/agnux)
 
 *¡Muchísimas gracias por el apoyo para seguir impulsando AGNUX!* 🇦🇷💡
 
