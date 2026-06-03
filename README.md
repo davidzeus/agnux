@@ -65,6 +65,7 @@ Cuando el usuario solicita una tarea para la cual AGNUX no tiene una herramienta
 * **Generación de código:** El orquestador escribe un script ejecutable en Python.
 * **Sandbox de Seguridad:** El script se ejecuta de manera aislada dentro de un contenedor Docker (`core/sandbox.py`) con recursos limitados para verificar que su ejecución sea segura y exitosa.
 * **Inyección en Caliente:** Tras pasar la verificación, el script se registra dinámicamente en el Kernel como una nueva herramienta ejecutable (`dynamicTools/`) y se ejecuta inmediatamente devolviendo el resultado al entorno de usuario.
+* **Créditos y Origen:** El concepto y arquitectura de este sistema de autogeneración de herramientas dinámicas está inspirado en el proyecto **Superpowers** creado por **Jesse Vincent** ([github.com/obra/superpowers](https://github.com/obra/superpowers)).
 
 ### 2. Motor de Estilos Semántico (Semantic Style Engine)
 La estética de AGNUX no es fija. A través de consultas semánticas, el usuario puede pedir cambios visuales como *"Quiero un estilo cyberpunk con tonos neón violeta y bordes redondeados translúcidos"*. El agente de estilos de IA:
