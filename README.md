@@ -25,10 +25,10 @@
   </p>
 
   <p>
-    <a href="[#-apoya-el-proyecto](https://link.mercadopago.com.ar/angieydavid)">
+    <a href="https://link.mercadopago.com.ar/angieydavid">
       <img src="https://img.shields.io/badge/Mercado_Pago-009EE3?style=flat-square&logo=mercadopago&logoColor=white" alt="Mercado Pago"/>
     </a>
-    <a href="[https://paypal.me/agnux](https://paypal.me/agnux)">
+    <a href="https://paypal.me/agnux">
       <img src="https://img.shields.io/badge/PayPal-00457C?style=flat-square&logo=paypal&logoColor=white" alt="PayPal"/>
     </a>
     <img src="https://img.shields.io/badge/Estado-Listo_para_Producción-00ff66?style=flat-square" alt="Estado"/>
@@ -229,7 +229,7 @@ AGNUX OS es un proyecto independiente desarrollado a pulmón. Si te gusta el con
 
 * **Mercado Pago / Transferencia (🇦🇷 Argentina):**
   * **Alias:** `agnuxArg`
-  * **Link directo:** [agnuxArg (Mercado Pago)](https://link.mercadopago.com.ar/agnuxArg)
+  * **Link directo:** [agnuxArg (Mercado Pago)](https://link.mercadopago.com.ar/angieydavid)
 * **PayPal (🌍 Global):**
   * **Link de Donación:** [paypal.me/agnux](https://paypal.me/agnux)
 
