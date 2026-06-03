@@ -1,6 +1,6 @@
 <div align="center">
 
-  <img src="https://agnux.net.ar/src/index.png" alt="AGNUX OS v2.0" width="480" />
+  <img src="https://agnux.net.ar/src/screenshot_final.png" alt="AGNUX OS v2.0" width="480" />
 
   <h1>🧠 AGNUX OS v2.0</h1>
 
