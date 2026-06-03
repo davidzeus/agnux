@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AGNUX OS v2.0 - Shell Cognitivo</title>
+    <meta name="description" content="Shell de sistema operativo impulsado por agentes cognitivos en tiempo real.">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700&family=Outfit:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <!-- Global CSS variable overrides to allow the Style Engine to inject stylesheets -->
+    <style id="agnux-dynamic-theme"></style>
+</head>
+<body>
+
+    <!-- Background Wallpaper & Overlay -->
+    <div id="agnux-wallpaper"></div>
+    <div id="agnux-desktop-grid"></div>
+
+    <!-- Top MacOS-style Menu Bar -->
+    <header id="agnux-topbar">
+        <div class="topbar-left">
+            <span class="system-logo">🛸 AGNUX OS</span>
+            <div class="status-indicator">
+                <span class="status-dot online"></span>
+                <span class="status-text">KERNEL ONLINE</span>
+            </div>
+        </div>
+        
+        <!-- Hyperisland (Dynamic Island) in center -->
+        <div id="hyperisland" class="capsule-compact">
+            <div class="hyperisland-content">
+                <div class="island-pill-active"></div>
+                <span id="hyperisland-text">Agnux Kernel listo</span>
+            </div>
+        </div>
+
+        <div class="topbar-right">
+            <div id="superpowers-status" class="superpowers-status-badge inactive">
+                <span class="pulse-ring"></span>
+                <span id="superpowers-skill-name">⚡ SUPERPOWERS OFF</span>
+            </div>
+            <span id="system-speed">⚡ CUDA ACCEL</span>
+            <span id="system-time">00:00</span>
+        </div>
+    </header>
+
+    <!-- Draggable Floating Desktop Windows -->
+    <main id="agnux-desktop">
+        
+        <!-- Window 1: Kernel Chat Console (Spotlight response display) -->
+        <div id="win-console" class="agnux-window" style="top: 100px; left: 100px; width: 560px; height: 420px;">
+            <div class="window-header">
+                <div class="window-controls">
+                    <span class="control-dot close" onclick="closeWindow('win-console')"></span>
+                    <span class="control-dot minimize" onclick="minimizeWindow('win-console')"></span>
+                    <span class="control-dot expand" onclick="maximizeWindow('win-console')"></span>
+                </div>
+                <span class="window-title">🧠 Consola del Kernel</span>
+            </div>
+            <div class="window-content console-content" style="display: flex; flex-direction: column; height: calc(100% - 38px); padding: 0;">
+                <div id="console-log" style="flex: 1; overflow-y: auto; padding: 16px;">
+                    <div class="message system-msg">
+                        <span class="sender">AGNUX:</span>
+                        <p>Bienvenido al Kernel de AGNUX OS v2.0. Escribe tus requerimientos en esta ventana o en la barra inferior.</p>
+                    </div>
+                </div>
+                <div id="console-stream-indicator" class="stream-indicator hidden" style="padding: 10px 16px;">
+                    <span class="indicator-dot"></span> Procesando comando...
+                </div>
+                <div class="window-input-container">
+                    <input type="text" class="window-input" placeholder="Escribe al Kernel desde esta ventana..." autocomplete="off">
+                    <button class="window-send-btn">Enviar</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Window 2: Telemetry System Diagnostics Desktop Widget -->
+        <div id="win-telemetry" class="desktop-widget" style="top: 150px; left: 700px; width: 380px; height: 380px;">
+            <div class="widget-header">
+                <span class="widget-title">📊 Diagnóstico de Sistema</span>
+            </div>
+            <div class="window-content telemetry-content">
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <span class="metric-label">CPU</span>
+                        <div class="metric-ring-container">
+                            <svg class="ring-svg" viewBox="0 0 36 36">
+                                <path class="ring-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                                <path id="cpu-ring-fill" class="ring-fill accent" stroke-dasharray="0, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                            </svg>
+                            <span id="cpu-val" class="metric-number">0%</span>
+                        </div>
+                    </div>
+                    <div class="metric-card">
+                        <span class="metric-label">MEMORIA</span>
+                        <div class="metric-ring-container">
+                            <svg class="ring-svg" viewBox="0 0 36 36">
+                                <path class="ring-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                                <path id="ram-ring-fill" class="ring-fill secondary" stroke-dasharray="0, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                            </svg>
+                            <span id="ram-val" class="metric-number">0%</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="telemetry-info-list">
+                    <div class="info-row">
+                        <span class="lbl">Qdrant Vector DB</span>
+                        <span id="status-qdrant" class="val badge-success">Conectando...</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="lbl">Ollama Engine</span>
+                        <span id="status-ollama" class="val badge-success">Conectando...</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="lbl">Docker Sandbox</span>
+                        <span id="status-docker" class="val badge-success">Listo</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="lbl">Motor de IA</span>
+                        <span id="status-ai-engine" class="val badge-success">Conectando...</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="lbl">Uso de Tokens</span>
+                        <span id="status-ai-tokens" class="val">0 tkn</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Bottom Spotlight Bar -->
+    <div id="spotlight-bar-container">
+        <div id="spotlight-bar">
+            <span class="spotlight-icon">🔍</span>
+            <input type="text" id="spotlight-input" placeholder="Pregúntale a AGNUX OS o solicita un tema..." autocomplete="off">
+            <button id="spotlight-send-btn">Ejecutar</button>
+        </div>
+    </div>
+
+    <!-- Bottom MacOS-style App Dock -->
+    <nav id="agnux-dock">
+        <div class="dock-item" onclick="openWindow('win-console')" title="Consola del Kernel">
+            <span class="dock-icon">🧠</span>
+            <span class="dock-label">Consola</span>
+        </div>
+        <div class="dock-item" onclick="openWindow('win-telemetry')" title="Diagnóstico de Hardware">
+            <span class="dock-icon">📊</span>
+            <span class="dock-label">Hardware</span>
+        </div>
+        <div class="dock-item" onclick="runApp('archivos')" title="Explorador de Archivos (pcmanfm)">
+            <span class="dock-icon">📁</span>
+            <span class="dock-label">Archivos</span>
+        </div>
+        <div class="dock-item" onclick="runApp('calculadora')" title="Calculadora Científica (galculator)">
+            <span class="dock-icon">🧮</span>
+            <span class="dock-label">Calculadora</span>
+        </div>
+        <div class="dock-item" onclick="runApp('terminal')" title="Consola del Sistema (xterm)">
+            <span class="dock-icon">💻</span>
+            <span class="dock-label">Terminal</span>
+        </div>
+    </nav>
+
+    <!-- Script imports -->
+    <script src="app.js"></script>
+</body>
+</html>

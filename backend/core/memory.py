@@ -1,94 +1,111 @@
 import uuid
 from datetime import datetime
-import asyncio
 from qdrant_client import AsyncQdrantClient
-from qdrant_client.models import Distance, VectorParams, PointStruct
+from qdrant_client.models import Distance, VectorParams, PointStruct, Filter, FieldCondition, MatchValue
+from core.config import qdrantHost, kernelLogger
 
-from core.config import logger, QDRANT_HOST
-
+# Initialize SentenceTransformer for embedding generation
 try:
     from sentence_transformers import SentenceTransformer
-    logger.info("🧠 [EMBEDDINGS] Cargando modelo semántico en CPU (paraphrase-multilingual-mpnet-base-v2)...")
-    embedding_model = SentenceTransformer('paraphrase-multilingual-mpnet-base-v2')
+    kernelLogger.info("🧠 [EMBEDDINGS] Cargando paraphrase-multilingual-mpnet-base-v2...")
+    embeddingModel = SentenceTransformer('paraphrase-multilingual-mpnet-base-v2')
 except Exception as e:
-    logger.error(f"❌ [EMBEDDINGS] Falla al cargar SentenceTransformer: {e}")
-    embedding_model = None
+    kernelLogger.error(f"❌ [EMBEDDINGS] Falla cargando SentenceTransformer: {e}")
+    embeddingModel = None
 
-# Cliente de Qdrant
-qdrant_client = AsyncQdrantClient(url=QDRANT_HOST)
+# Async Qdrant Client
+qdrantClient = AsyncQdrantClient(url=qdrantHost)
 
-# Constantes de colecciones
-COLECCION_FACIAL = "perfiles_faciales"
-COLECCION_MEMORIA = "agnux_kernel_memory"
+# Collections definitions
+coleccionFacial = "perfiles_faciales"
+coleccionMemoria = "agnux_kernel_memory"
 
-# =====================================================================
-# MATRICES DE MEMORIA GLOBAL (RAM KERNEL)
-# =====================================================================
-CACHE_VECTORS = {
+# Global RAM cache structures in camelCase
+cacheVectors = {
     "sistema": {},
     "usuarios": {}
 }
+temporaryFaceVectors = {}
+terminalSessions = {}
 
-# Semáforo FIFO asíncrono para evitar saturar el bus de inferencia
-OLLAMA_BUS_LOCK = asyncio.Lock()
-
-# Volátil para enrolamiento de rostros no registrados
-TEMPORARY_FACE_VECTORS = {}
-
-# Mapeo de terminales físicas (monitores sin cámara esperando al celular)
-TERMINAL_SESSIONS = {}
-
-def simular_vector_rostro() -> list[float]:
+def simularVectorRostro() -> list[float]:
     import random
     return [random.uniform(-1.0, 1.0) for _ in range(128)]
 
-def generar_vector_texto(texto: str) -> list[float]:
-    if embedding_model is None:
+def generarVectorTexto(texto: str) -> list[float]:
+    if embeddingModel is None:
         import random
+        # Fallback to random vector (768 dimensions)
         return [random.uniform(-1.0, 1.0) for _ in range(768)]
-    return embedding_model.encode(texto).tolist()
+    return embeddingModel.encode(texto).tolist()
 
-async def guardar_recuerdo_qdrant(user_id: str, tipo_evento: str, contenido: str, metadata_extra: dict = None):
+async def guardarRecuerdoQdrant(userId: str, tipoEvento: str, contenido: str, metadataExtra: dict = None):
     try:
-        if not contenido or len(contenido.strip()) < 3: return
-        vector = generar_vector_texto(contenido)
-        point_id = str(uuid.uuid4())
+        if not contenido or len(contenido.strip()) < 3:
+            return
+        vectorValue = generarVectorTexto(contenido)
+        pointId = str(uuid.uuid4())
         
-        payload = {
-            "user-id": user_id,
-            "tipo": tipo_evento,
+        payloadData = {
+            "userId": userId,
+            "tipo": tipoEvento,
             "contenido": contenido,
             "timestamp": datetime.now().isoformat()
         }
-        if metadata_extra:
-            payload.update(metadata_extra)
+        if metadataExtra:
+            payloadData.update(metadataExtra)
             
-        await qdrant_client.upsert(
-            collection_name=COLECCION_MEMORIA,
-            points=[PointStruct(id=point_id, vector=vector, payload=payload)]
+        await qdrantClient.upsert(
+            collection_name=coleccionMemoria,
+            points=[PointStruct(id=pointId, vector=vectorValue, payload=payloadData)]
         )
-        logger.info(f"💾 [MEMORIA] Recuerdo semántico ({tipo_evento}) almacenado para {user_id}.")
+        kernelLogger.info(f"💾 [QDRANT] Recuerdo semántico '{tipoEvento}' almacenado para {userId}.")
     except Exception as e:
-        logger.error(f"❌ [MEMORIA] Error al guardar recuerdo: {e}")
+        kernelLogger.error(f"❌ [QDRANT] Error al guardar recuerdo: {e}")
 
-async def inicializar_qdrant_colecciones():
-    logger.info("⚡ [KERNEL BOOT] Inicializando servicios base de memoria persistente...")
+async def buscarRecuerdosQdrant(userId: str, queryText: str, limit: int = 3) -> list[dict]:
     try:
-        collections_response = await qdrant_client.get_collections()
-        collection_names = [col.name for col in collections_response.collections]
+        vectorValue = generarVectorTexto(queryText)
+        searchResults = await qdrantClient.query_points(
+            collection_name=coleccionMemoria,
+            query=vectorValue,
+            query_filter=Filter(
+                must=[FieldCondition(key="userId", match=MatchValue(value=userId))]
+            ),
+            limit=limit
+        )
         
-        if COLECCION_FACIAL not in collection_names:
-            logger.info(f"🧠 [QDRANT] Creando colección '{COLECCION_FACIAL}' (128d, COSINE)...")
-            await qdrant_client.create_collection(
-                collection_name=COLECCION_FACIAL,
-                vectors_config=VectorParams(size=128, distance=Distance.COSINE),
+        memories = []
+        for point in searchResults.points:
+            memories.append({
+                "contenido": point.payload.get("contenido", ""),
+                "tipo": point.payload.get("tipo", ""),
+                "score": point.score,
+                "payload": point.payload
+            })
+        return memories
+    except Exception as e:
+        kernelLogger.error(f"❌ [QDRANT] Error al buscar recuerdos: {e}")
+        return []
+
+async def inicializarQdrantColecciones():
+    kernelLogger.info("⚡ [QDRANT] Inicializando esquemas vectoriales...")
+    try:
+        collectionsInfo = await qdrantClient.get_collections()
+        existingNames = [col.name for col in collectionsInfo.collections]
+        
+        if coleccionFacial not in existingNames:
+            kernelLogger.info(f"🧠 Creando colección facial: {coleccionFacial}")
+            await qdrantClient.create_collection(
+                collection_name=coleccionFacial,
+                vectors_config=VectorParams(size=128, distance=Distance.COSINE)
             )
             
-        if COLECCION_MEMORIA not in collection_names:
-            logger.info(f"🧠 [QDRANT] Creando colección '{COLECCION_MEMORIA}' (768d, COSINE)...")
-            await qdrant_client.create_collection(
-                collection_name=COLECCION_MEMORIA,
-                vectors_config=VectorParams(size=768, distance=Distance.COSINE),
+        if coleccionMemoria not in existingNames:
+            kernelLogger.info(f"🧠 Creando colección de memoria: {coleccionMemoria}")
+            await qdrantClient.create_collection(
+                collection_name=coleccionMemoria,
+                vectors_config=VectorParams(size=768, distance=Distance.COSINE)
             )
     except Exception as e:
-        logger.error(f"❌ [QDRANT] Falla al inicializar bus vectorial: {e}")
+        kernelLogger.error(f"❌ [QDRANT] Error inicializando colecciones: {e}")

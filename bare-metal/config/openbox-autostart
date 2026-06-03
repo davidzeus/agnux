@@ -1,13 +1,19 @@
 #!/bin/bash
-# Configuración de inicio de Openbox para AGNUX (Modo Kiosco)
+# Configuración de inicio de Openbox para AGNUX v2.0 (Modo Kiosco)
 
 # Desactivar DPMS (ahorro de energía) y screensaver
 xset -dpms
 xset s off
 xset s noblank
 
-# Ocultar el cursor después de un tiempo de inactividad (requiere unclutter)
-unclutter -idle 3 &
+# Iniciar Nginx proxy y asegurar que el puerto 8000 esté accesible
+sleep 3
 
-# Iniciar el navegador Chromium en modo kiosco
-chromium-browser --kiosk --incognito --noerrdialogs --disable-infobars http://localhost:80 &
+# Lanzar el Shell Nativo en PySide6 usando el intérprete del entorno virtual
+if [ -f "/opt/agnux/desktop/shell.py" ]; then
+    export QT_QPA_PLATFORM=xcb
+    /opt/agnux/backend/venv/bin/python /opt/agnux/desktop/shell.py &
+else
+    # Fallback a Chromium Kiosk
+    chromium-browser --kiosk --incognito --noerrdialogs --disable-infobars http://localhost:80 &
+fi
