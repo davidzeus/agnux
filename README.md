@@ -32,7 +32,7 @@
       <img src="https://img.shields.io/badge/PayPal-00457C?style=flat-square&logo=paypal&logoColor=white" alt="PayPal"/>
     </a>
     <img src="https://img.shields.io/badge/Estado-Listo_para_Producción-00ff66?style=flat-square" alt="Estado"/>
-    <img src="https://img.shields.io/badge/Visuales-macOS_Glass_%2B_Aero_Blur-blue?style=flat-square" alt="Diseño Visual"/>
+    <img src="https://img.shields.io/badge/Visuales-Glassmorphism_%2B_Aero_Blur-blue?style=flat-square" alt="Diseño Visual"/>
   </p>
 
   <br/>
@@ -49,7 +49,7 @@
 
 ## 🧬 La Filosofía AGNUX: El Espacio de Usuario Autogestionado
 
-Los sistemas operativos tradicionales (Linux, Windows, macOS) fueron diseñados como traductores estáticos entre comandos humanos y hardware. El usuario debe saber qué aplicación abrir, cómo configurarla y cómo encadenar comandos para lograr un objetivo.
+Los sistemas operativos y entornos de escritorio tradicionales fueron diseñados como traductores estáticos entre comandos humanos y hardware. El usuario debe saber qué aplicación abrir, cómo configurarla y cómo encadenar comandos para lograr un objetivo.
 
 **AGNUX** invierte este paradigma. Es un **Sistema Operativo Cognitivo**. 
 * El espacio de usuario no es una rejilla rígida de iconos; es un **lienzo dinámico** en HTML5 que muta en tiempo real según las necesidades del usuario.
