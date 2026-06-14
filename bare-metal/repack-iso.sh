@@ -4,7 +4,7 @@
 # =====================================================================
 set -e
 
-CWD="/home/david/Documentos/agnuxV2/bare-metal"
+CWD="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$CWD"
 
 IMAGE_NAME="agnux-os-neon-v2.0.iso"
