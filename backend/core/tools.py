@@ -152,7 +152,7 @@ def crearArchivo(path: str, contenido: str) -> str:
     try:
         baseDir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         absPath = os.path.abspath(os.path.join(baseDir, path))
-        if not absPath.startswith("/home/david/Documentos/agnuxV2"):
+        if not absPath.startswith(baseDir):
             return "Error: Acceso denegado fuera del área del proyecto."
             
         os.makedirs(os.path.dirname(absPath), exist_ok=True)

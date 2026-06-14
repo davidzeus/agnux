@@ -1,4 +1,5 @@
 import platform
+import time
 import psutil
 from fastapi import APIRouter
 from typing import Dict, Any
@@ -48,7 +49,7 @@ def obtenerDiagnosticoHardware() -> Dict[str, Any]:
             "cpu": cpuInfo,
             "memoria": memInfo,
             "disco": discoInfo,
-            "uptimeHoras": round(psutil.boot_time() / 3600, 2)
+            "uptimeHoras": round((time.time() - psutil.boot_time()) / 3600, 2)
         }
     except Exception as e:
         return {
