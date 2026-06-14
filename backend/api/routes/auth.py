@@ -55,7 +55,7 @@ async def verifyCloudflareAuth(request: Request):
     cfEmail = request.headers.get("Cf-Access-Authenticated-User-Email")
     kernelLogger.info(f"DEBUG: Headers recibidos: {dict(request.headers)}")
     
-    if not cfEmail and request.client.host in ("127.0.0.1", "::1", "localhost"):
+    if not cfEmail and request.client and request.client.host in ("127.0.0.1", "::1", "localhost"):
         cfEmail = "dev.local@agnux.net.ar"
         
     if not cfEmail:
