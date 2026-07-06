@@ -1081,3 +1081,170 @@ body {
     font-family: var(--agnux-mono);
     font-size: 12px;
 }
+
+/* ============ SUPERFICIE HTML LIBRE (ventanas de la IA) ============
+   Contenedor donde el Kernel materializa interfaces vía CREATE-WINDOW.
+   Los elementos estándar reciben estilo nativo del tema para que el
+   HTML generado se integre sin esfuerzo. */
+
+.window-html-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 18px 20px;
+    font-size: 13px;
+    line-height: 1.6;
+    user-select: text;
+}
+
+.window-html-content h1,
+.window-html-content h2,
+.window-html-content h3,
+.window-html-content h4 {
+    font-weight: 700;
+    letter-spacing: 0.2px;
+    margin: 0 0 10px 0;
+    color: var(--agnux-text-primary);
+}
+
+.window-html-content h1 { font-size: 20px; }
+.window-html-content h2 { font-size: 16px; }
+.window-html-content h3 {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1.4px;
+    color: var(--agnux-text-secondary);
+}
+.window-html-content h4 { font-size: 12px; }
+
+.window-html-content p {
+    margin: 0 0 10px 0;
+    color: var(--agnux-text-primary);
+}
+
+.window-html-content ul,
+.window-html-content ol {
+    margin: 0 0 10px 0;
+    padding-left: 20px;
+}
+
+.window-html-content li { margin-bottom: 4px; }
+
+.window-html-content a {
+    color: var(--agnux-accent);
+    text-decoration: none;
+}
+
+.window-html-content hr {
+    border: none;
+    border-top: 1px solid color-mix(in srgb, var(--agnux-text-primary) 8%, transparent);
+    margin: 12px 0;
+}
+
+.window-html-content code,
+.window-html-content pre {
+    font-family: var(--agnux-mono);
+    font-size: 11.5px;
+    background: color-mix(in srgb, var(--agnux-bg-color) 55%, transparent);
+    border: 1px solid color-mix(in srgb, var(--agnux-text-primary) 7%, transparent);
+    border-radius: 8px;
+}
+
+.window-html-content code { padding: 1px 6px; }
+
+.window-html-content pre {
+    padding: 12px 14px;
+    overflow-x: auto;
+    margin: 0 0 10px 0;
+}
+
+.window-html-content pre code {
+    background: none;
+    border: none;
+    padding: 0;
+}
+
+.window-html-content table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0 0 12px 0;
+    font-size: 12px;
+}
+
+.window-html-content th {
+    text-align: left;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    color: var(--agnux-text-secondary);
+    padding: 8px 10px;
+    border-bottom: 1px solid color-mix(in srgb, var(--agnux-accent) 35%, transparent);
+}
+
+.window-html-content td {
+    padding: 8px 10px;
+    border-bottom: 1px solid color-mix(in srgb, var(--agnux-text-primary) 6%, transparent);
+}
+
+.window-html-content tr:hover td {
+    background: color-mix(in srgb, var(--agnux-accent) 6%, transparent);
+}
+
+.window-html-content progress {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 6px;
+    border: none;
+    border-radius: 3px;
+    overflow: hidden;
+    background: color-mix(in srgb, var(--agnux-text-secondary) 22%, transparent);
+}
+
+.window-html-content progress::-webkit-progress-bar {
+    background: color-mix(in srgb, var(--agnux-text-secondary) 22%, transparent);
+}
+
+.window-html-content progress::-webkit-progress-value {
+    background: linear-gradient(90deg, var(--agnux-accent), var(--agnux-accent-2, #22e0ff));
+    border-radius: 3px;
+}
+
+.window-html-content button {
+    background: linear-gradient(120deg, var(--agnux-accent), var(--agnux-accent-dim));
+    border: none;
+    border-radius: 10px;
+    color: #ffffff;
+    padding: 8px 16px;
+    font-weight: 700;
+    font-size: 12px;
+    cursor: pointer;
+    transition: filter 0.2s, transform 0.1s;
+}
+
+.window-html-content button:hover { filter: brightness(1.12); }
+.window-html-content button:active { transform: scale(0.96); }
+
+.window-html-content input,
+.window-html-content select,
+.window-html-content textarea {
+    background: color-mix(in srgb, var(--agnux-text-primary) 6%, transparent);
+    border: 1px solid color-mix(in srgb, var(--agnux-text-primary) 9%, transparent);
+    border-radius: 10px;
+    color: var(--agnux-text-primary);
+    padding: 8px 12px;
+    font-family: inherit;
+    font-size: 12px;
+    outline: none;
+}
+
+.window-html-content input:focus,
+.window-html-content select:focus,
+.window-html-content textarea:focus {
+    border-color: var(--agnux-accent);
+}
+
+.window-html-content img,
+.window-html-content svg {
+    max-width: 100%;
+}

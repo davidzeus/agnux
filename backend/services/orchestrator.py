@@ -39,7 +39,8 @@ from core.tools import (
     useSkill,
     openWebBrowser,
     ejecutarCodigoPython,
-    crearArchivo
+    crearArchivo,
+    crearVentana
 )
 
 # Active fallbacks memory
@@ -59,7 +60,8 @@ agnuxTools = [
     useSkill,
     openWebBrowser,
     ejecutarCodigoPython,
-    crearArchivo
+    crearArchivo,
+    crearVentana
 ]
 
 def normalizarId(rawId: str) -> str:
@@ -190,6 +192,13 @@ async def _despacharSystemTool(toolName: str, toolArgs: dict, userId: str) -> tu
             contenido = toolArgs.get("contenido", "")
             res = crearArchivo(path, contenido)
             return "", res
+        elif toolName == "crearVentana":
+            res = crearVentana(
+                toolArgs.get("titulo", ""),
+                toolArgs.get("htmlContenido", ""),
+                toolArgs.get("ventanaId", "")
+            )
+            return f"event: CREATE-WINDOW\ndata: {res}\n\n", "Ventana materializada en el escritorio."
     except Exception as e:
         kernelLogger.error(f"Error despachando tool {toolName}: {e}")
     return "", ""
@@ -523,8 +532,11 @@ async def procesarGeneradorEventos(payload, isGoogleConnected: bool):
             superpowersPrompt = obtenerPromptSuperpowers()
             systemPrompt = f"""
             You are the Core Kernel of AGNUX OS. You execute tools in response to user requests.
-            Ensure all user IDs and properties use kebab-case. 
+            Ensure all user IDs and properties use kebab-case.
             All Python code and variables you write/expose must strictly use camelCase.
+            When the user asks for a panel, dashboard, table, report, form or any visual
+            interface, materialize it with the 'crearVentana' tool passing free HTML
+            (no <script>); reuse the same ventanaId to update a window you already created.
             
             Available tools:
             {json.dumps([t.__name__ for t in agnuxTools])}

@@ -163,6 +163,30 @@ def crearArchivo(path: str, contenido: str) -> str:
         kernelLogger.error(f"Error creando archivo {path}: {e}")
         return f"Error creando archivo: {e}"
 
+def crearVentana(titulo: str, htmlContenido: str, ventanaId: str = "") -> str:
+    """
+    Materializa una ventana flotante en el escritorio del usuario con contenido HTML libre.
+    Úsala siempre que el usuario pida un panel, dashboard, tabla, tarjeta, lista visual,
+    formulario, reporte o cualquier interfaz que se exprese mejor de forma visual que como texto.
+    El HTML se renderiza dentro de una ventana de cristal nativa del shell: puedes usar
+    etiquetas estándar (div, h1-h4, p, table, ul, progress, svg...) y estilos inline.
+    Las variables CSS del sistema están disponibles para integrarte al tema activo:
+    var(--agnux-accent), var(--agnux-accent-2), var(--agnux-text-primary),
+    var(--agnux-text-secondary), var(--agnux-panel-border).
+    No incluyas <html>, <head>, <body> ni <script>; solo el fragmento del cuerpo.
+    Args:
+        titulo: Título visible en la barra de la ventana.
+        htmlContenido: Fragmento HTML libre a renderizar dentro de la ventana.
+        ventanaId: Identificador opcional en kebab-case; si ya existe una ventana con ese id, se actualiza su contenido en vivo.
+    """
+    kernelLogger.info(f"🔌 [TOOL] crearVentana: titulo={titulo}, html (chars)={len(htmlContenido)}")
+    return json.dumps({
+        "__agnux_event": "CREATE-WINDOW",
+        "window-id": ventanaId,
+        "title": titulo,
+        "html": htmlContenido
+    }, ensure_ascii=False)
+
 def useSkill(skillName: str) -> str:
     """
     Recupera y activa una habilidad (skill) del framework de Superpowers.
