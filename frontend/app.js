@@ -117,8 +117,12 @@ function inicializarArrastreVentanas() {
                 document.querySelectorAll(".desktop-widget").forEach(w => w.style.zIndex = 5);
                 activeWindow.style.zIndex = 8;
             } else {
-                document.querySelectorAll(".agnux-window").forEach(w => w.style.zIndex = 20);
+                document.querySelectorAll(".agnux-window").forEach(w => {
+                    w.style.zIndex = 20;
+                    w.classList.remove("win-focused");
+                });
                 activeWindow.style.zIndex = 50;
+                activeWindow.classList.add("win-focused");
             }
             
             const rect = activeWindow.getBoundingClientRect();
@@ -156,7 +160,15 @@ function detenerArrastre() {
 // Window actions
 function closeWindow(id) {
     const win = document.getElementById(id);
-    if (win) win.classList.add("hidden");
+    if (win) {
+        win.style.transform = "scale(0.92)";
+        win.style.opacity = "0";
+        setTimeout(() => {
+            win.classList.add("hidden");
+            win.style.transform = "";
+            win.style.opacity = "";
+        }, 200);
+    }
 }
 
 function minimizeWindow(id) {
@@ -175,6 +187,10 @@ function openWindow(id) {
             win.classList.remove("hidden");
             win.style.transform = "scale(1)";
             win.style.opacity = "1";
+            // Re-disparar la animación de aparición (window-spawn)
+            win.style.animation = "none";
+            void win.offsetWidth;
+            win.style.animation = "";
             if (win.classList.contains("desktop-widget")) {
                 win.style.zIndex = 5;
             } else {

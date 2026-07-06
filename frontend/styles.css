@@ -1,31 +1,47 @@
 /* =====================================================================
-   🎨 AGNUX OS v2.0 - Core Styling & Visual Identity Tokens
+   🎨 AGNUX OS v2.0 — Identidad Visual "Neural Vanguard"
+   ---------------------------------------------------------------------
+   Estética cognitiva: aurora viva, cristal profundo, luz de acento.
+   El Motor de Estilos de la IA sobreescribe las variables --agnux-*
+   en caliente (SET-THEME); todo el diseño deriva de ellas.
    ===================================================================== */
 
 :root {
-  /* Default Elegant Light iOS-inspired Theme, overridden dynamically by the Style Engine */
-  --agnux-bg-color: #0f0f12;
-  --agnux-text-primary: #f5f5f7;
-  --agnux-text-secondary: #8e8e93;
-  --agnux-accent: #0071e3;
-  --agnux-accent-glow: rgba(0, 113, 227, 0.35);
-  --agnux-accent-dim: #005bb7;
-  --agnux-accent-border: rgba(0, 113, 227, 0.4);
-  --agnux-panel-bg: rgba(22, 22, 27, 0.55);
-  --agnux-panel-solid: #16161b;
-  --agnux-panel-border: rgba(255, 255, 255, 0.08);
-  --agnux-panel-blur: blur(25px);
-  --agnux-font-main: 'Outfit', 'Inter', sans-serif;
-  --agnux-font-clock: 'Inter', sans-serif;
+  /* Tema por defecto "Deep Cognition" — sobreescribible por el Style Engine */
+  --agnux-bg-color: #05050c;
+  --agnux-text-primary: #f2f3ff;
+  --agnux-text-secondary: #7f84a3;
+  --agnux-accent: #7c6cff;
+  --agnux-accent-glow: rgba(124, 108, 255, 0.4);
+  --agnux-accent-dim: #5f4fe0;
+  --agnux-accent-border: rgba(124, 108, 255, 0.45);
+  --agnux-panel-bg: rgba(13, 14, 24, 0.58);
+  --agnux-panel-solid: #0d0e18;
+  --agnux-panel-border: rgba(255, 255, 255, 0.09);
+  --agnux-panel-blur: blur(28px);
+  --agnux-font-main: 'Outfit', 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --agnux-font-clock: 'Inter', system-ui, sans-serif;
+
+  /* Tokens derivados (no requeridos por el Style Engine; con fallback) */
+  --agnux-accent-2: #22e0ff;             /* segunda luz neural */
+  --agnux-radius-window: 18px;
+  --agnux-mono: 'JetBrains Mono', 'SF Mono', 'Cascadia Mono', monospace;
+  --agnux-hairline: 1px solid var(--agnux-panel-border);
 }
 
-/* Reset and Core Layout */
+/* ============================= BASE ============================= */
+
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
     font-family: var(--agnux-font-main);
     user-select: none;
+}
+
+::selection {
+    background: color-mix(in srgb, var(--agnux-accent) 45%, transparent);
+    color: var(--agnux-text-primary);
 }
 
 body {
@@ -35,48 +51,117 @@ body {
     width: 100vw;
     height: 100vh;
     transition: background-color 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+    -webkit-font-smoothing: antialiased;
 }
 
-/* Wallpaper Background with smooth blur transitions */
+/* Scrollbars minimalistas tipo overlay */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--agnux-text-secondary) 35%, transparent);
+    border-radius: 8px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: color-mix(in srgb, var(--agnux-accent) 60%, transparent);
+    background-clip: content-box;
+}
+
+/* ====================== FONDO: AURORA NEURAL ====================== */
+
 #agnux-wallpaper {
     position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-image: url('../wallpaper.jpeg'), linear-gradient(135deg, #1e1e24 0%, #0f0f12 100%);
+    inset: 0;
+    background-image: url('../wallpaper.jpeg'),
+        radial-gradient(ellipse 120% 90% at 50% -20%,
+            color-mix(in srgb, var(--agnux-accent) 14%, transparent) 0%,
+            transparent 55%),
+        linear-gradient(160deg,
+            color-mix(in srgb, var(--agnux-accent) 7%, var(--agnux-bg-color)) 0%,
+            var(--agnux-bg-color) 45%,
+            color-mix(in srgb, var(--agnux-accent-2, #22e0ff) 5%, var(--agnux-bg-color)) 100%);
     background-size: cover;
     background-position: center;
     z-index: -2;
-    transition: filter 0.5s ease;
+    transition: filter 0.5s ease, background-image 0.8s ease;
 }
 
-/* Subtle Aero Glass grid overlay */
+/* Dos masas de luz que derivan lentamente — respiración del sistema */
+#agnux-wallpaper::before,
+#agnux-wallpaper::after {
+    content: "";
+    position: absolute;
+    width: 55vmax;
+    height: 55vmax;
+    border-radius: 50%;
+    filter: blur(90px);
+    mix-blend-mode: screen;
+    pointer-events: none;
+    will-change: transform;
+}
+
+#agnux-wallpaper::before {
+    top: -22vmax;
+    left: -12vmax;
+    background: radial-gradient(circle at center,
+        color-mix(in srgb, var(--agnux-accent) 34%, transparent) 0%,
+        transparent 62%);
+    animation: aurora-drift-a 26s ease-in-out infinite alternate;
+}
+
+#agnux-wallpaper::after {
+    bottom: -26vmax;
+    right: -14vmax;
+    background: radial-gradient(circle at center,
+        color-mix(in srgb, var(--agnux-accent-2, #22e0ff) 22%, transparent) 0%,
+        transparent 60%);
+    animation: aurora-drift-b 32s ease-in-out infinite alternate;
+}
+
+@keyframes aurora-drift-a {
+    0%   { transform: translate(0, 0) scale(1); }
+    50%  { transform: translate(9vmax, 6vmax) scale(1.12); }
+    100% { transform: translate(3vmax, 12vmax) scale(0.96); }
+}
+
+@keyframes aurora-drift-b {
+    0%   { transform: translate(0, 0) scale(1); }
+    50%  { transform: translate(-8vmax, -5vmax) scale(1.08); }
+    100% { transform: translate(-12vmax, -2vmax) scale(1.15); }
+}
+
+/* Retícula de puntos: sustrato computacional, casi subliminal */
 #agnux-desktop-grid {
     position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-image: 
-        linear-gradient(rgba(255, 255, 255, 0.01) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255, 255, 255, 0.01) 1px, transparent 1px);
-    background-size: 60px 60px;
+    inset: 0;
+    background-image: radial-gradient(circle,
+        rgba(255, 255, 255, 0.055) 1px, transparent 1px);
+    background-size: 34px 34px;
     z-index: -1;
     pointer-events: none;
-    mask-image: radial-gradient(circle at center, transparent 30%, black 90%);
+    mask-image: radial-gradient(ellipse at center, black 20%, transparent 78%);
+    animation: grid-breathe 12s ease-in-out infinite;
 }
 
-/* Top MacOS Menu Bar */
+@keyframes grid-breathe {
+    0%, 100% { opacity: 0.5; }
+    50%      { opacity: 1; }
+}
+
+/* ========================= BARRA SUPERIOR ========================= */
+
 #agnux-topbar {
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
     height: 44px;
-    background: var(--agnux-panel-bg);
-    backdrop-filter: var(--agnux-panel-blur) saturate(185%);
-    border-bottom: 1px solid var(--agnux-panel-border);
+    background: linear-gradient(to bottom,
+        color-mix(in srgb, var(--agnux-panel-solid) 55%, transparent),
+        color-mix(in srgb, var(--agnux-panel-solid) 25%, transparent));
+    backdrop-filter: var(--agnux-panel-blur) saturate(180%);
+    border-bottom: var(--agnux-hairline);
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -84,27 +169,64 @@ body {
     z-index: 1000;
     font-size: 13px;
     font-weight: 500;
+    animation: topbar-descend 0.9s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Hairline de luz que recorre el borde inferior de la barra */
+#agnux-topbar::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -1px;
+    height: 1px;
+    background: linear-gradient(90deg,
+        transparent 0%,
+        color-mix(in srgb, var(--agnux-accent) 55%, transparent) 30%,
+        color-mix(in srgb, var(--agnux-accent-2, #22e0ff) 55%, transparent) 70%,
+        transparent 100%);
+    background-size: 220% 100%;
+    animation: hairline-sweep 9s linear infinite;
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+@keyframes hairline-sweep {
+    0%   { background-position: 0% 0; }
+    100% { background-position: -220% 0; }
+}
+
+@keyframes topbar-descend {
+    from { transform: translateY(-100%); opacity: 0; }
+    to   { transform: translateY(0); opacity: 1; }
 }
 
 .topbar-left, .topbar-right {
     display: flex;
     align-items: center;
-    gap: 15px;
+    gap: 14px;
 }
 
 .system-logo {
-    font-weight: 700;
-    letter-spacing: -0.2px;
+    font-weight: 800;
+    letter-spacing: 0.4px;
+    background: linear-gradient(100deg,
+        var(--agnux-text-primary) 20%,
+        var(--agnux-accent) 55%,
+        var(--agnux-accent-2, #22e0ff) 80%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
 }
 
 .status-indicator {
     display: flex;
     align-items: center;
     gap: 6px;
-    background: rgba(255, 255, 255, 0.06);
+    background: rgba(255, 255, 255, 0.05);
     padding: 3px 10px;
     border-radius: 20px;
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .status-dot {
@@ -114,46 +236,88 @@ body {
 }
 
 .status-dot.online {
-    background-color: #30d158;
-    box-shadow: 0 0 8px #30d158;
+    background-color: #34f5a2;
+    box-shadow: 0 0 8px #34f5a2;
+    animation: pulse 2.4s ease-in-out infinite;
 }
 
 .status-text {
     font-size: 9px;
     font-weight: 700;
-    letter-spacing: 0.5px;
+    letter-spacing: 1.2px;
+    color: var(--agnux-text-secondary);
 }
 
-/* Hyperisland (Dynamic Island) Layout & Animations */
+#system-speed {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    color: var(--agnux-text-secondary);
+}
+
+#system-time {
+    font-family: var(--agnux-font-clock);
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+}
+
+/* ================= HYPERISLAND (isla dinámica) ================= */
+
 #hyperisland {
     position: absolute;
     left: 50%;
     transform: translateX(-50%);
     top: 6px;
-    background: #000000;
+    background: rgba(3, 3, 8, 0.92);
     color: #ffffff;
     display: flex;
     align-items: center;
     justify-content: center;
-    clip: true;
     z-index: 2000;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5),
+                inset 0 0 0 1px rgba(255, 255, 255, 0.10);
     transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    border: 1px solid rgba(255, 255, 255, 0.15);
+    overflow: hidden;
+}
+
+/* Shimmer perimetral: la isla siempre está "pensando" */
+#hyperisland::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: conic-gradient(from 0deg,
+        transparent 0deg,
+        color-mix(in srgb, var(--agnux-accent) 80%, transparent) 60deg,
+        color-mix(in srgb, var(--agnux-accent-2, #22e0ff) 80%, transparent) 120deg,
+        transparent 180deg);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    animation: island-orbit 4.5s linear infinite;
+    pointer-events: none;
+}
+
+@keyframes island-orbit {
+    to { transform: rotate(360deg); }
 }
 
 .capsule-compact {
-    width: 180px;
+    width: 190px;
     height: 30px;
     border-radius: 20px;
 }
 
 .capsule-expanded {
-    width: 320px;
+    width: 340px;
     height: 48px;
     border-radius: 24px;
-    background: var(--agnux-accent) !important;
-    border-color: var(--agnux-accent-border) !important;
+    background: linear-gradient(120deg,
+        color-mix(in srgb, var(--agnux-accent) 85%, #000),
+        color-mix(in srgb, var(--agnux-accent-2, #22e0ff) 55%, #000)) !important;
+    box-shadow: 0 14px 40px var(--agnux-accent-glow),
+                inset 0 0 0 1px rgba(255, 255, 255, 0.18) !important;
 }
 
 .hyperisland-content {
@@ -168,21 +332,24 @@ body {
 .island-pill-active {
     width: 6px;
     height: 6px;
-    background-color: #30d158;
+    background-color: #34f5a2;
     border-radius: 50%;
+    box-shadow: 0 0 8px #34f5a2;
     animation: pulse 1.5s infinite;
+    flex-shrink: 0;
 }
 
 #hyperisland-text {
     font-size: 11px;
     font-weight: 600;
-    letter-spacing: -0.1px;
+    letter-spacing: 0.1px;
     white-space: nowrap;
     overflow: hidden;
-    text-overflow: elide;
+    text-overflow: ellipsis;
 }
 
-/* Desktop App Workspace container */
+/* ========================= ESCRITORIO ========================= */
+
 #agnux-desktop {
     position: absolute;
     top: 44px;
@@ -193,52 +360,82 @@ body {
     z-index: 10;
 }
 
-/* Aero Glassmorphism Windows */
+/* ================ VENTANAS: CRISTAL PROFUNDO ================ */
+
 .agnux-window {
     position: absolute;
-    background: var(--agnux-panel-bg);
-    backdrop-filter: var(--agnux-panel-blur) saturate(180%);
-    border: 1px solid var(--agnux-panel-border);
-    border-radius: 12px;
-    box-shadow: 0 20px 45px rgba(0, 0, 0, 0.35);
+    background: linear-gradient(165deg,
+        color-mix(in srgb, var(--agnux-panel-solid) 62%, transparent),
+        color-mix(in srgb, var(--agnux-panel-solid) 42%, transparent));
+    backdrop-filter: var(--agnux-panel-blur) saturate(190%);
+    border: var(--agnux-hairline);
+    border-radius: var(--agnux-radius-window, 18px);
+    box-shadow: 0 32px 70px rgba(0, 0, 0, 0.5),
+                0 2px 8px rgba(0, 0, 0, 0.3),
+                inset 0 1px 0 rgba(255, 255, 255, 0.08);
     display: flex;
     flex-direction: column;
     overflow: hidden;
     z-index: 20;
-    transition: transform 0.1s ease, opacity 0.2s ease, width 0.2s ease, height 0.2s ease;
+    transition: transform 0.18s ease, opacity 0.22s ease,
+                width 0.2s ease, height 0.2s ease,
+                box-shadow 0.35s ease, border-color 0.35s ease;
+    animation: window-spawn 0.55s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes window-spawn {
+    from { transform: scale(0.92) translateY(18px); opacity: 0; filter: blur(6px); }
+    to   { transform: scale(1) translateY(0); opacity: 1; filter: blur(0); }
+}
+
+/* Ventana enfocada: halo de acento (clase gestionada por app.js) */
+.agnux-window.win-focused {
+    border-color: var(--agnux-accent-border);
+    box-shadow: 0 36px 80px rgba(0, 0, 0, 0.55),
+                0 0 0 1px color-mix(in srgb, var(--agnux-accent) 35%, transparent),
+                0 0 44px color-mix(in srgb, var(--agnux-accent) 22%, transparent),
+                inset 0 1px 0 rgba(255, 255, 255, 0.10);
 }
 
 .window-header {
-    height: 38px;
-    background: rgba(255, 255, 255, 0.04);
-    border-bottom: 1px solid var(--agnux-panel-border);
+    height: 40px;
+    background: linear-gradient(to bottom,
+        rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.015));
+    border-bottom: var(--agnux-hairline);
     display: flex;
     align-items: center;
     padding: 0 12px;
     cursor: move;
+    flex-shrink: 0;
 }
 
 .window-controls {
     display: flex;
     gap: 8px;
     position: absolute;
+    z-index: 2;
 }
 
 .control-dot {
-    width: 12px;
-    height: 12px;
+    width: 11px;
+    height: 11px;
     border-radius: 50%;
     cursor: pointer;
-    transition: filter 0.2s ease;
+    transition: filter 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.15);
 }
 
 .control-dot:hover {
-    filter: brightness(1.2);
+    filter: brightness(1.25);
+    transform: scale(1.18);
 }
 
-.control-dot.close { background-color: #ff5f56; }
-.control-dot.minimize { background-color: #ffbd2e; }
-.control-dot.expand { background-color: #27c93f; }
+.control-dot.close    { background-color: #ff5470; }
+.control-dot.close:hover    { box-shadow: 0 0 10px rgba(255, 84, 112, 0.8); }
+.control-dot.minimize { background-color: #ffc253; }
+.control-dot.minimize:hover { box-shadow: 0 0 10px rgba(255, 194, 83, 0.8); }
+.control-dot.expand   { background-color: #35e08c; }
+.control-dot.expand:hover   { box-shadow: 0 0 10px rgba(53, 224, 140, 0.8); }
 
 .window-title {
     width: 100%;
@@ -246,7 +443,8 @@ body {
     font-size: 12px;
     font-weight: 600;
     color: var(--agnux-text-primary);
-    letter-spacing: -0.1px;
+    letter-spacing: 0.3px;
+    opacity: 0.9;
 }
 
 .window-content {
@@ -255,9 +453,10 @@ body {
     padding: 16px;
 }
 
-/* Window Content Styles */
+/* ===================== CONSOLA DEL KERNEL ===================== */
+
 .console-content {
-    background: rgba(0, 0, 0, 0.25);
+    background: color-mix(in srgb, var(--agnux-bg-color) 42%, transparent);
     display: flex;
     flex-direction: column;
     justify-content: space-between;
@@ -269,61 +468,104 @@ body {
     display: flex;
     flex-direction: column;
     gap: 12px;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: var(--agnux-mono);
     font-size: 12px;
     padding-right: 5px;
 }
 
 .message {
-    padding: 10px 14px;
-    border-radius: 8px;
-    line-height: 1.5;
+    padding: 11px 14px;
+    border-radius: 12px;
+    line-height: 1.55;
+    animation: msg-rise 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+    max-width: 100%;
+    word-wrap: break-word;
+}
+
+@keyframes msg-rise {
+    from { transform: translateY(10px); opacity: 0; }
+    to   { transform: translateY(0); opacity: 1; }
 }
 
 .message.system-msg {
-    background: rgba(255, 255, 255, 0.05);
-    border-left: 3px solid var(--agnux-accent);
+    background: color-mix(in srgb, var(--agnux-text-primary) 5%, transparent);
+    border: 1px solid color-mix(in srgb, var(--agnux-text-primary) 6%, transparent);
+    border-left: 2px solid var(--agnux-accent);
+    color: var(--agnux-text-secondary);
 }
 
 .message.user-msg {
-    background: rgba(0, 113, 227, 0.15);
-    border-left: 3px solid var(--agnux-accent-glow);
+    background: linear-gradient(135deg,
+        color-mix(in srgb, var(--agnux-accent) 26%, transparent),
+        color-mix(in srgb, var(--agnux-accent) 14%, transparent));
+    border: 1px solid color-mix(in srgb, var(--agnux-accent) 30%, transparent);
+    border-radius: 14px 14px 4px 14px;
     align-self: flex-end;
-    width: 90%;
+    width: fit-content;
+    max-width: 90%;
 }
 
 .message.kernel-msg {
-    background: rgba(48, 209, 88, 0.05);
-    border-left: 3px solid #30d158;
+    background: color-mix(in srgb, var(--agnux-text-primary) 4%, transparent);
+    border: 1px solid color-mix(in srgb, var(--agnux-text-primary) 7%, transparent);
+    border-radius: 14px 14px 14px 4px;
+    position: relative;
+}
+
+.message.kernel-msg .sender {
+    background: linear-gradient(90deg, var(--agnux-accent), var(--agnux-accent-2, #22e0ff));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
 }
 
 .sender {
     font-weight: 700;
     display: block;
     margin-bottom: 4px;
-    font-size: 10px;
-    letter-spacing: 0.5px;
+    font-size: 9.5px;
+    letter-spacing: 1.4px;
     text-transform: uppercase;
+    opacity: 0.95;
 }
 
+/* Indicador de pensamiento: gradiente vivo mientras la IA razona */
 .stream-indicator {
     font-size: 11px;
-    color: var(--agnux-text-secondary);
+    font-weight: 600;
     display: flex;
     align-items: center;
     gap: 8px;
     margin-top: 10px;
+    background: linear-gradient(90deg,
+        var(--agnux-text-secondary) 0%,
+        var(--agnux-accent) 40%,
+        var(--agnux-accent-2, #22e0ff) 60%,
+        var(--agnux-text-secondary) 100%);
+    background-size: 250% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: thinking-flow 2.4s linear infinite;
+}
+
+@keyframes thinking-flow {
+    0%   { background-position: 125% 0; }
+    100% { background-position: -125% 0; }
 }
 
 .indicator-dot {
     width: 6px;
     height: 6px;
-    background-color: var(--agnux-accent);
+    background: linear-gradient(135deg, var(--agnux-accent), var(--agnux-accent-2, #22e0ff));
     border-radius: 50%;
+    box-shadow: 0 0 10px var(--agnux-accent-glow);
     animation: pulse 1.0s infinite;
+    flex-shrink: 0;
 }
 
-/* Telemetry Widgets Grid */
+/* ==================== TELEMETRÍA / WIDGETS ==================== */
+
 .metrics-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -332,22 +574,28 @@ body {
 }
 
 .metric-card {
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid var(--agnux-panel-border);
-    border-radius: 10px;
-    padding: 12px;
+    background: color-mix(in srgb, var(--agnux-text-primary) 3%, transparent);
+    border: 1px solid color-mix(in srgb, var(--agnux-text-primary) 6%, transparent);
+    border-radius: 16px;
+    padding: 14px 12px;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
+    transition: border-color 0.3s ease, background 0.3s ease;
+}
+
+.metric-card:hover {
+    border-color: color-mix(in srgb, var(--agnux-accent) 35%, transparent);
+    background: color-mix(in srgb, var(--agnux-accent) 5%, transparent);
 }
 
 .metric-label {
-    font-size: 10px;
+    font-size: 9.5px;
     font-weight: 700;
-    letter-spacing: 0.5px;
+    letter-spacing: 1.6px;
     color: var(--agnux-text-secondary);
-    margin-bottom: 8px;
+    margin-bottom: 10px;
 }
 
 .metric-ring-container {
@@ -359,23 +607,28 @@ body {
 .ring-svg {
     width: 100%;
     height: 100%;
+    transform: rotate(-90deg);
 }
 
 .ring-bg {
     fill: none;
-    stroke: rgba(255, 255, 255, 0.06);
-    stroke-width: 2.8;
+    stroke: color-mix(in srgb, var(--agnux-text-secondary) 28%, transparent);
+    stroke-width: 2.4;
 }
 
 .ring-fill {
     fill: none;
-    stroke-width: 2.8;
+    stroke-width: 2.6;
     stroke-linecap: round;
-    transition: stroke-dasharray 0.5s ease;
+    transition: stroke-dasharray 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    filter: drop-shadow(0 0 4px var(--agnux-accent-glow));
 }
 
-.ring-fill.accent { stroke: var(--agnux-accent); }
-.ring-fill.secondary { stroke: #ff3366; }
+.ring-fill.accent    { stroke: var(--agnux-accent); }
+.ring-fill.secondary {
+    stroke: var(--agnux-accent-2, #22e0ff);
+    filter: drop-shadow(0 0 4px color-mix(in srgb, var(--agnux-accent-2, #22e0ff) 45%, transparent));
+}
 
 .metric-number {
     position: absolute;
@@ -384,6 +637,7 @@ body {
     transform: translate(-50%, -50%);
     font-size: 14px;
     font-weight: 700;
+    font-variant-numeric: tabular-nums;
 }
 
 .telemetry-info-list {
@@ -398,78 +652,118 @@ body {
     align-items: center;
     font-size: 12px;
     padding-bottom: 8px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+    border-bottom: 1px solid color-mix(in srgb, var(--agnux-text-primary) 5%, transparent);
 }
 
-.info-row .lbl {
-    color: var(--agnux-text-secondary);
-}
+.info-row .lbl { color: var(--agnux-text-secondary); }
+.info-row .val { font-weight: 600; font-variant-numeric: tabular-nums; }
 
-.info-row .val {
-    font-weight: 600;
+.badge-success, .badge-error, .badge-warning {
+    padding: 2px 9px;
+    border-radius: 12px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
 }
 
 .badge-success {
-    background: rgba(48, 209, 88, 0.15);
-    color: #30d158;
-    padding: 2px 8px;
-    border-radius: 12px;
-    font-size: 10px;
-    border: 1px solid rgba(48, 209, 88, 0.2);
+    background: rgba(52, 245, 162, 0.12);
+    color: #34f5a2;
+    border: 1px solid rgba(52, 245, 162, 0.25);
+    text-shadow: 0 0 8px rgba(52, 245, 162, 0.4);
 }
 
 .badge-error {
-    background: rgba(255, 69, 58, 0.15);
-    color: #ff453a;
-    padding: 2px 8px;
-    border-radius: 12px;
-    font-size: 10px;
-    border: 1px solid rgba(255, 69, 58, 0.2);
+    background: rgba(255, 84, 112, 0.12);
+    color: #ff5470;
+    border: 1px solid rgba(255, 84, 112, 0.25);
 }
 
 .badge-warning {
-    background: rgba(255, 159, 10, 0.15);
-    color: #ff9f0a;
-    padding: 2px 8px;
-    border-radius: 12px;
-    font-size: 10px;
-    border: 1px solid rgba(255, 159, 10, 0.2);
+    background: rgba(255, 194, 83, 0.12);
+    color: #ffc253;
+    border: 1px solid rgba(255, 194, 83, 0.25);
 }
 
-/* Bottom Spotlight Search Capsule */
+/* ================ SPOTLIGHT: EL PUENTE COGNITIVO ================
+   Único punto de entrada del sistema; el elemento héroe de la UI. */
+
 #spotlight-bar-container {
     position: fixed;
-    bottom: 96px;
+    bottom: 100px;
     left: 0;
     right: 0;
     display: flex;
     justify-content: center;
     z-index: 500;
+    animation: spotlight-rise 1s cubic-bezier(0.16, 1, 0.3, 1) 0.15s both;
+}
+
+@keyframes spotlight-rise {
+    from { transform: translateY(40px); opacity: 0; }
+    to   { transform: translateY(0); opacity: 1; }
 }
 
 #spotlight-bar {
-    width: 620px;
-    height: 52px;
-    background: var(--agnux-panel-bg);
+    position: relative;
+    width: 640px;
+    height: 56px;
+    background: color-mix(in srgb, var(--agnux-panel-solid) 68%, transparent);
     backdrop-filter: var(--agnux-panel-blur) saturate(180%);
-    border: 1px solid var(--agnux-panel-border);
-    border-radius: 26px;
+    border: 1px solid transparent;
+    border-radius: 28px;
     display: flex;
     align-items: center;
-    padding: 0 8px 0 20px;
-    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4), 0 0 1px var(--agnux-accent-border);
-    transition: box-shadow 0.3s ease, border-color 0.3s ease;
+    padding: 0 8px 0 22px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+    transition: box-shadow 0.4s ease, transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Anillo de gradiente perimetral, siempre encendido y giratorio */
+#spotlight-bar::before {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    border-radius: 29px;
+    padding: 1px;
+    background: conic-gradient(from var(--spot-angle, 0deg),
+        color-mix(in srgb, var(--agnux-accent) 65%, transparent),
+        color-mix(in srgb, var(--agnux-accent-2, #22e0ff) 50%, transparent),
+        transparent 40%,
+        color-mix(in srgb, var(--agnux-accent) 65%, transparent));
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    animation: spot-ring 6s linear infinite;
+    pointer-events: none;
+    opacity: 0.75;
+    transition: opacity 0.3s ease;
+}
+
+@property --spot-angle {
+    syntax: "<angle>";
+    initial-value: 0deg;
+    inherits: false;
+}
+
+@keyframes spot-ring {
+    to { --spot-angle: 360deg; }
 }
 
 #spotlight-bar:focus-within {
-    border-color: var(--agnux-accent);
-    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4), 0 0 15px var(--agnux-accent-glow);
+    transform: scale(1.015);
+    box-shadow: 0 20px 55px rgba(0, 0, 0, 0.55),
+                0 0 40px var(--agnux-accent-glow);
+}
+
+#spotlight-bar:focus-within::before {
+    opacity: 1;
 }
 
 .spotlight-icon {
-    font-size: 18px;
+    font-size: 17px;
     margin-right: 12px;
-    opacity: 0.7;
+    opacity: 0.75;
 }
 
 #spotlight-input {
@@ -480,52 +774,64 @@ body {
     color: var(--agnux-text-primary);
     font-size: 15px;
     font-weight: 400;
+    letter-spacing: 0.1px;
 }
 
 #spotlight-input::placeholder {
     color: var(--agnux-text-secondary);
-    opacity: 0.65;
+    opacity: 0.7;
 }
 
 #spotlight-send-btn {
-    height: 38px;
-    padding: 0 20px;
-    background: var(--agnux-accent);
+    height: 40px;
+    padding: 0 22px;
+    background: linear-gradient(120deg, var(--agnux-accent), var(--agnux-accent-dim));
     color: #ffffff;
     border: none;
     outline: none;
-    border-radius: 19px;
-    font-weight: 600;
+    border-radius: 20px;
+    font-weight: 700;
     font-size: 13px;
+    letter-spacing: 0.3px;
     cursor: pointer;
-    transition: background-color 0.2s ease, transform 0.1s ease;
+    box-shadow: 0 4px 16px var(--agnux-accent-glow);
+    transition: box-shadow 0.25s ease, transform 0.15s ease, filter 0.2s ease;
 }
 
 #spotlight-send-btn:hover {
-    background-color: var(--agnux-accent-dim);
+    filter: brightness(1.12);
+    box-shadow: 0 6px 24px var(--agnux-accent-glow);
 }
 
 #spotlight-send-btn:active {
-    transform: scale(0.96);
+    transform: scale(0.95);
 }
 
-/* MacOS Bottom Dock */
+/* ========================= DOCK FLOTANTE ========================= */
+
 #agnux-dock {
     position: fixed;
     bottom: 16px;
     left: 50%;
     transform: translateX(-50%);
-    height: 64px;
-    background: var(--agnux-panel-bg);
+    height: 66px;
+    background: color-mix(in srgb, var(--agnux-panel-solid) 52%, transparent);
     backdrop-filter: var(--agnux-panel-blur) saturate(180%);
-    border: 1px solid var(--agnux-panel-border);
-    border-radius: 20px;
+    border: var(--agnux-hairline);
+    border-radius: 22px;
     display: flex;
     align-items: center;
-    padding: 0 12px;
-    gap: 15px;
+    padding: 0 14px;
+    gap: 12px;
     z-index: 500;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45),
+                inset 0 1px 0 rgba(255, 255, 255, 0.07);
+    animation: dock-rise 1s cubic-bezier(0.16, 1, 0.3, 1) 0.3s both;
+}
+
+@keyframes dock-rise {
+    from { transform: translateX(-50%) translateY(90px); opacity: 0; }
+    to   { transform: translateX(-50%) translateY(0); opacity: 1; }
 }
 
 .dock-item {
@@ -536,74 +842,93 @@ body {
     justify-content: center;
     position: relative;
     cursor: pointer;
-    transition: transform 0.2s ease;
+    border-radius: 14px;
+    transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.2s ease;
 }
 
 .dock-item:hover {
-    transform: scale(1.22) translateY(-6px);
+    transform: scale(1.24) translateY(-8px);
+    background: color-mix(in srgb, var(--agnux-accent) 14%, transparent);
+}
+
+.dock-item:active {
+    transform: scale(1.05) translateY(-4px);
 }
 
 .dock-icon {
     font-size: 28px;
+    filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.4));
 }
 
 .dock-label {
     position: absolute;
-    bottom: 58px;
-    background: #1e1e24;
+    bottom: 60px;
+    background: rgba(3, 3, 8, 0.92);
     color: #ffffff;
     border: 1px solid var(--agnux-accent-border);
     font-size: 10px;
     font-weight: 700;
-    padding: 3px 8px;
-    border-radius: 6px;
+    letter-spacing: 0.4px;
+    padding: 4px 10px;
+    border-radius: 8px;
     white-space: nowrap;
     opacity: 0;
     pointer-events: none;
-    transition: opacity 0.15s ease;
+    transform: translateY(4px);
+    transition: opacity 0.18s ease, transform 0.18s ease;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
 }
 
 .dock-item:hover .dock-label {
     opacity: 1;
+    transform: translateY(0);
 }
 
-/* Utility states */
+/* ====================== ESTADOS Y UTILIDADES ====================== */
+
 .hidden {
     display: none !important;
 }
 
-/* Animations */
 @keyframes pulse {
-    0% { opacity: 0.4; }
-    50% { opacity: 1; }
+    0%   { opacity: 0.4; }
+    50%  { opacity: 1; }
     100% { opacity: 0.4; }
 }
 
-/* Superpowers Status Badge Styling (Mac Aero Blur + Glassmorphism) */
+/* =============== BADGE DE SUPERPOWERS (habilidades) =============== */
+
 .superpowers-status-badge {
     display: flex;
     align-items: center;
     gap: 8px;
-    background: linear-gradient(135deg, rgba(0, 113, 227, 0.2) 0%, rgba(255, 51, 102, 0.2) 100%);
+    background: linear-gradient(135deg,
+        color-mix(in srgb, var(--agnux-accent) 22%, transparent) 0%,
+        color-mix(in srgb, var(--agnux-accent-2, #22e0ff) 18%, transparent) 100%);
     backdrop-filter: blur(10px);
     padding: 4px 12px;
     border-radius: 20px;
-    border: 1px solid rgba(0, 113, 227, 0.35);
-    box-shadow: 0 0 12px rgba(0, 113, 227, 0.25);
+    border: 1px solid var(--agnux-accent-border);
+    box-shadow: 0 0 12px var(--agnux-accent-glow);
     animation: glow-pulse 2.5s infinite ease-in-out;
     transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .superpowers-status-badge.inactive {
-    opacity: 0.45;
-    background: rgba(255, 255, 255, 0.05);
-    border-color: rgba(255, 255, 255, 0.05);
+    opacity: 0.4;
+    background: rgba(255, 255, 255, 0.045);
+    border-color: rgba(255, 255, 255, 0.06);
     box-shadow: none;
     animation: none;
 }
 
+.superpowers-status-badge.inactive #superpowers-skill-name {
+    color: var(--agnux-text-secondary);
+    text-shadow: none;
+}
+
 .superpowers-status-badge.inactive .pulse-ring {
-    background-color: #8e8e93;
+    background-color: var(--agnux-text-secondary);
     box-shadow: none;
     animation: none;
 }
@@ -611,64 +936,55 @@ body {
 #superpowers-skill-name {
     font-size: 10px;
     font-weight: 700;
-    letter-spacing: 0.6px;
+    letter-spacing: 0.8px;
     text-transform: uppercase;
     color: #ffffff;
-    text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
 .pulse-ring {
     width: 6.5px;
     height: 6.5px;
-    background-color: #ff3366;
+    background: linear-gradient(135deg, var(--agnux-accent), var(--agnux-accent-2, #22e0ff));
     border-radius: 50%;
-    box-shadow: 0 0 10px #ff3366;
+    box-shadow: 0 0 10px var(--agnux-accent-glow);
     animation: pulse-ring-glow 1.5s infinite;
 }
 
 @keyframes glow-pulse {
-    0% {
-        box-shadow: 0 0 8px rgba(0, 113, 227, 0.2), 0 0 8px rgba(255, 51, 102, 0.2);
-        border-color: rgba(0, 113, 227, 0.3);
+    0%, 100% {
+        box-shadow: 0 0 8px var(--agnux-accent-glow);
+        border-color: var(--agnux-accent-border);
     }
     50% {
-        box-shadow: 0 0 18px rgba(0, 113, 227, 0.55), 0 0 18px rgba(255, 51, 102, 0.55);
-        border-color: rgba(255, 51, 102, 0.55);
-    }
-    100% {
-        box-shadow: 0 0 8px rgba(0, 113, 227, 0.2), 0 0 8px rgba(255, 51, 102, 0.2);
-        border-color: rgba(0, 113, 227, 0.3);
+        box-shadow: 0 0 20px var(--agnux-accent-glow),
+                    0 0 20px color-mix(in srgb, var(--agnux-accent-2, #22e0ff) 40%, transparent);
+        border-color: color-mix(in srgb, var(--agnux-accent-2, #22e0ff) 55%, transparent);
     }
 }
 
 @keyframes pulse-ring-glow {
-    0% {
-        transform: scale(0.95);
-        box-shadow: 0 0 0 0 rgba(255, 51, 102, 0.7);
-    }
-    70% {
-        transform: scale(1.1);
-        box-shadow: 0 0 0 6px rgba(255, 51, 102, 0);
-    }
-    100% {
-        transform: scale(0.95);
-        box-shadow: 0 0 0 0 rgba(255, 51, 102, 0);
-    }
+    0%   { transform: scale(0.95); box-shadow: 0 0 0 0 var(--agnux-accent-glow); }
+    70%  { transform: scale(1.1);  box-shadow: 0 0 0 6px transparent; }
+    100% { transform: scale(0.95); box-shadow: 0 0 0 0 transparent; }
 }
 
-/* Desktop Widget Styling (Flat Glassmorphism / Wallpaper Integration) */
+/* =============== WIDGETS DE ESCRITORIO (integrados) =============== */
+
 .desktop-widget {
     position: absolute;
-    background: rgba(0, 0, 0, 0.15) !important;
-    backdrop-filter: blur(5px) saturate(100%) !important;
-    border: 1px solid rgba(255, 255, 255, 0.05) !important;
-    border-radius: 20px;
+    background: color-mix(in srgb, var(--agnux-panel-solid) 30%, transparent) !important;
+    backdrop-filter: blur(8px) saturate(130%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.055) !important;
+    border-radius: 22px;
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    z-index: 5; /* Stays behind active windows (z-index 20/50) */
-    box-shadow: none !important; /* Flat design, integrated in wallpaper */
-    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease;
+    z-index: 5; /* Siempre detrás de las ventanas activas (z 20/50) */
+    box-shadow: none !important;
+    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+                opacity 0.2s ease, border-color 0.3s ease;
+    animation: window-spawn 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.2s both;
 }
 
 .telemetry-content {
@@ -681,8 +997,7 @@ body {
 }
 
 .desktop-widget:hover {
-    border-color: rgba(255, 255, 255, 0.08);
-    background: rgba(255, 255, 255, 0.025);
+    border-color: color-mix(in srgb, var(--agnux-accent) 25%, transparent) !important;
 }
 
 .widget-header {
@@ -698,59 +1013,62 @@ body {
 }
 
 .widget-title {
-    font-size: 11px;
+    font-size: 10.5px;
     font-weight: 700;
-    letter-spacing: 0.8px;
+    letter-spacing: 1.8px;
     color: var(--agnux-text-secondary);
     text-transform: uppercase;
     opacity: 0.85;
 }
 
-/* Dedicated Window Chat Inputs */
+/* ================ ENTRADAS DE CHAT EN VENTANAS ================ */
+
 .window-input-container {
     display: flex;
     gap: 8px;
     padding: 10px 14px;
-    background: rgba(0, 0, 0, 0.2);
-    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    background: color-mix(in srgb, var(--agnux-bg-color) 35%, transparent);
+    border-top: 1px solid color-mix(in srgb, var(--agnux-text-primary) 6%, transparent);
 }
 
 .window-input {
     flex: 1;
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 8px;
-    color: #ffffff;
-    padding: 8px 12px;
+    background: color-mix(in srgb, var(--agnux-text-primary) 6%, transparent);
+    border: 1px solid color-mix(in srgb, var(--agnux-text-primary) 9%, transparent);
+    border-radius: 10px;
+    color: var(--agnux-text-primary);
+    padding: 9px 13px;
     font-family: inherit;
     font-size: 12px;
     outline: none;
-    transition: border-color 0.2s, background 0.2s;
+    transition: border-color 0.25s, background 0.25s, box-shadow 0.25s;
 }
 
 .window-input:focus {
     border-color: var(--agnux-accent);
-    background: rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.07);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--agnux-accent) 18%, transparent);
 }
 
 .window-send-btn {
-    background: var(--agnux-accent);
+    background: linear-gradient(120deg, var(--agnux-accent), var(--agnux-accent-dim));
     border: none;
-    border-radius: 8px;
+    border-radius: 10px;
     color: #ffffff;
     padding: 8px 16px;
-    font-weight: 600;
+    font-weight: 700;
     cursor: pointer;
     font-size: 12px;
-    transition: background 0.2s, transform 0.1s;
+    transition: filter 0.2s, transform 0.1s, box-shadow 0.2s;
 }
 
 .window-send-btn:hover {
-    background: var(--agnux-accent-dim);
+    filter: brightness(1.12);
+    box-shadow: 0 3px 12px var(--agnux-accent-glow);
 }
 
 .window-send-btn:active {
-    transform: scale(0.97);
+    transform: scale(0.96);
 }
 
 .window-chat-log {
@@ -760,6 +1078,6 @@ body {
     flex-direction: column;
     gap: 12px;
     padding: 16px;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: var(--agnux-mono);
     font-size: 12px;
 }
