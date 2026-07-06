@@ -119,7 +119,7 @@ gantt
     Bootstrap y Hydration de Componentes:active, 4.2, 4.8
     
     section PySide6 + HTML5 v2.0
-    Iniciar Backend y X11              :done, 0, 0.6
+    Iniciar Backend y Wayland          :done, 0, 0.6
     Cargar local index.html en Qt      :done, 0.6, 0.8
 ```
 
@@ -198,7 +198,7 @@ graph TD
 
 ## 💿 Distribución Live USB Bare-Metal (Creación de la ISO)
 
-AGNUX OS v2.0 puede compilarse en una distribución autónoma autoinstalable basada en **KDE Neon**. El proceso de compilación empaqueta los drivers propietarios de NVIDIA, configura el gestor de inicio **SDDM** para iniciar directamente en la sesión gráfica de AGNUX (Openbox + PySide6 Shell) y precarga la imagen de Qdrant en formato tarball (`qdrant.tar`) para que funcione 100% sin conexión a Internet.
+AGNUX OS v2.0 puede compilarse en una distribución autónoma autoinstalable basada en **KDE Neon**. El proceso de compilación empaqueta los drivers propietarios de NVIDIA, configura el gestor de inicio **SDDM** para iniciar directamente en la sesión gráfica Wayland de AGNUX (compositor kiosco `cage` + PySide6 Shell) y precarga la imagen de Qdrant en formato tarball (`qdrant.tar`) para que funcione 100% sin conexión a Internet.
 
 1. Navega al directorio de compilación física:
    ```bash

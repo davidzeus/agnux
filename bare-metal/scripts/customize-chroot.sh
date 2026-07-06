@@ -13,9 +13,12 @@ echo "nameserver 8.8.8.8" >> /etc/resolv.conf
 # 1. Actualizar repositorios e instalar dependencias básicas
 apt-get update
 
-# Instalar herramientas gráficas, openbox y bibliotecas de PySide6
+# Instalar herramientas gráficas, el compositor Wayland cage y bibliotecas de PySide6
 apt-get install -y \
-    openbox \
+    cage \
+    libwayland-client0 \
+    libwayland-egl1 \
+    libxkbcommon0 \
     python3-pip \
     python3-venv \
     python3-pyside6.qtwebenginewidgets \
@@ -76,10 +79,10 @@ server {
 }
 EOF
 
-# 6. Crear la sesión gráfica X11 para "AGNUX OS" en SDDM
-echo "🎨 Registrando la sesión de escritorio de AGNUX..."
-mkdir -p /usr/share/xsessions
-cat << 'EOF' > /usr/share/xsessions/agnux.desktop
+# 6. Crear la sesión gráfica Wayland para "AGNUX OS" en SDDM
+echo "🎨 Registrando la sesión de escritorio Wayland de AGNUX..."
+mkdir -p /usr/share/wayland-sessions
+cat << 'EOF' > /usr/share/wayland-sessions/agnux.desktop
 [Desktop Entry]
 Name=AGNUX OS
 Comment=AGNUX OS Cognitive Shell v2.0
@@ -113,15 +116,18 @@ fi
 cd /opt/agnux/backend
 /opt/agnux/backend/venv/bin/python -m uvicorn main:app --port 8000 --host 127.0.0.1 > /tmp/agnux-backend.log 2>&1 &
 
-# Arrancar el gestor de ventanas openbox
-openbox &
-
 # Esperar a que el backend esté listo
 sleep 2.5
 
-# Lanzar el cliente gráfico PySide6 (bloquea la sesión de SDDM)
+# Entorno Qt para Wayland
+export QT_QPA_PLATFORM=wayland
+export QT_WAYLAND_DISABLE_WINDOWDECORATION=1
+export AGNUX_KIOSK=1
+
+# Lanzar el cliente gráfico PySide6 dentro del compositor Wayland cage
+# (cage bloquea la sesión de SDDM hasta que la shell termina)
 cd /opt/agnux/desktop
-/opt/agnux/backend/venv/bin/python shell.py > /tmp/agnux-desktop.log 2>&1
+exec cage -s -- /opt/agnux/backend/venv/bin/python shell.py > /tmp/agnux-desktop.log 2>&1
 EOF
 
 chmod +x /usr/local/bin/start-agnux-session.sh

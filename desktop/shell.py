@@ -43,10 +43,16 @@ class AgnuxShellWindow(QMainWindow):
 def launchShell():
     # Set environment variables for smooth Qt WebEngine rendering
     os.environ["QTWEBENGINE_DISABLE_SANDBOX"] = "1"
-    
+
     app = QApplication(sys.argv)
     window = AgnuxShellWindow()
-    window.show()
+    # AGNUX_KIOSK=1 lo exporta el lanzador de sesión Wayland (cage):
+    # la shell ocupa toda la pantalla; sin la variable queda en modo
+    # ventana para desarrollo sobre cualquier escritorio.
+    if os.environ.get("AGNUX_KIOSK") == "1":
+        window.showFullScreen()
+    else:
+        window.show()
     sys.exit(app.exec())
 
 if __name__ == "__main__":
