@@ -32,7 +32,8 @@
       <img src="https://img.shields.io/badge/PayPal-00457C?style=flat-square&logo=paypal&logoColor=white" alt="PayPal"/>
     </a>
     <img src="https://img.shields.io/badge/Estado-Listo_para_Producción-00ff66?style=flat-square" alt="Estado"/>
-    <img src="https://img.shields.io/badge/Visuales-Glassmorphism_%2B_Aero_Blur-blue?style=flat-square" alt="Diseño Visual"/>
+    <img src="https://img.shields.io/badge/Sesión-Wayland_%2B_cage-9f7aff?style=flat-square" alt="Wayland"/>
+    <img src="https://img.shields.io/badge/Visuales-Neural_Vanguard-blue?style=flat-square" alt="Diseño Visual"/>
   </p>
 
   <br/>
@@ -60,18 +61,29 @@ Los sistemas operativos y entornos de escritorio tradicionales fueron diseñados
 
 ## ⚡ Características Principales y "Superpoderes"
 
-### 1. Sistema de Superpoderes (Dynamic Tool Generation)
-Cuando el usuario solicita una tarea para la cual AGNUX no tiene una herramienta registrada (por ejemplo, abrir una calculadora personalizada, decodificar un formato de archivo extraño, emular un navegador ligero para abrir Netflix o inspeccionar un puerto de red), el sistema ejecuta su **pipeline de autogeneración**:
-* **Generación de código:** El orquestador escribe un script ejecutable en Python.
-* **Sandbox de Seguridad:** El script se ejecuta de manera aislada dentro de un contenedor Docker (`core/sandbox.py`) con recursos limitados para verificar que su ejecución sea segura y exitosa.
-* **Inyección en Caliente:** Tras pasar la verificación, el script se registra dinámicamente en el Kernel como una nueva herramienta ejecutable (`dynamicTools/`) y se ejecuta inmediatamente devolviendo el resultado al entorno de usuario.
+El Kernel resuelve cada intención en lenguaje natural siguiendo una **estrategia de resolución en 3 niveles**: 1) usar una herramienta existente o una aplicación del host (abrir el navegador en una URL, redactar un documento y abrirlo en el editor, lanzar apps); 2) materializar la respuesta como **interfaz visual generada** (paneles, tablas, dashboards); 3) si ninguna herramienta puede resolverlo, **forjarse una a sí mismo**.
+
+### 1. Sistema de Superpoderes (Self-Forge: Dynamic Tool Generation)
+Cuando el usuario solicita una tarea para la cual AGNUX no tiene una herramienta registrada, el Kernel ejecuta su **pipeline de autogeneración** (`crearHerramienta`):
+* **Generación de código + casos de prueba:** El orquestador escribe la función en Python junto a una batería de pruebas con `assert` sobre casos reales.
+* **Autoprueba en Sandbox:** Definición y pruebas se ejecutan aisladas en un contenedor Docker (`core/sandbox.py`) sin acceso a red y con CPU/RAM limitadas. Si la autoprueba falla, la herramienta se **rechaza** y el agente recibe la salida del sandbox para corregir e iterar.
+* **Inyección en Caliente:** Solo el código aprobado se inyecta en `backend/dynamicTools/` y se registra de inmediato en el arsenal del agente (`core/dynamicToolsLoader.py`), quedando invocable en ese mismo turno y en cada arranque posterior del Kernel.
 * **Créditos y Origen:** El concepto y arquitectura de este sistema de autogeneración de herramientas dinámicas está inspirado en el proyecto **Superpowers** creado por **Jesse Vincent** ([github.com/obra/superpowers](https://github.com/obra/superpowers)).
+
+### 1.b Interfaz Generativa e Interactiva (Generative UI)
+El Kernel no responde solo con texto: **materializa interfaces**. Mediante la herramienta `crearVentana` emite el evento `CREATE-WINDOW` con **HTML libre** que se renderiza como una ventana de cristal nativa del shell:
+* **Integración automática al tema:** El HTML generado hereda la identidad visual activa (tablas, barras de progreso, formularios y botones estilizados con las variables `--agnux-*`), en cualquier tema del Style Engine.
+* **Actualización en vivo:** Reutilizando el mismo `ventanaId`, la IA refresca el contenido de una ventana abierta sin cerrarla (paneles de telemetría vivos).
+* **Interactividad por intents (`data-intent`):** Cualquier botón, fila o tarjeta con `data-intent="petición en lenguaje natural"` dispara ese intent de vuelta al Kernel al hacer click, como si el usuario lo hubiera escrito. Los placeholders `{campo}` se interpolan con los valores de los inputs de la misma ventana — formularios funcionales sin una línea de JavaScript. El ciclo completo: *la IA crea la interfaz → el usuario la toca → el intent vuelve a la IA → la IA actualiza la interfaz*.
+* **Saneamiento:** Los `<script>` se eliminan del HTML generado antes de insertarse en el DOM.
 
 ### 2. Motor de Estilos Semántico (Semantic Style Engine)
 La estética de AGNUX no es fija. A través de consultas semánticas, el usuario puede pedir cambios visuales como *"Quiero un estilo cyberpunk con tonos neón violeta y bordes redondeados translúcidos"*. El agente de estilos de IA:
 * Diseña y valida una hoja de estilos CSS en tiempo real.
 * Inyecta el bloque CSS dinámicamente en el DOM del frontend en menos de **5ms** mediante Server-Sent Events (SSE).
 * Almacena las configuraciones vectorizadas en la base de datos de recuerdos de Qdrant.
+
+La identidad visual por defecto, **"Neural Vanguard"**, expresa el concepto cognitivo: un fondo aurora vivo que deriva lentamente, ventanas de cristal profundo con halo de acento al enfocar, una Hyperisland con shimmer perimetral permanente y el Spotlight como elemento héroe con anillo de gradiente giratorio. **Todo el diseño deriva de las variables `--agnux-*` vía `color-mix`**, por lo que un `SET-THEME` del Style Engine retematiza el 100% de la interfaz — aurora incluida — sin tocar una línea de CSS estructural.
 
 ### 3. Memoria Episódica y Semántica (Hybrid Memory Hub)
 * **Memoria a Corto Plazo (Conversacional):** Historial de sesión de chat almacenado en una base SQLite local (`agnux.db` / `local.db`).
@@ -139,27 +151,33 @@ gantt
 
 ```mermaid
 graph TD
-    UI[PySide6 Shell + QWebEngineView] <-->|Slots Nativos & SSE| Backend[FastAPI Gateway]
+    Cage[Compositor Wayland cage - kiosco] --> UI[PySide6 Shell + QWebEngineView]
+    UI <-->|SSE: TEXT-CHUNK / SET-THEME / CREATE-WINDOW| Backend[FastAPI Gateway]
+    UI -->|Intents: Spotlight + data-intent| Backend
     Backend <-->|Agno Agentic Engine| Orchestrator[Intent Orchestrator]
     Orchestrator <-->|Style Queries| StyleEngine[Style Engine Agent]
     Orchestrator <-->|Vector Memory| Qdrant[(Qdrant Vector DB)]
     Orchestrator <-->|Chat Logs & State| SQLite[(SQLite local.db)]
-    Orchestrator <-->|Dynamic Code Test| Sandbox[Docker Sandbox Container]
-    Orchestrator <-->|System Calls| HostOS[Host OS Linux]
+    Orchestrator -->|Autoprueba| Sandbox[Docker Sandbox Container]
+    Sandbox -->|Aprobada: inyección en caliente| DynamicTools[dynamicTools/ autogeneradas]
+    DynamicTools --> Orchestrator
+    Orchestrator <-->|System Calls: apps, docs, navegador| HostOS[Host OS Linux]
 ```
 
 ---
 
 ## 📁 Estructura del Repositorio
 
-* **`desktop/`**: Contiene `shell.py`, el script en PySide6 que inicializa la ventana del escritorio sin bordes y expone el puente de comunicación nativo hacia el frontend.
+* **`desktop/`**: Contiene `shell.py`, el shell en PySide6 que carga el frontend en un `QWebEngineView`. Bajo la sesión Wayland corre a pantalla completa como kiosco (`AGNUX_KIOSK=1`); sin esa variable arranca en modo ventana para desarrollo sobre cualquier escritorio.
 * **`backend/`**: El core cognitivo desarrollado en FastAPI.
   * `main.py`: Punto de entrada de la API.
-  * `core/tools.py`: Definición de herramientas del sistema (manipulación de archivos, ejecución de comandos, consulta de hardware).
+  * `core/tools.py`: Herramientas del sistema (navegador, documentos con editor, ventanas generativas, notificaciones, sandbox, autogeneración con `crearHerramienta`).
   * `core/sandbox.py`: Interfaz para instanciar contenedores Docker y validar código generado en caliente.
+  * `core/dynamicToolsLoader.py`: Cargador que registra las herramientas autogeneradas de `dynamicTools/` al arrancar y tras cada inyección.
+  * `dynamicTools/`: Herramientas forjadas por el propio Kernel tras aprobar su autoprueba en el sandbox.
   * `services/orchestrator.py`: Lógica de agentes utilizando el framework Agno.
-* **`frontend/`**: La interfaz gráfica del escritorio basada en HTML5, CSS3 translúcido (efectos Aero Glassmorphic) y Vanilla JS.
-* **`bare-metal/`**: Herramientas y scripts para la generación de la distribución autónoma del sistema operativo en formato ISO (remasterización sobre base KDE Neon).
+* **`frontend/`**: La interfaz gráfica del escritorio basada en HTML5, CSS3 y Vanilla JS con la identidad "Neural Vanguard" (aurora viva, cristal profundo, superficies HTML generativas e intents `data-intent`).
+* **`bare-metal/`**: Herramientas y scripts para la generación de la distribución autónoma del sistema operativo en formato ISO (remasterización sobre base KDE Neon), con sesión gráfica **100% Wayland** (compositor kiosco `cage`, sin Xorg) registrada en SDDM.
 
 ---
 
@@ -193,6 +211,10 @@ graph TD
    cd ../desktop
    python3 shell.py
    ```
+   En un escritorio de desarrollo se abre en modo ventana (1280×800). Para reproducir la experiencia kiosco de la ISO en cualquier equipo con Wayland:
+   ```bash
+   QT_QPA_PLATFORM=wayland AGNUX_KIOSK=1 cage -s -- python3 shell.py
+   ```
 
 ---
 
@@ -219,7 +241,11 @@ AGNUX OS v2.0 puede compilarse en una distribución autónoma autoinstalable bas
 Elegimos **KDE Neon (User Edition)** como la distribución base para remasterizar la ISO de AGNUX por tres razones técnicas fundamentales:
 1. **Base Ubuntu LTS (Noble):** Ofrece máxima estabilidad a largo plazo, compatibilidad universal con binarios de Linux, paquetería Debian nativa y soporte directo y robusto para controladores de tarjetas gráficas NVIDIA y CUDA.
 2. **Ecosistema Qt Nativo y Moderno:** KDE Neon proporciona por defecto las librerías compartidas de Qt más actualizadas. Como la interface gráfica de AGNUX está construida en **PySide6** (el puente oficial de Qt6 para Python), la compatibilidad binaria es del 100% y el rendimiento gráfico es óptimo, evitando empaquetar librerías extra que aumentarían el peso de la ISO.
-3. **Gestión de Sesión con SDDM:** Emplea SDDM como display manager por defecto. Esto nos facilitó interceptar la inicialización gráfica en el live boot para forzar el autologin de forma modular y cargar nuestra sesión de usuario `agnux.desktop` y scripts de preparación de permisos sin alterar el instalador principal.
+3. **Gestión de Sesión con SDDM:** Emplea SDDM como display manager por defecto. Esto nos facilitó interceptar la inicialización gráfica en el live boot para forzar el autologin de forma modular y cargar nuestra sesión de usuario `agnux.desktop` (registrada en `/usr/share/wayland-sessions/`) y scripts de preparación de permisos sin alterar el instalador principal.
+
+### 🖥️ Stack gráfico: Wayland + cage (sin Xorg)
+
+La sesión de AGNUX corre **100% sobre Wayland** usando **`cage`**, un compositor kiosco minimalista de la familia wlroots: la shell PySide6 es la única superficie, a pantalla completa, sin gestor de ventanas visible. Beneficios directos frente al stack X11/Openbox anterior: **cero tearing** (cada frame llega completo), escalado HiDPI correcto, menor superficie de ataque y arranque más simple (un solo proceso compositor). El plugin Qt `wayland` viene incluido en PySide6, y las aplicaciones del host que la IA lanza (editor, explorador, terminal) se abren como superficies Wayland encima del kiosco. En equipos con NVIDIA, si la primera inicialización muestra pantalla negra, habilitar `nvidia-drm.modeset=1` en la línea de kernel de GRUB.
 
 ---
 
