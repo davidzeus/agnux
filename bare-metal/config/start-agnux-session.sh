@@ -31,15 +31,17 @@ echo "🐍 [AGNUX LAUNCHER] Arrancando servidor Python backend..."
 cd /opt/agnux/backend
 /opt/agnux/backend/venv/bin/python -m uvicorn main:app --port 8000 --host 127.0.0.1 > /tmp/agnux-backend.log 2>&1 &
 
-# Arrancar el gestor de ventanas openbox (en segundo plano)
-echo "🎨 [AGNUX LAUNCHER] Iniciando gestor de ventanas Openbox..."
-openbox &
-
 # Esperar a que el backend de Uvicorn responda
 echo "⏳ [AGNUX LAUNCHER] Esperando inicialización de la API..."
 sleep 3.5
 
-# Lanzar el cliente gráfico PySide6 (bloquea la sesión de SDDM)
-echo "🖥️ [AGNUX LAUNCHER] Lanzando interface cognitiva shell..."
+# Entorno Qt para Wayland
+export QT_QPA_PLATFORM=wayland
+export QT_WAYLAND_DISABLE_WINDOWDECORATION=1
+export AGNUX_KIOSK=1
+
+# Lanzar el cliente gráfico PySide6 dentro del compositor Wayland cage
+# (cage bloquea la sesión de SDDM hasta que la shell termina; -s habilita VT switching)
+echo "🖥️ [AGNUX LAUNCHER] Lanzando interface cognitiva shell sobre Wayland (cage)..."
 cd /opt/agnux/desktop
-/opt/agnux/backend/venv/bin/python shell.py > /tmp/agnux-desktop.log 2>&1
+exec cage -s -- /opt/agnux/backend/venv/bin/python shell.py > /tmp/agnux-desktop.log 2>&1

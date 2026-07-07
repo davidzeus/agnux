@@ -39,8 +39,12 @@ from core.tools import (
     useSkill,
     openWebBrowser,
     ejecutarCodigoPython,
-    crearArchivo
+    crearArchivo,
+    crearVentana,
+    crearDocumento,
+    crearHerramienta
 )
+from core.dynamicToolsLoader import cargarHerramientasDinamicas
 
 # Active fallbacks memory
 pendingFallbacks = {}
@@ -59,8 +63,28 @@ agnuxTools = [
     useSkill,
     openWebBrowser,
     ejecutarCodigoPython,
-    crearArchivo
+    crearArchivo,
+    crearVentana,
+    crearDocumento,
+    crearHerramienta
 ]
+
+def registrarHerramientasDinamicas():
+    """
+    Fusiona las herramientas autogeneradas (dynamicTools/) en el arsenal del
+    agente. Se llama al arrancar y cada vez que crearHerramienta inyecta una
+    nueva, para que quede invocable sin reiniciar el Kernel.
+    """
+    indicePorNombre = {t.__name__: i for i, t in enumerate(agnuxTools)}
+    for funcion in cargarHerramientasDinamicas():
+        if funcion.__name__ in indicePorNombre:
+            agnuxTools[indicePorNombre[funcion.__name__]] = funcion
+        else:
+            agnuxTools.append(funcion)
+            indicePorNombre[funcion.__name__] = len(agnuxTools) - 1
+
+# Carga inicial de herramientas autogeneradas en arranque del Kernel
+registrarHerramientasDinamicas()
 
 def normalizarId(rawId: str) -> str:
     return rawId.strip().lower().replace("_", "-")
@@ -190,6 +214,19 @@ async def _despacharSystemTool(toolName: str, toolArgs: dict, userId: str) -> tu
             contenido = toolArgs.get("contenido", "")
             res = crearArchivo(path, contenido)
             return "", res
+        elif toolName == "crearVentana":
+            res = crearVentana(
+                toolArgs.get("titulo", ""),
+                toolArgs.get("htmlContenido", ""),
+                toolArgs.get("ventanaId", "")
+            )
+            return f"event: CREATE-WINDOW\ndata: {res}\n\n", "Ventana materializada en el escritorio."
+        elif toolName == "crearHerramienta":
+            # El agente ya ejecutó la tool (sandbox + inyección); aquí solo
+            # recargamos el arsenal para que la herramienta nueva sea
+            # invocable de inmediato. No se re-ejecuta la autoprueba.
+            registrarHerramientasDinamicas()
+            return "", ""
     except Exception as e:
         kernelLogger.error(f"Error despachando tool {toolName}: {e}")
     return "", ""
@@ -522,9 +559,30 @@ async def procesarGeneradorEventos(payload, isGoogleConnected: bool):
             # 4. Standard conversational flow
             superpowersPrompt = obtenerPromptSuperpowers()
             systemPrompt = f"""
-            You are the Core Kernel of AGNUX OS. You execute tools in response to user requests.
-            Ensure all user IDs and properties use kebab-case. 
+            You are the Core Kernel of AGNUX OS: the user states an intent in natural
+            language and YOU solve it end to end, acting on the real system.
+            Ensure all user IDs and properties use kebab-case.
             All Python code and variables you write/expose must strictly use camelCase.
+
+            RESOLUTION STRATEGY (in order):
+            1. If an available tool solves the intent, invoke it directly. Examples:
+               navigate the web -> openWebBrowser (auto-installs a browser if missing);
+               write/redact a document -> generate the full text yourself and pass it
+               to crearDocumento (saves it and opens it in a graphical editor);
+               open host apps -> openSystemApp; run/verify code -> ejecutarCodigoPython.
+            2. For panels, dashboards, tables, reports, forms or any visual answer,
+               materialize a window with 'crearVentana' passing free HTML (no <script>);
+               reuse the same ventanaId to live-update a window you already created.
+               Make windows interactive: data-intent="natural language request" on
+               buttons/rows/cards fires that request back to you on click, and
+               {inputName} placeholders inside it interpolate form values from the
+               same window (e.g. <button data-intent="convertir {monto} dólares">).
+            3. If NO tool can solve the intent, FORGE ONE: call 'crearHerramienta' with
+               the function code plus assert-based test cases. It self-tests in the
+               isolated Docker sandbox and, only if the tests pass, injects the tool
+               into the system, making it available immediately — then invoke it to
+               finish the task. If the self-test fails, fix the code and retry.
+            Prefer solving over explaining: the user wants the result, not instructions.
             
             Available tools:
             {json.dumps([t.__name__ for t in agnuxTools])}

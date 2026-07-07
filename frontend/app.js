@@ -10,8 +10,40 @@ document.addEventListener("DOMContentLoaded", () => {
     inicializarSpotlight();
     comenzarMonitoreoTelemetry();
     inicializarInputsVentanas();
+    inicializarIntentsDeVentanas();
     conectarWebSocketNotificaciones("terminal-default", "user-default");
 });
+
+// Intent dispatch desde ventanas generadas por la IA: cualquier elemento con
+// data-intent="..." dentro de una superficie HTML dispara ese intent en
+// lenguaje natural de vuelta al Kernel al hacer click. Los placeholders
+// {campo} se interpolan con el valor del input/select/textarea de la misma
+// ventana cuyo name o id coincida. Delegación única: cubre ventanas futuras.
+function inicializarIntentsDeVentanas() {
+    const desktop = document.getElementById("agnux-desktop");
+    desktop.addEventListener("click", (e) => {
+        const el = e.target.closest("[data-intent]");
+        if (!el) return;
+        const surface = el.closest(".window-html-content");
+        if (!surface) return; // solo dentro de HTML generado por la IA
+
+        let intent = (el.getAttribute("data-intent") || "").trim();
+        if (!intent) return;
+
+        intent = intent.replace(/\{([a-zA-Z][\w-]*)\}/g, (marca, campo) => {
+            const input = surface.querySelector(
+                `[name="${CSS.escape(campo)}"], #${CSS.escape(campo)}`
+            );
+            return input && "value" in input ? input.value : marca;
+        });
+
+        // Feedback visual de disparo
+        el.classList.add("intent-fired");
+        setTimeout(() => el.classList.remove("intent-fired"), 600);
+
+        enviarPromptAlKernel(intent, "win-console");
+    });
+}
 
 // WebSocket Client for Hyperisland Notifications
 let notificationSocket = null;
@@ -117,8 +149,12 @@ function inicializarArrastreVentanas() {
                 document.querySelectorAll(".desktop-widget").forEach(w => w.style.zIndex = 5);
                 activeWindow.style.zIndex = 8;
             } else {
-                document.querySelectorAll(".agnux-window").forEach(w => w.style.zIndex = 20);
+                document.querySelectorAll(".agnux-window").forEach(w => {
+                    w.style.zIndex = 20;
+                    w.classList.remove("win-focused");
+                });
                 activeWindow.style.zIndex = 50;
+                activeWindow.classList.add("win-focused");
             }
             
             const rect = activeWindow.getBoundingClientRect();
@@ -156,7 +192,15 @@ function detenerArrastre() {
 // Window actions
 function closeWindow(id) {
     const win = document.getElementById(id);
-    if (win) win.classList.add("hidden");
+    if (win) {
+        win.style.transform = "scale(0.92)";
+        win.style.opacity = "0";
+        setTimeout(() => {
+            win.classList.add("hidden");
+            win.style.transform = "";
+            win.style.opacity = "";
+        }, 200);
+    }
 }
 
 function minimizeWindow(id) {
@@ -175,6 +219,10 @@ function openWindow(id) {
             win.classList.remove("hidden");
             win.style.transform = "scale(1)";
             win.style.opacity = "1";
+            // Re-disparar la animación de aparición (window-spawn)
+            win.style.animation = "none";
+            void win.offsetWidth;
+            win.style.animation = "";
             if (win.classList.contains("desktop-widget")) {
                 win.style.zIndex = 5;
             } else {
@@ -448,45 +496,66 @@ function aplicarCSSDinamico(cssCode) {
     styleTag.innerHTML = cssCode;
 }
 
-// 7. Dynamic Window Builder
+// Sanitizes free AI-generated HTML: strips <script> so nothing executes
+// outside the kernel's control (styles and inline markup remain intact).
+function sanitizarHTMLLibre(html) {
+    const tpl = document.createElement("template");
+    tpl.innerHTML = html;
+    tpl.content.querySelectorAll("script").forEach(s => s.remove());
+    return tpl.content;
+}
+
+// Cascading spawn position so AI windows don't stack exactly on top of each other
+let ventanasDinamicasCreadas = 0;
+
+// 7. Dynamic Window Builder — supports free AI-generated HTML (windowSpec.html)
+// or a chat-context window (windowSpec.content) as fallback.
 function crearVentanaDinamica(windowSpec) {
     const desktop = document.getElementById("agnux-desktop");
     const winId = windowSpec["window-id"] || `win-${Date.now()}`;
-    
-    // Check if already exists
+    const esHTML = typeof windowSpec.html === "string" && windowSpec.html.trim() !== "";
+
+    // Check if already exists → live update
     if (document.getElementById(winId)) {
         const win = document.getElementById(winId);
         const titleEl = win.querySelector(".window-title");
-        const logEl = win.querySelector(".window-chat-log");
         if (titleEl) titleEl.textContent = windowSpec.title || "Ventana de Agnux";
-        if (logEl) {
-            const newMsg = document.createElement("div");
-            newMsg.className = "message system-msg";
-            newMsg.innerHTML = `<span class="sender">AGNUX:</span><p>${windowSpec.content || ""}</p>`;
-            logEl.appendChild(newMsg);
+
+        if (esHTML) {
+            let htmlBody = win.querySelector(".window-html-content");
+            if (!htmlBody) {
+                // Was a chat window: convert its body to a free HTML surface
+                const content = win.querySelector(".window-content");
+                content.innerHTML = `<div class="window-html-content"></div>`;
+                htmlBody = content.querySelector(".window-html-content");
+            }
+            htmlBody.replaceChildren(sanitizarHTMLLibre(windowSpec.html));
+        } else {
+            const logEl = win.querySelector(".window-chat-log");
+            if (logEl) {
+                const newMsg = document.createElement("div");
+                newMsg.className = "message system-msg";
+                newMsg.innerHTML = `<span class="sender">AGNUX:</span><p>${windowSpec.content || ""}</p>`;
+                logEl.appendChild(newMsg);
+            }
         }
-        openWindow(winId);
+        // openWindow togglea: solo re-mostrar si estaba oculta
+        if (win.classList.contains("hidden")) openWindow(winId);
         return;
     }
-    
+
     const win = document.createElement("div");
     win.id = winId;
     win.className = "agnux-window";
-    win.style.top = "200px";
-    win.style.left = "300px";
-    win.style.width = "480px";
-    win.style.height = "360px";
-    
-    win.innerHTML = `
-        <div class="window-header">
-            <div class="window-controls">
-                <span class="control-dot close" onclick="document.getElementById('${winId}').remove()"></span>
-                <span class="control-dot minimize" onclick="minimizeWindow('${winId}')"></span>
-                <span class="control-dot expand" onclick="maximizeWindow('${winId}')"></span>
-            </div>
-            <span class="window-title">${windowSpec.title || "Ventana de Agnux"}</span>
-        </div>
-        <div class="window-content" style="display: flex; flex-direction: column; height: calc(100% - 38px); padding: 0;">
+    const offset = (ventanasDinamicasCreadas++ % 6) * 32;
+    win.style.top = `${140 + offset}px`;
+    win.style.left = `${320 + offset}px`;
+    win.style.width = esHTML ? "560px" : "480px";
+    win.style.height = esHTML ? "440px" : "360px";
+
+    const cuerpoVentana = esHTML
+        ? `<div class="window-html-content"></div>`
+        : `
             <div class="window-chat-log">
                 <div class="message system-msg">
                     <span class="sender">AGNUX:</span>
@@ -500,26 +569,46 @@ function crearVentanaDinamica(windowSpec) {
                 <input type="text" class="window-input" placeholder="Escribe en este contexto..." autocomplete="off">
                 <button class="window-send-btn">Enviar</button>
             </div>
+        `;
+
+    win.innerHTML = `
+        <div class="window-header">
+            <div class="window-controls">
+                <span class="control-dot close" onclick="document.getElementById('${winId}').remove()"></span>
+                <span class="control-dot minimize" onclick="minimizeWindow('${winId}')"></span>
+                <span class="control-dot expand" onclick="maximizeWindow('${winId}')"></span>
+            </div>
+            <span class="window-title">${windowSpec.title || "Ventana de Agnux"}</span>
+        </div>
+        <div class="window-content" style="display: flex; flex-direction: column; height: calc(100% - 40px); padding: 0;">
+            ${cuerpoVentana}
         </div>
     `;
-    
+
+    if (esHTML) {
+        win.querySelector(".window-html-content")
+           .replaceChildren(sanitizarHTMLLibre(windowSpec.html));
+    }
+
     desktop.appendChild(win);
     inicializarArrastreVentanas();
-    
-    // Wire up events for this new dynamic window's input
-    const input = win.querySelector(".window-input");
-    const btn = win.querySelector(".window-send-btn");
-    const enviarMsg = () => {
-        const text = input.value.trim();
-        if (text) {
-            enviarPromptAlKernel(text, winId);
-            input.value = "";
-        }
-    };
-    btn.addEventListener("click", enviarMsg);
-    input.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") enviarMsg();
-    });
+
+    if (!esHTML) {
+        // Wire up events for this new dynamic window's chat input
+        const input = win.querySelector(".window-input");
+        const btn = win.querySelector(".window-send-btn");
+        const enviarMsg = () => {
+            const text = input.value.trim();
+            if (text) {
+                enviarPromptAlKernel(text, winId);
+                input.value = "";
+            }
+        };
+        btn.addEventListener("click", enviarMsg);
+        input.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") enviarMsg();
+        });
+    }
 }
 
 // 8. Periodic Hardware Telemetry Polling

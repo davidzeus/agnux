@@ -7,10 +7,14 @@ set -e
 echo "🟩 [AGNUX BOOTSTRAP] Iniciando aprovisionamiento del sistema operativo..."
 
 # 1. Actualizar repositorios e instalar dependencias gráficas y de sistema base
+# (stack gráfico 100% Wayland: compositor kiosco cage, sin Xorg)
 sudo apt-get update && sudo apt-get upgrade -y
 sudo apt-get install -y \
-    xorg \
-    openbox \
+    cage \
+    libwayland-client0 \
+    libwayland-egl1 \
+    libwayland-server0 \
+    libxkbcommon0 \
     python3-pip \
     python3-venv \
     curl \
@@ -19,20 +23,9 @@ sudo apt-get install -y \
     nginx \
     libgl1-mesa-glx \
     libegl1-mesa \
-    libxrender1 \
-    libxcomposite1 \
-    libxcursor1 \
-    libxdamage1 \
-    libxext6 \
-    libxfixes3 \
-    libxi6 \
-    libxrandr2 \
-    libxtst6 \
     libasound2 \
     libnss3 \
     libnspr4 \
-    libxcb1 \
-    libxkbcommon-x11-0 \
     libfontconfig1 \
     libdbus-1-3
 
@@ -93,11 +86,20 @@ server {
 EOF
 sudo systemctl restart nginx
 
-# 5. Configurar el inicio automático de X11 sin entorno GNOME/KDE
-echo "🎨 [AGNUX CORE] Configurando sesión gráfica minimalista (Modo Kiosco)..."
-mkdir -p ~/.config/openbox
-cp /opt/agnux/bare-metal/config/openbox-autostart ~/.config/openbox/autostart
-chmod +x ~/.config/openbox/autostart
+# 5. Configurar el inicio automático de la sesión Wayland sin entorno GNOME/KDE
+echo "🎨 [AGNUX CORE] Configurando sesión gráfica Wayland minimalista (Modo Kiosco con cage)..."
+sudo install -m 755 /opt/agnux/bare-metal/config/agnux-wayland-session /usr/local/bin/agnux-wayland-session
+
+# Autoarranque del kiosco al loguearse en la consola tty1 (sin display manager)
+if ! grep -q "agnux-wayland-session" ~/.bash_profile 2>/dev/null; then
+    cat << 'EOF' >> ~/.bash_profile
+
+# AGNUX OS: lanzar la sesión gráfica Wayland automáticamente en tty1
+if [ -z "$WAYLAND_DISPLAY" ] && [ "$(tty)" = "/dev/tty1" ]; then
+    exec /usr/local/bin/agnux-wayland-session
+fi
+EOF
+fi
 
 # 6. Crear entorno virtual del backend e instalar requerimientos
 echo "🐍 [AGNUX CORE] Configurando entorno virtual de python..."

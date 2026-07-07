@@ -1,0 +1,21 @@
+#!/bin/bash
+# Lanzador de sesión Wayland para AGNUX v2.0 (Modo Kiosco con cage)
+# Reemplaza al antiguo autostart de Openbox/X11.
+
+# Esperar a que Nginx proxy exponga el puerto 8000
+sleep 3
+
+# Entorno Qt para Wayland
+export QT_QPA_PLATFORM=wayland
+export QT_WAYLAND_DISABLE_WINDOWDECORATION=1
+export AGNUX_KIOSK=1
+
+# Lanzar el Shell Nativo en PySide6 dentro del compositor kiosco cage.
+# cage bloquea hasta que la app termina; -s habilita el cambio de VT (rescate).
+if [ -f "/opt/agnux/desktop/shell.py" ]; then
+    exec cage -s -- /opt/agnux/backend/venv/bin/python /opt/agnux/desktop/shell.py
+else
+    # Fallback a Chromium Kiosk (nativo Wayland vía Ozone)
+    exec cage -s -- chromium-browser --kiosk --incognito --noerrdialogs \
+        --disable-infobars --ozone-platform=wayland http://localhost:80
+fi

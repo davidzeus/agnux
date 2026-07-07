@@ -1,8 +1,9 @@
 import json
 import os
+import re
 import subprocess
 import webbrowser
-from core.config import kernelLogger
+from core.config import kernelLogger, dynamicToolsDir
 from core.sandbox import evaluarCodigoSandbox
 
 def asegurarPaquete(paquete: str) -> bool:
@@ -162,6 +163,153 @@ def crearArchivo(path: str, contenido: str) -> str:
     except Exception as e:
         kernelLogger.error(f"Error creando archivo {path}: {e}")
         return f"Error creando archivo: {e}"
+
+def crearDocumento(nombreArchivo: str, contenido: str) -> str:
+    """
+    Crea un documento de texto con el contenido dado y lo abre inmediatamente
+    en un editor gráfico del sistema para que el usuario lo vea y lo edite.
+    Úsala cuando el usuario pida redactar, escribir o crear un documento,
+    carta, informe, nota o texto: tú generas el contenido completo y esta
+    herramienta lo materializa en pantalla. El archivo se guarda en la
+    carpeta Documentos del usuario. Si no hay editor instalado, se
+    auto-instala uno (mousepad).
+    Args:
+        nombreArchivo: Nombre del archivo con extensión (ej: 'carta-renuncia.txt', 'informe.md').
+        contenido: Texto completo del documento ya redactado.
+    """
+    kernelLogger.info(f"🔌 [TOOL] crearDocumento: {nombreArchivo} ({len(contenido)} chars)")
+
+    # Sanear nombre: sin rutas, solo el nombre base
+    nombreLimpio = os.path.basename(nombreArchivo.strip()) or "documento.txt"
+    docsDir = os.path.join(os.path.expanduser("~"), "Documentos")
+    os.makedirs(docsDir, exist_ok=True)
+    rutaDocumento = os.path.join(docsDir, nombreLimpio)
+
+    try:
+        with open(rutaDocumento, "w", encoding="utf-8") as f:
+            f.write(contenido)
+    except Exception as e:
+        kernelLogger.error(f"Error escribiendo documento {rutaDocumento}: {e}")
+        return f"Error creando el documento: {e}"
+
+    # Buscar un editor gráfico ya presente en el sistema; si no hay, auto-instalar
+    editoresConocidos = ["mousepad", "featherpad", "gedit", "kate", "pluma"]
+    editorDisponible = None
+    for editor in editoresConocidos:
+        if subprocess.run(["which", editor], stdout=subprocess.DEVNULL,
+                          stderr=subprocess.DEVNULL).returncode == 0:
+            editorDisponible = editor
+            break
+
+    if not editorDisponible and asegurarPaquete("mousepad"):
+        editorDisponible = "mousepad"
+
+    if editorDisponible:
+        try:
+            subprocess.Popen([editorDisponible, rutaDocumento])
+            return f"Documento '{nombreLimpio}' creado en {rutaDocumento} y abierto en {editorDisponible}."
+        except Exception as e:
+            kernelLogger.error(f"Error abriendo editor {editorDisponible}: {e}")
+
+    return f"Documento '{nombreLimpio}' creado en {rutaDocumento} (no se encontró editor gráfico para abrirlo)."
+
+def crearHerramienta(nombreHerramienta: str, codigoPython: str, codigoPrueba: str) -> str:
+    """
+    Autogenera una nueva herramienta del sistema cuando ninguna herramienta
+    existente puede resolver la petición del usuario. Ciclo de autogeneración:
+    el código se AUTOPRUEBA primero en el sandbox Docker aislado (sin red) y
+    SOLO si la prueba pasa se inyecta en backend/dynamicTools/, quedando
+    registrada de inmediato como herramienta invocable en este mismo turno.
+    El código debe definir exactamente una función con el mismo nombre que
+    nombreHerramienta, con type hints, usando solo la librería estándar de
+    Python, y con un docstring que describa qué hace y sus Args (ese docstring
+    es lo que te permitirá invocarla luego).
+    Args:
+        nombreHerramienta: Nombre de la función en camelCase (ej: 'convertirRomanos').
+        codigoPython: Código fuente completo que define la función.
+        codigoPrueba: Código que invoca la función con casos reales y hace assert de los resultados; debe lanzar excepción si algo falla.
+    """
+    kernelLogger.info(f"🔌 [TOOL] crearHerramienta: {nombreHerramienta}")
+
+    # 1. Validar el nombre (identificador Python seguro, sin rutas)
+    nombreLimpio = nombreHerramienta.strip()
+    if not re.fullmatch(r"[a-zA-Z][a-zA-Z0-9]*", nombreLimpio):
+        return json.dumps({
+            "ok": False,
+            "error": f"Nombre inválido '{nombreHerramienta}': usa un identificador camelCase sin espacios ni símbolos."
+        }, ensure_ascii=False)
+
+    # 2. El código debe definir la función prometida
+    if not re.search(rf"^\s*def\s+{re.escape(nombreLimpio)}\s*\(", codigoPython, re.MULTILINE):
+        return json.dumps({
+            "ok": False,
+            "error": f"El código no define la función '{nombreLimpio}'. Define exactamente 'def {nombreLimpio}(...)'."
+        }, ensure_ascii=False)
+
+    # 3. Autoprueba en el sandbox aislado: definición + casos de prueba
+    codigoCompleto = f"{codigoPython}\n\n# --- AUTOPRUEBA DEL KERNEL ---\n{codigoPrueba}\nprint('AGNUX-SELFTEST-OK')\n"
+    resultado = evaluarCodigoSandbox(codigoCompleto, lenguaje="python")
+
+    if not resultado.get("ok") or "AGNUX-SELFTEST-OK" not in resultado.get("output", ""):
+        kernelLogger.warning(f"⚠️ [SELF-FORGE] '{nombreLimpio}' NO pasó la autoprueba. Rechazada.")
+        return json.dumps({
+            "ok": False,
+            "error": "La autoprueba en el sandbox falló. Corrige el código o la prueba y reintenta.",
+            "sandboxOutput": resultado.get("output", ""),
+            "exitCode": resultado.get("exitCode", -1)
+        }, ensure_ascii=False)
+
+    # 4. Inyección: persistir la herramienta aprobada en dynamicTools/
+    rutaHerramienta = os.path.join(dynamicToolsDir, f"{nombreLimpio}.py")
+    try:
+        with open(rutaHerramienta, "w", encoding="utf-8") as f:
+            f.write(codigoPython)
+    except Exception as e:
+        kernelLogger.error(f"Error inyectando herramienta {nombreLimpio}: {e}")
+        return json.dumps({"ok": False, "error": f"Autoprueba OK pero falló la inyección: {e}"}, ensure_ascii=False)
+
+    kernelLogger.info(
+        f"⚒️ [SELF-FORGE] Herramienta '{nombreLimpio}' aprobada en sandbox "
+        f"({resultado.get('executionTimeMs')}ms) e inyectada en {rutaHerramienta}"
+    )
+    return json.dumps({
+        "ok": True,
+        "mensaje": f"Herramienta '{nombreLimpio}' autoprobada en sandbox e inyectada al sistema. Ya está disponible para invocarse.",
+        "sandboxOutput": resultado.get("output", ""),
+        "executionTimeMs": resultado.get("executionTimeMs", 0),
+        "ruta": f"dynamicTools/{nombreLimpio}.py"
+    }, ensure_ascii=False)
+
+def crearVentana(titulo: str, htmlContenido: str, ventanaId: str = "") -> str:
+    """
+    Materializa una ventana flotante en el escritorio del usuario con contenido HTML libre.
+    Úsala siempre que el usuario pida un panel, dashboard, tabla, tarjeta, lista visual,
+    formulario, reporte o cualquier interfaz que se exprese mejor de forma visual que como texto.
+    El HTML se renderiza dentro de una ventana de cristal nativa del shell: puedes usar
+    etiquetas estándar (div, h1-h4, p, table, ul, progress, svg...) y estilos inline.
+    Las variables CSS del sistema están disponibles para integrarte al tema activo:
+    var(--agnux-accent), var(--agnux-accent-2), var(--agnux-text-primary),
+    var(--agnux-text-secondary), var(--agnux-panel-border).
+    INTERACTIVIDAD: agrega data-intent="petición en lenguaje natural" a botones,
+    filas o tarjetas; al hacer click, ese intent se te enviará como si el usuario
+    lo hubiera escrito, y podrás responder o actualizar esta ventana (mismo
+    ventanaId). Los placeholders {campo} dentro del data-intent se reemplazan
+    con el valor del input/select/textarea de la ventana cuyo name o id sea
+    'campo' (ej: <input name="monto"> y
+    <button data-intent="convertir {monto} dólares a euros">Convertir</button>).
+    No incluyas <html>, <head>, <body> ni <script>; solo el fragmento del cuerpo.
+    Args:
+        titulo: Título visible en la barra de la ventana.
+        htmlContenido: Fragmento HTML libre a renderizar dentro de la ventana.
+        ventanaId: Identificador opcional en kebab-case; si ya existe una ventana con ese id, se actualiza su contenido en vivo.
+    """
+    kernelLogger.info(f"🔌 [TOOL] crearVentana: titulo={titulo}, html (chars)={len(htmlContenido)}")
+    return json.dumps({
+        "__agnux_event": "CREATE-WINDOW",
+        "window-id": ventanaId,
+        "title": titulo,
+        "html": htmlContenido
+    }, ensure_ascii=False)
 
 def useSkill(skillName: str) -> str:
     """
