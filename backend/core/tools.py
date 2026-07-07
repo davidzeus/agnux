@@ -290,6 +290,13 @@ def crearVentana(titulo: str, htmlContenido: str, ventanaId: str = "") -> str:
     Las variables CSS del sistema están disponibles para integrarte al tema activo:
     var(--agnux-accent), var(--agnux-accent-2), var(--agnux-text-primary),
     var(--agnux-text-secondary), var(--agnux-panel-border).
+    INTERACTIVIDAD: agrega data-intent="petición en lenguaje natural" a botones,
+    filas o tarjetas; al hacer click, ese intent se te enviará como si el usuario
+    lo hubiera escrito, y podrás responder o actualizar esta ventana (mismo
+    ventanaId). Los placeholders {campo} dentro del data-intent se reemplazan
+    con el valor del input/select/textarea de la ventana cuyo name o id sea
+    'campo' (ej: <input name="monto"> y
+    <button data-intent="convertir {monto} dólares a euros">Convertir</button>).
     No incluyas <html>, <head>, <body> ni <script>; solo el fragmento del cuerpo.
     Args:
         titulo: Título visible en la barra de la ventana.

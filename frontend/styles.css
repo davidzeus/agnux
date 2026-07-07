@@ -1248,3 +1248,22 @@ body {
 .window-html-content svg {
     max-width: 100%;
 }
+
+/* Elementos interactivos: disparan intents al Kernel (data-intent) */
+.window-html-content [data-intent] {
+    cursor: pointer;
+}
+
+.window-html-content [data-intent]:not(button):hover {
+    background: color-mix(in srgb, var(--agnux-accent) 8%, transparent);
+    border-radius: 8px;
+}
+
+.window-html-content [data-intent].intent-fired {
+    animation: intent-pulse 0.55s ease-out;
+}
+
+@keyframes intent-pulse {
+    0%   { box-shadow: 0 0 0 0 var(--agnux-accent-glow); }
+    100% { box-shadow: 0 0 0 16px transparent; }
+}

@@ -573,6 +573,10 @@ async def procesarGeneradorEventos(payload, isGoogleConnected: bool):
             2. For panels, dashboards, tables, reports, forms or any visual answer,
                materialize a window with 'crearVentana' passing free HTML (no <script>);
                reuse the same ventanaId to live-update a window you already created.
+               Make windows interactive: data-intent="natural language request" on
+               buttons/rows/cards fires that request back to you on click, and
+               {inputName} placeholders inside it interpolate form values from the
+               same window (e.g. <button data-intent="convertir {monto} dólares">).
             3. If NO tool can solve the intent, FORGE ONE: call 'crearHerramienta' with
                the function code plus assert-based test cases. It self-tests in the
                isolated Docker sandbox and, only if the tests pass, injects the tool

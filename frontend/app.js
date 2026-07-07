@@ -10,8 +10,40 @@ document.addEventListener("DOMContentLoaded", () => {
     inicializarSpotlight();
     comenzarMonitoreoTelemetry();
     inicializarInputsVentanas();
+    inicializarIntentsDeVentanas();
     conectarWebSocketNotificaciones("terminal-default", "user-default");
 });
+
+// Intent dispatch desde ventanas generadas por la IA: cualquier elemento con
+// data-intent="..." dentro de una superficie HTML dispara ese intent en
+// lenguaje natural de vuelta al Kernel al hacer click. Los placeholders
+// {campo} se interpolan con el valor del input/select/textarea de la misma
+// ventana cuyo name o id coincida. Delegación única: cubre ventanas futuras.
+function inicializarIntentsDeVentanas() {
+    const desktop = document.getElementById("agnux-desktop");
+    desktop.addEventListener("click", (e) => {
+        const el = e.target.closest("[data-intent]");
+        if (!el) return;
+        const surface = el.closest(".window-html-content");
+        if (!surface) return; // solo dentro de HTML generado por la IA
+
+        let intent = (el.getAttribute("data-intent") || "").trim();
+        if (!intent) return;
+
+        intent = intent.replace(/\{([a-zA-Z][\w-]*)\}/g, (marca, campo) => {
+            const input = surface.querySelector(
+                `[name="${CSS.escape(campo)}"], #${CSS.escape(campo)}`
+            );
+            return input && "value" in input ? input.value : marca;
+        });
+
+        // Feedback visual de disparo
+        el.classList.add("intent-fired");
+        setTimeout(() => el.classList.remove("intent-fired"), 600);
+
+        enviarPromptAlKernel(intent, "win-console");
+    });
+}
 
 // WebSocket Client for Hyperisland Notifications
 let notificationSocket = null;
