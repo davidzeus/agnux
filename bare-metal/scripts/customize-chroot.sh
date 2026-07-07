@@ -29,6 +29,7 @@ apt-get install -y \
     xterm \
     galculator \
     pcmanfm \
+    mousepad \
     curl \
     git \
     nginx \
